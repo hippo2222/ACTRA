@@ -617,6 +617,10 @@ class TestImportAtomic:
         result = svc.import_tasks_atomic(zip_path, {"conflict_resolution": "new_id"})
         assert result["ok"] is True
         assert result["imported"] == 1
+        imported_task = svc.storage.load_task("m1", "t1", "tk1_copy1")
+        assert imported_task is not None
+        assert imported_task["task_data"]["id"] == "tk1_copy1"
+        assert imported_task["task_data"]["name"] == "Task (copy 1)"
 
     def test_import_tasks_with_excluded_list(self, tmp_path):
         svc = _make_svc(tmp_path)

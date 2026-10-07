@@ -411,7 +411,7 @@
     }
 
     function isBlockingModalOpen() {
-        const el = document.querySelector('.modal.open, .import-modal:not(.hidden), [role="dialog"]:not(.hidden)');
+        const el = document.querySelector('dialog[open], .modal.open, .import-modal:not(.hidden), [role="dialog"]:not(.hidden), .editor-modal-layer:not(.hidden)');
         if (!el) return false;
         return !el.closest('[hidden]');
     }
@@ -2068,6 +2068,8 @@
                 || controlEl?.contains(event.target)
                 || calloutEls.some((node) => node.contains(event.target))
                 || event.target.closest('[data-onboarding-interactive]')
+                || event.target.closest('dialog[open]')
+                || event.target.closest('.modal:not(.hidden), .editor-modal-layer:not(.hidden), [role="dialog"]:not(.hidden)')
             );
             if (!isInsideTour) {
                 event.preventDefault();

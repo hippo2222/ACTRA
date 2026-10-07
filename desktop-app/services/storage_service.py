@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import tempfile
 import time
 import uuid
@@ -22,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from werkzeug.utils import secure_filename
+from services.task_identity_utils import generate_duplicate_task_identity
 from services.workspace_lineage import (
     build_source_lineage_key,
     find_first_by_source_lineage,
@@ -2740,6 +2742,164 @@ class StorageService:
         except Exception as e:
             self.logger.exception(f"Failed to rename task {task_id}: {e}")
             return False
+
+    def duplicate_task(
+        self,
+        module_id: str,
+        topic_id: str,
+        source_task_id: str,
+        target_module_id: Optional[str] = None,
+        target_topic_id: Optional[str] = None,
+        workspace_meta: Optional[Dict[str, Any]] = None,
+        validate: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Duplicate an existing task with incremental copy numbering.
+
+        Args:
+            module_id: Source module ID
+            topic_id: Source topic ID
+            source_task_id: Source task ID to duplicate
+            target_module_id: Target module ID (defaults to module_id)
+            target_topic_id: Target topic ID (defaults to topic_id)
+            workspace_meta: Optional workspace metadata for lineage and ownership
+            validate: Whether to validate task structure when saving
+
+        Returns:
+            Dict containing:
+                "success": bool,
+                "source_module_id": str,
+                "source_topic_id": str,
+                "source_task_id": str,
+                "module_id": str,
+                "topic_id": str,
+                "task_id": str,
+                "name": str,
+                "task_data": Dict,
+        """
+        target_module = target_module_id or module_id
+        target_topic = target_topic_id or topic_id
+
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+        self._validate_id(source_task_id, "source_task_id")
+        self._validate_id(target_module, "target_module_id")
+        self._validate_id(target_topic, "target_topic_id")
+
+        source_payload = self.load_task(module_id, topic_id, source_task_id)
+        if not source_payload:
+            raise FileNotFoundError(f"Source task {source_task_id} not found in {module_id}/{topic_id}")
+
+        source_task_data = source_payload.get("task_data")
+        if not isinstance(source_task_data, dict):
+            raise ValueError(f"Invalid task data in source task {source_task_id}")
+
+        source_meta = source_task_data.get("meta") if isinstance(source_task_data.get("meta"), dict) else {}
+        source_name = source_task_data.get("name") or source_meta.get("name") or source_task_id
+
+        # Collect existing task IDs and names in target topic
+        existing_tasks = self.get_tasks(target_module, target_topic) or []
+        existing_ids = {
+            str(t.get("id")).strip()
+            for t in existing_tasks
+            if isinstance(t, dict) and t.get("id")
+        }
+        existing_names = {
+            str(t.get("name")).strip()
+            for t in existing_tasks
+            if isinstance(t, dict) and t.get("name")
+        }
+        target_tasks_dir = self.modules_dir / target_module / "topics" / target_topic / "tasks"
+        if target_tasks_dir.exists():
+            for entry in target_tasks_dir.iterdir():
+                if entry.is_dir() and (entry / "task.json").exists():
+                    existing_ids.add(entry.name)
+
+        new_task_id, new_task_name = generate_duplicate_task_identity(
+            existing_ids,
+            existing_names,
+            source_task_id,
+            source_name,
+        )
+
+        # Create target task folder and copy local assets if present
+        source_task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / source_task_id
+        target_task_dir = self.modules_dir / target_module / "topics" / target_topic / "tasks" / new_task_id
+        target_task_dir.mkdir(parents=True, exist_ok=True)
+
+        source_images_dir = source_task_dir / "images"
+        target_images_dir = target_task_dir / "images"
+        if source_images_dir.exists() and source_images_dir.is_dir():
+            shutil.copytree(source_images_dir, target_images_dir, dirs_exist_ok=True)
+
+        # Clone and update task_data payload
+        cloned_task_data = copy.deepcopy(source_task_data)
+        cloned_task_data["id"] = new_task_id
+        cloned_task_data["name"] = new_task_name
+
+        meta = cloned_task_data.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+            cloned_task_data["meta"] = meta
+
+        meta["id"] = new_task_id
+        meta["name"] = new_task_name
+        meta["module"] = target_module
+        meta["topic"] = target_topic
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        meta["created_at"] = now_iso
+        meta["created"] = now_iso
+        meta["modified"] = now_iso
+        meta["updated_at"] = now_iso
+
+        meta["created_via"] = "manual_copy"
+        meta["source_entity_kind"] = "task"
+        meta["source_entity_id"] = source_task_id
+        meta = self._apply_workspace_meta_fields(meta, workspace_meta)
+        meta = self._normalize_graph_ownership_fields(
+            meta,
+            fallback_source="manual_copy",
+            fallback_scope="workspace_private",
+        )
+        cloned_task_data["meta"] = normalize_workspace_lineage_fields(
+            meta,
+            entity_kind="task",
+            entity_id=new_task_id,
+            entity_ref=f"{target_module}/{target_topic}/{new_task_id}",
+        )
+
+        if not self.save_task(target_module, target_topic, new_task_id, cloned_task_data, validate=validate):
+            raise RuntimeError(f"Failed to save duplicated task {new_task_id}")
+
+        source_answer_key = source_payload.get("answer_key")
+        if isinstance(source_answer_key, dict) and source_answer_key:
+            normalized_ak = self._normalize_answer_key(cloned_task_data, source_answer_key)
+            self._write_task_answer_key(target_module, target_topic, new_task_id, normalized_ak)
+
+        self._modules_cache = None
+        self.logger.info(
+            "Task duplicated: %s/%s/%s -> %s/%s/%s ('%s')",
+            module_id,
+            topic_id,
+            source_task_id,
+            target_module,
+            target_topic,
+            new_task_id,
+            new_task_name,
+        )
+
+        return {
+            "success": True,
+            "source_module_id": module_id,
+            "source_topic_id": topic_id,
+            "source_task_id": source_task_id,
+            "module_id": target_module,
+            "topic_id": target_topic,
+            "task_id": new_task_id,
+            "name": new_task_name,
+            "task_data": cloned_task_data,
+        }
 
     def _ensure_task_registered_in_module(self, module_id: str, topic_id: str, task_id: str, payload: Dict) -> None:
         """

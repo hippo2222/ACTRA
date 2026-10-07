@@ -17,6 +17,7 @@ from services.hosted_shadow_fallback import (
     HostedShadowWriteFallbackDisabledError,
 )
 from services.package_io import PackageIO
+from services.task_identity_utils import generate_duplicate_task_identity
 
 # Type definitions
 TaskConflict = Dict[str, Any]
@@ -960,10 +961,30 @@ class ImportExportService:
                             skipped_count += 1
                             continue
                         elif conflict_res == 'new_id':
-                            # Generate new ID
-                            new_id = str(uuid.uuid4())
+                            # Generate deterministic next copy ID and title
+                            try:
+                                existing_topic_tasks = self.storage.get_tasks(target_module, target_topic) or []
+                            except Exception:
+                                existing_topic_tasks = []
+                            existing_ids = [t.get('id') for t in existing_topic_tasks if isinstance(t, dict) and t.get('id')]
+                            existing_names = [t.get('name') for t in existing_topic_tasks if isinstance(t, dict) and t.get('name')]
+                            existing_ids.extend(task_index.keys())
+
+                            new_id, new_name = generate_duplicate_task_identity(
+                                existing_ids,
+                                existing_names,
+                                task_id,
+                                task_data.get('name') or task_name,
+                            )
                             task_data['id'] = new_id
-                            task_data['name'] = f"{task_data.get('name', 'Task')} (Copy)"
+                            task_data['name'] = new_name
+                            meta = task_data.get('meta')
+                            if isinstance(meta, dict):
+                                meta['id'] = new_id
+                                meta['name'] = new_name
+                                meta['module'] = target_module
+                                meta['topic'] = target_topic
+
                             # Update JSON
                             with open(task_file, 'w', encoding='utf-8') as f:
                                 json.dump(task_data, f, indent=2, ensure_ascii=False)

@@ -132,6 +132,9 @@ describe('ImportManager archive preview', () => {
 
         const html = manager.renderStep4();
 
-        expect(html).toContain('Будет импортировано 1 заданий');
+        expect(html).toContain('Будет импортировано: 1 задание');
+        expect(html).toContain('Готово к импорту');
+        expect(html).toContain('Исключено вручную');
+        expect(html).toContain('Заблокировано');
     });
 });

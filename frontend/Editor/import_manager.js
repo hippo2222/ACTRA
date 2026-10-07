@@ -34,8 +34,15 @@ class ImportManager {
         this.uploadedFile = null;
         this.checkResult = null;
         this.archiveCacheId = null;
+        this.conflictResolution = 'skip'; // 'skip' | 'overwrite' | 'new_id'
+        this.skipErrors = true;
         this.perTaskConflictRes = new Map(); // index -> 'skip'|'overwrite'|'new_id'
         this.aiTemplateType = 'open_answer';
+        this.cheatSheetTab = 'test';
+        this.aiPromptTab = 'prompt';
+        this.previewFilterStatus = 'all';
+        this.previewFilterType = 'all';
+        this.editingTaskIndex = null;
         this.workspaceImportState = this.createWorkspaceImportState();
 
         // AI generation mode state
@@ -1948,15 +1955,29 @@ ${remaining}
             || workspace.complex_id
             || ''
         ).trim();
+        const createdSummaryText = [
+            this.formatModulesCount(createdCounts.modules || 0),
+            this.formatTopicsCount(createdCounts.topics || 0),
+            this.formatTasksCount(createdCounts.tasks || 0),
+            this.formatTheoriesCount(createdCounts.theories || 0)
+        ].join(', ');
+
+        const reusedSummaryText = [
+            this.formatModulesCount(reusedCounts.modules || 0),
+            this.formatTopicsCount(reusedCounts.topics || 0),
+            this.formatTasksCount(reusedCounts.tasks || 0),
+            this.formatTheoriesCount(reusedCounts.theories || 0)
+        ].join(', ');
+
         return `
             <div class="max-w-3xl mx-auto text-center py-8 animate-slide-up-fade space-y-5">
-                <div class="w-20 h-20 bg-primary-lighter rounded-full flex items-center justify-center mx-auto">
-                    <span class="material-symbols-outlined text-primary text-[48px]">inventory_2</span>
+                <div class="w-16 h-16 bg-primary-lighter rounded-2xl flex items-center justify-center mx-auto">
+                    <span class="material-symbols-outlined text-primary text-[36px]">inventory_2</span>
                 </div>
 
                 <div>
                     <h3 class="text-xl font-bold text-text-main mb-2">${wt('im.k649', 'Готово к добавлению в workspace')}</h3>
-                    <p class="text-text-secondary">${wt('im.k837', 'Будет создана или переиспользована рабочая версия комплекса со всеми зависимостями, без merge по имени.')}</p>
+                    <p class="text-sm text-text-secondary">${wt('im.k837', 'Будет создана или переиспользована рабочая версия комплекса со всеми зависимостями, без merge по имени.')}</p>
                 </div>
 
                 ${runtimeError ? `
@@ -1966,50 +1987,49 @@ ${remaining}
                     </div>
                 ` : ''}
 
-                <div class="bg-surface-2 rounded-lg p-6 text-left">
-                    <div class="space-y-2 text-sm">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Complex ID</span>
-                            <span class="font-mono text-text-main break-all">${this.escapeHtml(workspace.complex_id || '')}</span>
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-5 text-left shadow-xs">
+                    <div class="space-y-3 text-sm">
+                        <div class="flex flex-wrap items-start justify-between gap-3 pb-2 border-b border-border-subtle">
+                            <span class="text-text-secondary">${wt('im.complex_id_label', 'Идентификатор комплекса:')}</span>
+                            <span class="font-mono text-xs font-semibold text-text-main break-all">${this.escapeHtml(workspace.complex_id || '')}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Tasks</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(String(totalNodes.tasks || 0))}</span>
+                            <span class="text-text-secondary">${wt('im.tasks_count_label', 'Всего заданий:')}</span>
+                            <span class="font-bold text-success-text">${this.formatTasksCount(totalNodes.tasks || 0)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Modules / Topics / Theories</span>
+                            <span class="text-text-secondary">${wt('im.structure_counts_label', 'Структура (модули / темы / теория):')}</span>
                             <span class="font-medium text-text-main">${this.escapeHtml(`${totalNodes.modules || 0} / ${totalNodes.topics || 0} / ${totalNodes.theories || 0}`)}</span>
                         </div>
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k839', 'Создаст новых')}</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(wt('im.k984', '{m} модулей, {t} тем, {tsk} заданий, {th} теорий', { m: createdCounts.modules || 0, t: createdCounts.topics || 0, tsk: createdCounts.tasks || 0, th: createdCounts.theories || 0 }))}</span>
+                        <div class="flex flex-wrap items-start justify-between gap-3 pt-2 border-t border-border-subtle">
+                            <span class="text-text-secondary">${wt('im.k839', 'Будет создано:')}</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(createdSummaryText)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k840', 'Переиспользует')}</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(wt('im.k984', '{m} модулей, {t} тем, {tsk} заданий, {th} теорий', { m: reusedCounts.modules || 0, t: reusedCounts.topics || 0, tsk: reusedCounts.tasks || 0, th: reusedCounts.theories || 0 }))}</span>
+                            <span class="text-text-secondary">${wt('im.k840', 'Будет переиспользовано:')}</span>
+                            <span class="font-medium text-text-secondary">${this.escapeHtml(reusedSummaryText)}</span>
                         </div>
                     </div>
                 </div>
 
                 ${executeResult?.ok ? `
                     <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3 text-left text-sm text-success-darker">
-                        <div class="font-semibold">${wt('im.k841', 'Последний execute-ответ уже нормализован')}</div>
-                        <div class="mt-1 break-words">service_contract: ${this.escapeHtml(executeResult.serviceContract?.namespace || '')}</div>
-                        ${importedComplexId ? `<div class="mt-1 break-words">workspace_complex_id: ${this.escapeHtml(importedComplexId)}</div>` : ''}
+                        <div class="font-semibold">${wt('im.ready_all_tasks_valid_title', 'Все задания проверены')}</div>
+                        ${importedComplexId ? `<div class="mt-1 break-words text-xs text-text-secondary">${wt('im.complex_id_label', 'Идентификатор комплекса:')} <span class="font-mono font-medium text-text-main">${this.escapeHtml(importedComplexId)}</span></div>` : ''}
                     </div>
                     <div class="flex flex-wrap items-center justify-center gap-3">
                         <button
                             type="button"
                             onclick="dashboard.importManager.openWorkspaceImportResultComplex()"
-                            class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-fg shadow-sm transition hover:opacity-95"
+                            class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-fg shadow-sm transition hover:opacity-95"
                         >
                             <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-                            ${wt('im.k567', 'Открыть copy')}
+                            ${wt('im.open_copy_btn', 'Открыть комплекс')}
                         </button>
                         <button
                             type="button"
                             onclick="dashboard.closeImportModal()"
-                            class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-5 py-3 text-sm font-medium text-text-main transition hover:bg-surface-2"
+                            class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-5 py-2.5 text-sm font-medium text-text-main transition hover:bg-surface-2"
                         >
                             <span class="material-symbols-outlined text-[18px]">close</span>
                             ${wt('im.k568', 'Закрыть')}
@@ -2124,7 +2144,8 @@ ${remaining}
             stepsPanel.classList.toggle('hidden', this.modalPurpose === 'theory_analysis');
         }
         if (footer) {
-            footer.classList.toggle('hidden', this.modalPurpose === 'theory_analysis');
+            // FIX P0-2: Footer is always visible and sticky across all modes
+            footer.classList.remove('hidden');
         }
         if (content) {
             content.classList.toggle('p-6', this.modalPurpose !== 'theory_analysis');
@@ -2184,10 +2205,157 @@ ${remaining}
             this.renderTheoryAnalysisMode();
             return;
         }
+        if (this.currentStep === 3) {
+            const conflictEl = document.getElementById('conflict-resolution-select');
+            if (conflictEl && conflictEl.value) {
+                this.conflictResolution = conflictEl.value;
+            }
+            const skipErrorsEl = document.getElementById('skip-errors-checkbox');
+            if (skipErrorsEl) {
+                this.skipErrors = !!skipErrorsEl.checked;
+            }
+        }
         this.currentStep = step;
         this.updateStepUI();
         this.renderCurrentStep();
         this.updateNavigationButtons();
+    }
+
+    getConflictResolutionLabel(mode) {
+        if (mode === 'overwrite') {
+            return wt('im.k911', 'Перезаписать');
+        }
+        if (mode === 'new_id') {
+            return wt('im.k912', 'Создать копию (новый ID)');
+        }
+        return wt('im.k910', 'Пропустить (по умолчанию)');
+    }
+
+    getWorkspaceLimits() {
+        return this.parsedResult?.workspace_limits || this.dashboard?.workspaceLimits || null;
+    }
+
+    getPluralForm(count, one, few, many) {
+        const lang = (window.i18n && typeof window.i18n.getLang === 'function') ? window.i18n.getLang() : 'ru';
+        const abs = Math.abs(Number(count) || 0);
+        if (lang === 'en') {
+            return abs === 1 ? one : (many || few);
+        }
+        const rem10 = abs % 10;
+        const rem100 = abs % 100;
+        if (rem100 >= 11 && rem100 <= 19) {
+            return many;
+        }
+        if (rem10 === 1) {
+            return one;
+        }
+        if (rem10 >= 2 && rem10 <= 4) {
+            return few;
+        }
+        return many;
+    }
+
+    formatTasksCount(count) {
+        const n = Number(count) || 0;
+        const word = this.getPluralForm(
+            n,
+            wt('im.plural_task_one', 'задание'),
+            wt('im.plural_task_few', 'задания'),
+            wt('im.plural_task_many', 'заданий')
+        );
+        return `${n} ${word}`;
+    }
+
+    formatModulesCount(count) {
+        const n = Number(count) || 0;
+        const word = this.getPluralForm(
+            n,
+            wt('im.plural_module_one', 'модуль'),
+            wt('im.plural_module_few', 'модуля'),
+            wt('im.plural_module_many', 'модулей')
+        );
+        return `${n} ${word}`;
+    }
+
+    formatTopicsCount(count) {
+        const n = Number(count) || 0;
+        const word = this.getPluralForm(
+            n,
+            wt('im.plural_topic_one', 'тема'),
+            wt('im.plural_topic_few', 'темы'),
+            wt('im.plural_topic_many', 'тем')
+        );
+        return `${n} ${word}`;
+    }
+
+    formatTheoriesCount(count) {
+        const n = Number(count) || 0;
+        const word = this.getPluralForm(
+            n,
+            wt('im.plural_theory_one', 'теория'),
+            wt('im.plural_theory_few', 'теории'),
+            wt('im.plural_theory_many', 'теорий')
+        );
+        return `${n} ${word}`;
+    }
+
+    showImportProgressBar(initialLabel = '') {
+        let pc = document.getElementById('import-progress-bar-container');
+        if (!pc) {
+            const stepContent = document.querySelector('#import-step-content') || document.querySelector('[data-role="import-content"]');
+            if (stepContent) {
+                pc = document.createElement('div');
+                pc.id = 'import-progress-bar-container';
+                pc.className = 'mt-5 p-4 rounded-xl border border-border-subtle bg-surface-2 animate-fade-in shadow-xs text-left';
+                pc.innerHTML = `
+                    <div class="flex items-center justify-between text-xs font-semibold text-text-secondary mb-2">
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                            <span id="import-progress-label">${this.escapeHtml(initialLabel || wt('im.k931', 'Подготовка...'))}</span>
+                        </span>
+                        <span id="import-progress-percent" class="font-mono text-primary font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-surface-3 rounded-full h-2.5 overflow-hidden">
+                        <div id="import-progress-fill" class="h-full bg-primary rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                    </div>
+                `;
+                stepContent.appendChild(pc);
+            }
+        }
+        if (pc) {
+            pc.classList.remove('hidden');
+            const labelEl = document.getElementById('import-progress-label');
+            const percentEl = document.getElementById('import-progress-percent');
+            const fillEl = document.getElementById('import-progress-fill');
+            if (labelEl && initialLabel) labelEl.textContent = initialLabel;
+            if (percentEl) percentEl.textContent = '0%';
+            if (fillEl) fillEl.style.width = '0%';
+            try { pc.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+        }
+    }
+
+    updateImportProgress(percent, label = '') {
+        const pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+        const fill = document.getElementById('import-progress-fill');
+        const labelEl = document.getElementById('import-progress-label');
+        const pctEl = document.getElementById('import-progress-percent');
+        if (fill) fill.style.width = `${pct}%`;
+        if (labelEl && label) labelEl.textContent = label;
+        if (pctEl) pctEl.textContent = `${pct}%`;
+        const nextBtn = document.querySelector('[data-role="import-next"]');
+        if (nextBtn) {
+            const nextTextEl = nextBtn.querySelector('[data-role="import-next-text"]');
+            const textContent = `${wt('im.k261', 'Импорт...')} ${pct}%`;
+            if (nextTextEl) nextTextEl.textContent = textContent;
+            else nextBtn.textContent = textContent;
+        }
+    }
+
+    hideImportProgressBar() {
+        const pc = document.getElementById('import-progress-bar-container');
+        if (pc) {
+            pc.classList.add('hidden');
+        }
     }
 
     /**
@@ -2268,13 +2436,26 @@ ${remaining}
         }
     }
 
+    getDynamicStep2Label() {
+        if (this.modalPurpose === 'theory_analysis') {
+            return wt('im.step2_label_analysis', 'Анализ теории');
+        }
+        if (this.importMode === 'archive') {
+            return wt('im.step2_label_archive', 'ZIP-архив');
+        }
+        if (this.importMode === 'ai') {
+            return wt('im.step2_label_ai', 'Промпт и ответ');
+        }
+        return wt('im.step2_label_text', 'Текст заданий');
+    }
+
     updateStepUI() {
         if (this.modalPurpose === 'theory_analysis') return;
         const steps = document.querySelectorAll('[data-role="import-steps"] [data-step]');
         steps.forEach(stepEl => {
             const stepNum = parseInt(stepEl.dataset.step);
-            const circle = stepEl.querySelector('div:first-child');
-            const label = stepEl.querySelector('span');
+            const circle = stepEl.querySelector('[data-role^="step-circle"]') || stepEl.querySelector('div:first-child');
+            const label = stepEl.querySelector('[data-role^="step-label"]') || stepEl.querySelector('span');
             if (label && !stepEl.dataset.defaultLabel) {
                 stepEl.dataset.defaultLabel = label.textContent || '';
             }
@@ -2290,63 +2471,198 @@ ${remaining}
                 }
             } else {
                 stepEl.classList.remove('hidden');
-                if (label && stepEl.dataset.defaultLabel) {
-                    label.textContent = stepEl.dataset.defaultLabel;
+                if (label) {
+                    if (stepNum === 2) {
+                        label.textContent = this.getDynamicStep2Label();
+                    } else if (stepEl.dataset.defaultLabel) {
+                        label.textContent = stepEl.dataset.defaultLabel;
+                    }
                 }
             }
 
-            if (stepNum === this.currentStep) {
-                // Current step - primary color with number
-                circle.className = 'w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm transition-all duration-300';
-                circle.innerHTML = stepNum;
-                label.className = 'editor-import-step-label text-xs font-medium text-text-secondary transition-colors duration-300';
-                stepEl.classList.remove('completed');
-            } else if (stepNum < this.currentStep) {
-                // Completed step - green with checkmark
-                circle.className = 'w-10 h-10 rounded-full bg-success flex items-center justify-center text-primary-contrast font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-success hover:ring-offset-2 transition-all duration-300';
-                circle.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span>';
-                label.className = 'editor-import-step-label text-xs font-medium text-success-text transition-colors duration-300';
-                stepEl.classList.add('completed');
-            } else {
-                // Future step - disabled
-                circle.className = 'w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-300';
-                circle.innerHTML = stepNum;
-                label.className = 'editor-import-step-label text-xs font-medium text-text-disabled transition-colors duration-300';
-                stepEl.classList.remove('completed');
+            if (circle) {
+                if (stepNum === this.currentStep) {
+                    // Current step - primary color with number
+                    circle.className = 'w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-bold text-sm shadow-sm transition-all duration-300';
+                    circle.innerHTML = stepNum;
+                    if (label) label.className = 'editor-import-step-label text-xs font-semibold text-text-main text-center truncate max-w-full px-1 transition-colors duration-300';
+                    stepEl.classList.remove('completed');
+                } else if (stepNum < this.currentStep) {
+                    // Completed step - green with checkmark
+                    circle.className = 'w-9 h-9 rounded-full bg-success flex items-center justify-center text-primary-contrast font-bold text-sm cursor-pointer hover:ring-2 hover:ring-success hover:ring-offset-2 transition-all duration-300';
+                    circle.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span>';
+                    if (label) label.className = 'editor-import-step-label text-xs font-medium text-success-text text-center truncate max-w-full px-1 transition-colors duration-300';
+                    stepEl.classList.add('completed');
+                } else {
+                    // Future step - disabled
+                    circle.className = 'w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-300';
+                    circle.innerHTML = stepNum;
+                    if (label) label.className = 'editor-import-step-label text-xs font-medium text-text-disabled text-center truncate max-w-full px-1 transition-colors duration-300';
+                    stepEl.classList.remove('completed');
+                }
             }
 
             // Clickable completed steps
             stepEl.onclick = stepNum < this.currentStep ? () => this.goToStep(stepNum) : null;
             stepEl.style.cursor = stepNum < this.currentStep ? 'pointer' : 'default';
         });
+
+        // Update step dividers
+        const dividers = [
+            document.querySelector('[data-role="step-divider-1"]'),
+            document.querySelector('[data-role="step-divider-2"]'),
+            document.querySelector('[data-role="step-divider-3"]'),
+        ];
+        dividers.forEach((div, idx) => {
+            if (!div) return;
+            const isPassed = this.currentStep > (idx + 1);
+            div.className = `flex-1 h-[2px] mx-2 rounded-full transition-colors duration-300 ${isPassed ? 'bg-primary' : 'bg-border-subtle'}`;
+        });
+    }
+
+    updateFooterStatus() {
+        const statusEl = document.querySelector('[data-role="import-footer-status"]');
+        if (!statusEl) return;
+
+        if (this.modalPurpose === 'theory_analysis') {
+            const session = this.getActiveManualAnalysisSession();
+            const hasSession = !!session?.analysis?.ok;
+            const isCoverageMap = this.aiTemplateType === 'material_analysis';
+            if (this.currentStep === 2) {
+                if (hasSession && isCoverageMap) {
+                    statusEl.innerHTML = `<span class="inline-flex items-center gap-1.5 truncate max-w-full"><span class="w-2 h-2 rounded-full bg-success shrink-0"></span><span class="truncate">${wt('im.status_coverage_ready', 'Карта покрытия сформирована')}</span></span>`;
+                } else if (!hasSession && isCoverageMap) {
+                    const textLen = (this.sourceText || '').trim().length;
+                    statusEl.innerHTML = textLen > 0
+                        ? `<span class="text-text-secondary">${wt('im.status_chars_entered', 'Введено символов:')} <strong>${textLen}</strong></span>`
+                        : `<span class="text-text-disabled">${wt('im.status_waiting_ai_response', 'Ожидание ответа внешнего ИИ')}</span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="text-text-secondary truncate max-w-full">${this.escapeHtml(this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType)))}</span>`;
+                }
+            } else if (this.currentStep === 3) {
+                const count = this.getPreviewImportableTasks().length;
+                statusEl.innerHTML = `<span class="text-text-secondary">${wt('im.status_tasks_count', 'Задач к импорту:')} <strong>${count}</strong></span>`;
+            } else if (this.currentStep === 4) {
+                const count = this.getPreviewImportableTasks().length;
+                statusEl.innerHTML = `<span class="text-success-text font-medium">${wt('im.status_ready_to_import', 'Готово к сохранению:')} <strong>${count}</strong></span>`;
+            } else {
+                statusEl.innerHTML = '';
+            }
+            return;
+        }
+
+        // Standard import mode status
+        if (this.currentStep === 1) {
+            if (this.selectedModule && this.selectedTopic) {
+                statusEl.innerHTML = `<span class="inline-flex items-center gap-1.5 truncate max-w-full"><span class="w-2 h-2 rounded-full bg-success shrink-0"></span><span class="truncate">${this.escapeHtml(this.selectedModuleName || '')} / ${this.escapeHtml(this.selectedTopicName || '')}</span></span>`;
+            } else {
+                statusEl.innerHTML = `<span class="text-warning-text flex items-center gap-1.5"><span class="material-symbols-outlined text-[15px]">info</span><span>${wt('im.status_select_module_topic', 'Выберите модуль и тему')}</span></span>`;
+            }
+        } else if (this.currentStep === 2) {
+            if (this.importMode === 'text') {
+                const len = (this.sourceText || '').trim().length;
+                statusEl.innerHTML = len > 0
+                    ? `<span class="text-text-secondary">${wt('im.status_chars_entered', 'Введено символов:')} <strong>${len}</strong></span>`
+                    : `<span class="text-text-disabled">${wt('im.status_enter_text', 'Вставьте текст заданий')}</span>`;
+            } else if (this.importMode === 'archive') {
+                if (this.uploadedFile) {
+                    statusEl.innerHTML = `<span class="inline-flex items-center gap-1.5 truncate max-w-full text-success-text"><span class="material-symbols-outlined text-[15px]">folder_zip</span><span class="truncate">${this.escapeHtml(this.uploadedFile.name)}</span></span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="text-text-disabled">${wt('im.status_select_archive', 'Архив не выбран')}</span>`;
+                }
+            } else if (this.importMode === 'ai') {
+                statusEl.innerHTML = `<span class="text-text-secondary">${wt('im.status_ai_prompt_ready', 'Промпт готов к отправке')}</span>`;
+            }
+        } else if (this.currentStep === 3) {
+            const count = this.getPreviewImportableTasks().length;
+            const total = this.parsedResult?.tasks?.length || count;
+            statusEl.innerHTML = `<span class="text-text-secondary">${wt('im.status_selected_tasks', 'Выбрано:')} <strong>${count}</strong> ${wt('im.status_from', 'из')} ${total}</span>`;
+        } else if (this.currentStep === 4) {
+            const count = this.getPreviewImportableTasks().length;
+            statusEl.innerHTML = `<span class="text-success-text font-medium">${wt('im.status_ready_to_import', 'Готово к импорту:')} <strong>${count}</strong></span>`;
+        } else {
+            statusEl.innerHTML = '';
+        }
     }
 
     updateNavigationButtons() {
         const prevBtn = document.querySelector('[data-role="import-prev"]');
         const nextBtn = document.querySelector('[data-role="import-next"]');
         if (!prevBtn || !nextBtn) return;
+
+        const setBtnText = (btn, role, text) => {
+            const el = btn.querySelector(`[data-role="${role}"]`);
+            if (el) {
+                el.textContent = text;
+            } else {
+                btn.textContent = text;
+            }
+        };
+
+        this.updateFooterStatus();
+
         if (this.modalPurpose === 'theory_analysis') {
+            const session = this.getActiveManualAnalysisSession();
+            const hasSession = !!session?.analysis?.ok;
+            const isCoverageMap = this.aiTemplateType === 'material_analysis';
+            const isPromptStep = this.currentStep <= 2;
+            const isPreviewStep = this.currentStep === 3;
+            const isImportStep = this.currentStep === 4;
+
+            // Prev button in theory analysis
+            if (isPreviewStep || isImportStep) {
+                prevBtn.disabled = false;
+                setBtnText(prevBtn, 'import-prev-text', wt('im.k098', 'Назад'));
+                prevBtn.onclick = () => this.prevStep();
+            } else if (hasSession && !isCoverageMap) {
+                prevBtn.disabled = false;
+                setBtnText(prevBtn, 'import-prev-text', wt('im.k576', 'К карте покрытия'));
+                prevBtn.onclick = () => this.returnToManualAnalysisCoverageMap();
+            } else {
+                prevBtn.disabled = true;
+                setBtnText(prevBtn, 'import-prev-text', wt('im.k098', 'Назад'));
+                prevBtn.onclick = () => this.prevStep();
+            }
+
+            // Next button in theory analysis
+            const primaryActionDisabled = this.importInProgress || this.aiAnalyzing || this.aiGenerating;
+            nextBtn.disabled = primaryActionDisabled;
+            nextBtn.onclick = () => this.handleNext();
+
+            if (isImportStep) {
+                setBtnText(nextBtn, 'import-next-text', this.importInProgress ? wt('im.k290', 'Импорт...') : wt('im.k291', 'Импортировать'));
+            } else if (isPreviewStep) {
+                setBtnText(nextBtn, 'import-next-text', wt('im.k292', 'К импорту'));
+            } else if (isCoverageMap) {
+                setBtnText(nextBtn, 'import-next-text', wt('im.k293', 'Разобрать анализ'));
+            } else {
+                setBtnText(nextBtn, 'import-next-text', wt('im.k294', 'Проверить текст'));
+            }
             return;
         }
+
+        // Standard import mode
+        prevBtn.onclick = () => this.prevStep();
+        nextBtn.onclick = () => this.handleNext();
 
         if (this.hasActiveWorkspaceImportFlow()) {
             prevBtn.disabled = false;
             const executeReady = !!this.getWorkspaceImportExecutePayload()?.ok;
-            prevBtn.textContent = this.currentStep > 3 && !executeReady ? wt('im.k092', 'Назад') : wt('im.k093', 'Закрыть');
+            setBtnText(prevBtn, 'import-prev-text', this.currentStep > 3 && !executeReady ? wt('im.k092', 'Назад') : wt('im.k093', 'Закрыть'));
             const preview = this.getWorkspaceImportPreviewPayload();
             const previewReady = !!preview;
             const loadingPreview = this.workspaceImportState?.loadingPreview === true;
             const executing = this.workspaceImportState?.executing === true || this.importInProgress;
             if (this.currentStep >= 4) {
                 if (executeReady) {
-                    nextBtn.textContent = wt('im.k094', 'Открыть copy');
+                    setBtnText(nextBtn, 'import-next-text', wt('im.open_copy_btn', 'Открыть комплекс'));
                     nextBtn.disabled = false;
                 } else {
-                    nextBtn.textContent = executing ? wt('im.k095', 'Добавление...') : wt('im.k096', 'Добавить в workspace');
+                    setBtnText(nextBtn, 'import-next-text', executing ? wt('im.k095', 'Добавление...') : wt('im.k096', 'Добавить в workspace'));
                     nextBtn.disabled = !previewReady || loadingPreview || executing;
                 }
             } else {
-                nextBtn.textContent = wt('im.k097', 'К подтверждению');
+                setBtnText(nextBtn, 'import-next-text', wt('im.k097', 'К подтверждению'));
                 nextBtn.disabled = !previewReady || loadingPreview;
             }
             return;
@@ -2354,11 +2670,11 @@ ${remaining}
 
         // Prev button
         prevBtn.disabled = this.currentStep === 1;
-        prevBtn.textContent = wt('im.k098', 'Назад');
+        setBtnText(prevBtn, 'import-prev-text', wt('im.k098', 'Назад'));
 
-        const limits = this.parsedResult?.workspace_limits;
+        const limits = this.getWorkspaceLimits();
         let limitExceeded = false;
-        if (limits && limits.plan !== 'premium') {
+        if (limits && limits.plan !== 'premium' && limits.unlimited !== true) {
             const remainingTasks = limits.tasks?.remaining_personal ?? 0;
             const importableTasksCount = this.getPreviewImportableTasks().length;
             if (importableTasksCount > remainingTasks) {
@@ -2370,24 +2686,26 @@ ${remaining}
 
         // Next button label
         if (this.currentStep === 4) {
-            nextBtn.textContent = this.importInProgress ? wt('im.k099', 'Импорт...') : wt('im.k100', 'Импортировать');
+            setBtnText(nextBtn, 'import-next-text', this.importInProgress ? wt('im.k099', 'Импорт...') : wt('im.k100', 'Импортировать'));
         } else if (this.importMode === 'ai') {
-            if (this.currentStep === 1) nextBtn.textContent = wt('im.k101', 'К промптам');
-            else if (this.currentStep === 2) nextBtn.textContent = this.aiTemplateType === 'material_analysis' ? wt('im.k561', 'Разобрать анализ') : wt('im.k562', 'Проверить текст');
-            else if (this.currentStep === 3) nextBtn.textContent = wt('im.k102', 'К импорту');
-            else nextBtn.textContent = wt('im.k103', 'Далее');
+            if (this.currentStep === 1) setBtnText(nextBtn, 'import-next-text', wt('im.k101', 'К промптам'));
+            else if (this.currentStep === 2) setBtnText(nextBtn, 'import-next-text', this.aiTemplateType === 'material_analysis' ? wt('im.k561', 'Разобрать анализ') : wt('im.k562', 'Проверить текст'));
+            else if (this.currentStep === 3) setBtnText(nextBtn, 'import-next-text', wt('im.k102', 'К импорту'));
+            else setBtnText(nextBtn, 'import-next-text', wt('im.k103', 'Далее'));
         } else {
-            nextBtn.textContent = wt('im.k104', 'Далее');
+            setBtnText(nextBtn, 'import-next-text', wt('im.k104', 'Далее'));
         }
 
+        const shouldCheckLimits = this.currentStep >= 3;
         if (this.currentStep === 4 && nothingToImport && !this.importInProgress) {
-            nextBtn.textContent = wt('im.k105', 'Нечего импортировать');
-        } else if (limitExceeded && !this.importInProgress) {
-            nextBtn.textContent = wt('im.limit_exceeded_btn', 'Превышен лимит');
+            setBtnText(nextBtn, 'import-next-text', wt('im.k105', 'Нечего импортировать'));
+        } else if (shouldCheckLimits && limitExceeded && !this.importInProgress) {
+            setBtnText(nextBtn, 'import-next-text', wt('im.limit_exceeded_btn', 'Превышен лимит'));
         }
 
         // Disable next during AI processing or if limits are exceeded
-        nextBtn.disabled = this.aiAnalyzing || this.aiGenerating || this.importInProgress || nothingToImport || limitExceeded;
+        const limitBlock = shouldCheckLimits && limitExceeded;
+        nextBtn.disabled = this.aiAnalyzing || this.aiGenerating || this.importInProgress || nothingToImport || limitBlock;
     }
 
     // =========================================================================
@@ -2634,6 +2952,8 @@ ${remaining}
         this.uploadedFile = null;
         this.checkResult = null;
         this.archiveCacheId = null;
+        this.conflictResolution = 'skip';
+        this.skipErrors = true;
         this.perTaskConflictRes.clear();
         this.resetWorkspaceImportState();
         this.aiTemplateType = 'open_answer';
@@ -2753,38 +3073,47 @@ ${remaining}
 
     renderStep1() {
         // Get modules from dashboard catalog
-        const modules = this.dashboard.catalog || [];
+        const modules = this.dashboard?.catalog || [];
 
         return `
-            <div class="max-w-3xl mx-auto animate-slide-up-fade">
-                <h3 class="text-lg font-bold text-text-main mb-6">${wt('im.k652', 'Выберите режим импорта')}</h3>
+            <div class="max-w-3xl mx-auto space-y-6 animate-slide-up-fade">
+                <div>
+                    <h3 class="text-base font-bold text-text-main">${wt('im.k652', 'Выберите режим импорта')}</h3>
+                    <p class="text-xs text-text-secondary mt-1">${wt('md.import_modal_subtitle', 'Пакетная загрузка заданий, генерация через AI-промпты и анализ теории.')}</p>
+                </div>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-8">
-                    <button data-role="import-mode-text" onclick="dashboard.importManager.setImportMode('text')" 
-                        class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'text' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button type="button" data-role="import-mode-card" data-mode="text" onclick="dashboard.importManager.setImportMode('text')" 
+                        class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'text' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
                         <div class="flex items-center gap-3 mb-2">
-                            <span class="material-symbols-outlined text-2xl ${this.importMode === 'text' ? 'text-primary' : 'text-text-disabled'}">description</span>
-                            <span class="font-bold text-text-main">${wt('im.k848', 'Из текста')}</span>
+                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'text' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
+                                <span class="material-symbols-outlined text-xl">description</span>
+                            </span>
+                            <span class="font-bold text-sm text-text-main">${wt('im.k848', 'Из текста')}</span>
                         </div>
-                        <p class="text-xs text-text-secondary">${wt('im.k849', 'Вставка текста с разметкой (@OPEN_ANSWER, @SEQUENCE...)')}</p>
+                        <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_text_desc', 'Вставка текста заданий с разметкой (@TEST, @OPEN_ANSWER...)')}</p>
                     </button>
                     
-                    <button data-role="import-mode-archive" onclick="dashboard.importManager.setImportMode('archive')" 
-                        class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'archive' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
+                    <button type="button" data-role="import-mode-card" data-mode="archive" onclick="dashboard.importManager.setImportMode('archive')" 
+                        class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'archive' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
                         <div class="flex items-center gap-3 mb-2">
-                            <span class="material-symbols-outlined text-2xl ${this.importMode === 'archive' ? 'text-primary' : 'text-text-disabled'}">folder_zip</span>
-                            <span class="font-bold text-text-main">${wt('im.k850', 'Из архива')}</span>
+                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'archive' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
+                                <span class="material-symbols-outlined text-xl">folder_zip</span>
+                            </span>
+                            <span class="font-bold text-sm text-text-main">${wt('im.k850', 'Из архива')}</span>
                         </div>
-                        <p class="text-xs text-text-secondary">${wt('im.k851', 'Загрузка ZIP-архива с заданиями (с картинками)')}</p>
+                        <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_archive_desc', 'Загрузка ZIP-архива с заданиями и изображениями')}</p>
                     </button>
 
-                    <button data-role="import-mode-ai" onclick="dashboard.importManager.setImportMode('ai')" 
-                        class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'ai' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
+                    <button type="button" data-role="import-mode-card" data-mode="ai" onclick="dashboard.importManager.setImportMode('ai')" 
+                        class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'ai' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
                         <div class="flex items-center gap-3 mb-2">
-                            <span class="material-symbols-outlined text-2xl ${this.importMode === 'ai' ? 'text-primary' : 'text-text-disabled'}">auto_awesome</span>
-                            <span class="font-bold text-text-main">${wt('im.k852', 'ИИ-генерация')}</span>
+                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'ai' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
+                                <span class="material-symbols-outlined text-xl">auto_awesome</span>
+                            </span>
+                            <span class="font-bold text-sm text-text-main">${wt('im.k852', 'ИИ-генерация')}</span>
                         </div>
-                        <p class="text-xs text-text-secondary">${wt('im.k853', 'Промпты для самостоятельной работы с внешней нейросетью и последующего импорта результата')}</p>
+                        <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_ai_desc', 'Промпты для внешних нейросетей и импорт результата')}</p>
                     </button>
                 </div>
 
@@ -2800,23 +3129,24 @@ ${remaining}
     renderStep1Text(modules) {
         return `
             <div class="space-y-4 animate-fade-in">
-                <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
-                    <select id="import-module-select"
-                        class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                        ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
-                    </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
+                        <select id="import-module-select"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                            ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
+                        <select id="import-topic-select"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
+                            disabled>
+                            <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
+                        </select>
+                    </div>
                 </div>
-                
-                <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
-                    <select id="import-topic-select"
-                        class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
-                        disabled>
-                        <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
-                    </select>
-                </div>
-
             </div>
         `;
     }
@@ -2824,44 +3154,37 @@ ${remaining}
     renderStep1Archive(modules) {
         return `
             <div class="space-y-4 animate-fade-in">
-                <div class="p-4 bg-warning-lighter text-warning-text rounded-lg text-sm border border-warning-light">
-                    <div class="font-bold mb-1">${wt('im.k857', 'Как это работает:')}</div>
-                    <ul class="list-disc list-inside space-y-1 ml-1 text-xs">
-                        <li>${wt('im.k858', 'Задания будут распакованы из ZIP-архива')}</li>
-                        <li>${wt('im.k859', 'Картинки будут сохранены автоматически')}</li>
-                        <li>${wt('im.k860', 'Если модули/темы не выбраны, они будут созданы из структуры архива')}</li>
-                    </ul>
-                </div>
-
                  <div>
                     <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k861', 'Файл архива (.zip)')}</label>
-                    <div id="import-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-8 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-colors cursor-pointer relative">
+                    <div id="import-drop-zone" data-role="archive-dropzone" class="border-2 border-dashed border-border-subtle rounded-xl p-8 text-center bg-surface-1 hover:bg-surface-2 hover:border-primary transition-all cursor-pointer relative group">
                         <input type="file" id="import-file-input" accept=".zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="pointer-events-none">
-                            <span class="material-symbols-outlined text-4xl text-text-disabled mb-2">cloud_upload</span>
-                            <p class="text-sm font-medium text-text-secondary" id="file-name-display">${wt('im.k862', 'Перетащите файл сюда или кликните')}</p>
+                        <div class="pointer-events-none flex flex-col items-center">
+                            <div class="w-12 h-12 rounded-full bg-surface-2 group-hover:bg-primary/10 flex items-center justify-center mb-3 transition-colors">
+                                <span class="material-symbols-outlined text-2xl text-text-secondary group-hover:text-primary transition-colors">cloud_upload</span>
+                            </div>
+                            <p class="text-sm font-semibold text-text-main" id="file-name-display">${wt('im.k862', 'Перетащите файл сюда или кликните')}</p>
                             <p class="text-xs text-text-disabled mt-1">${wt('im.k863', 'Максимальный размер: 200MB')}</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="pt-4 border-t border-border-subtle">
-                   <div class="flex items-center justify-between mb-2 cursor-pointer" onclick="document.getElementById('advanced-options').classList.toggle('hidden')">
-                       <span class="text-sm font-semibold text-text-secondary">${wt('im.k864', 'Дополнительно (Target Override)')}</span>
-                       <span class="material-symbols-outlined text-text-disabled">expand_more</span>
-                   </div>
-                   <div id="advanced-options" class="hidden space-y-4">
+                <div class="pt-3 border-t border-border-subtle">
+                   <button type="button" class="flex items-center justify-between w-full text-left cursor-pointer group py-1" onclick="document.getElementById('advanced-options').classList.toggle('hidden')">
+                       <span class="text-xs font-semibold text-text-secondary group-hover:text-text-main">${wt('im.k864', 'Дополнительно (Target Override)')}</span>
+                       <span class="material-symbols-outlined text-text-disabled group-hover:text-text-main text-base">expand_more</span>
+                   </button>
+                   <div id="advanced-options" class="hidden mt-3 space-y-3">
                        <div>
-                            <label class="block text-sm font-medium text-text-secondary mb-1">${wt('im.k865', 'Переопределить модуль (опционально)')}</label>
+                            <label class="block text-xs font-medium text-text-secondary mb-1">${wt('im.k865', 'Переопределить модуль (опционально)')}</label>
                             <select id="import-module-select" 
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs">
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 px-3 text-text-main text-xs">
                                 ${this.renderModuleOptions(modules, wt('im.k654', 'Не переопределять (из архива)'))}
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-text-secondary mb-1">${wt('im.k866', 'Переопределить тему (опционально)')}</label>
+                            <label class="block text-xs font-medium text-text-secondary mb-1">${wt('im.k866', 'Переопределить тему (опционально)')}</label>
                             <select id="import-topic-select" 
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs" disabled>
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 px-3 text-text-main text-xs" disabled>
                                 <option value="">${wt('im.k867', 'Не переопределять')}</option>
                             </select>
                         </div>
@@ -2871,101 +3194,85 @@ ${remaining}
         `;
     }
     renderStep2() {
-        if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
+        if (this.importMode === 'archive') {
+            return this.renderStep2Archive();
+        }
+        if (this.importMode === 'ai' || this.modalPurpose === 'theory_analysis') {
             return this.renderStep2AI();
         }
+        return this.renderStep2Text();
+    }
 
-        if (this.importMode === 'archive') {
-            // Step 2 for Archive is "Validating..." (Spinner)
-            return `
-               <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
-                   <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
-                   <h3 class="text-lg font-bold text-text-main">${wt('im.k655', 'Проверка архива...')}</h3>
-                   <p class="text-text-secondary text-sm mt-2">${wt('im.k868', 'Анализ структуры и поиск конфликтов')}</p>
-               </div>
-            `;
-        }
+    renderStep2Archive() {
+        return `
+            <div class="h-full flex-1 flex flex-col min-h-[420px] animate-slide-up-fade" data-role="archive-dropzone-panel">
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="text-xs font-bold text-text-main">${wt('im.k861', 'Файл архива (.zip)')}</h4>
+                        <p class="text-[11px] text-text-secondary mt-0.5">${wt('im.step1_mode_archive_desc', 'Загрузка ZIP-архива с заданиями и изображениями')}</p>
+                    </div>
 
+                    <div id="import-drop-zone" data-role="archive-dropzone" class="border-2 border-dashed border-border-subtle rounded-xl p-8 text-center bg-surface-1 hover:bg-surface-2 hover:border-primary transition-all cursor-pointer relative group">
+                        <input type="file" id="import-file-input" accept=".zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="pointer-events-none flex flex-col items-center">
+                            <div class="w-12 h-12 rounded-full bg-surface-2 group-hover:bg-primary/10 flex items-center justify-center mb-3 transition-colors">
+                                <span class="material-symbols-outlined text-2xl text-text-secondary group-hover:text-primary transition-colors">cloud_upload</span>
+                            </div>
+                            <p class="text-sm font-semibold text-text-main" id="file-name-display">${wt('im.k862', 'Перетащите файл сюда или кликните')}</p>
+                            <p class="text-xs text-text-disabled mt-1">${wt('im.k863', 'Максимальный размер: 200MB')}</p>
+                        </div>
+                    </div>
+
+                    <!-- Pre-flight Conflict and Error Settings -->
+                    <div class="p-3.5 bg-surface-1 border border-border-subtle rounded-xl shadow-xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                            <div>
+                                <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
+                                <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 px-2.5 focus:ring-1 focus:ring-primary">
+                                    <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
+                                    <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
+                                    <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
+                                </select>
+                            </div>
+                            <div class="sm:pt-5">
+                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" id="skip-errors-checkbox" ${this.skipErrors ? 'checked' : ''} class="rounded text-primary focus:ring-primary w-4 h-4">
+                                    <span class="text-xs text-text-secondary font-medium">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderStep2Text() {
         const hasErrors = this.parsedResult?.parsing_errors?.length > 0;
         const errorsList = this.parsedResult?.parsing_errors || [];
-        const templateOptions = this.modalPurpose === 'theory_analysis'
-            ? this.getAIAgentTemplateOptions()
-            : this.getDirectAIAgentTemplateOptions();
-        const activeTemplate = this.getActiveAIAgentTemplateConfig();
-        const isAiPromptMode = this.importMode === 'ai';
-        const isMaterialAnalysisMode = isAiPromptMode && this.aiTemplateType === 'material_analysis';
-        const manualAnalysisPreview = isAiPromptMode ? this.renderManualAnalysisPreviewCard() : '';
-        const manualAnalysisPromptContext = isAiPromptMode ? this.renderManualAnalysisPromptContextCard() : '';
-        const stepTitle = isAiPromptMode ? wt('im.k116', 'Скопируйте промпт и вставьте ответ внешнего ИИ') : wt('im.k117', 'Вставьте текст с заданиями');
-        const stepDescription = isAiPromptMode
-            ? wt('im.k118', 'Сгенерируйте задания во внешней нейросети, затем вставьте результат сюда для проверки и импорта.')
-            : wt('im.k119', 'Вставьте текст, содержащий задания в формате парсера');
-        const showStepIntro = this.modalPurpose !== 'theory_analysis';
-        const showTemplateSelector = this.modalPurpose !== 'theory_analysis';
-        const fixedTheoryTemplateLabel = isMaterialAnalysisMode
-            ? wt('im.k120', 'Анализ материала')
-            : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType) || activeTemplate.taskType || activeTemplate.title);
+        const cheatData = this.getCheatSheetData(this.cheatSheetTab || 'test');
+        const tabs = [
+            { key: 'test', label: wt('im.cheat_tab_test', 'Тест') },
+            { key: 'open_answer', label: wt('im.cheat_tab_open', 'Открытый ответ') },
+            { key: 'sequence', label: wt('im.cheat_tab_seq', 'Последовательность') },
+            { key: 'click_text', label: wt('im.cheat_tab_click_text', 'Выбор') },
+            { key: 'click_words', label: wt('im.cheat_tab_click_words', 'Ошибки') },
+        ];
+        const lineCount = (this.sourceText || '').length > 0 ? (this.sourceText || '').split('\n').length : 0;
+        const charCount = (this.sourceText || '').length;
 
         return `
-            <div class="max-w-3xl mx-auto animate-slide-up-fade">
-                ${showStepIntro ? `
-                    <h3 class="text-lg font-bold text-text-main mb-2">${stepTitle}</h3>
-                    <p class="text-sm text-text-secondary mb-6">${stepDescription}</p>
-                ` : ''}
-
-                <div class="mb-4 p-4 bg-surface-2 border border-border-subtle rounded-lg">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <div>
-                            <h4 class="text-sm font-bold text-text-main">${wt('im.k869', 'Шаблон промпта для ИИ-агента')}</h4>
-                            <p class="text-xs text-text-secondary mt-1">${wt('im.k870', 'Скопируйте шаблон, передайте его ИИ-агенту и вставьте результат ниже.')}</p>
-                        </div>
-                        <button id="ai-agent-copy-prompt-btn"
-                            class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors">
-                            ${wt('im.k121', 'Скопировать промпт')}
-                        </button>
-                    </div>
-                    ${showTemplateSelector ? `
-                        <div class="mb-3">
-                            <label for="ai-agent-template-type" class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k871', 'Тип задания')}</label>
-                            <select id="ai-agent-template-type"
-                                class="block w-full rounded-lg border-border-subtle bg-surface-1 py-2 px-3 text-sm text-text-main focus:ring-2 focus:ring-primary">
-                                ${Object.entries(templateOptions).map(([key, value]) => `
-                                    <option value="${key}" ${this.aiTemplateType === key ? 'selected' : ''}>${this.escapeHtml(value.title)}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-                    ` : `
-                        <div class="mb-3">
-                            <div class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k872', 'Режим')}</div>
-                            <div class="rounded-lg border border-border-subtle bg-surface-1 py-2 px-3 text-sm font-medium text-text-main">
-                                ${this.escapeHtml(fixedTheoryTemplateLabel)}
-                            </div>
-                        </div>
-                    `}
-                    <div id="ai-agent-instructions" class="mb-3 p-3 bg-surface-2 border border-info-light rounded-lg">
-                        <div class="flex items-start gap-2">
-                            <span class="material-symbols-outlined text-info text-[18px] mt-0.5">lightbulb</span>
-                            <div class="text-xs text-text-secondary whitespace-pre-line">${this.escapeHtml(activeTemplate.instructions)}</div>
-                        </div>
-                    </div>
-                    <textarea id="ai-agent-prompt-textarea" rows="12" readonly
-                        class="block w-full rounded-lg border-border-subtle bg-surface-1 p-3 text-xs text-text-main font-mono">${this.escapeHtml(activeTemplate.prompt)}</textarea>
-                </div>
-
-                ${manualAnalysisPromptContext}
-
+            <div class="h-full flex-1 flex flex-col min-h-[420px] animate-slide-up-fade">
+                <!-- Errors alert if any -->
                 ${hasErrors ? `
-                    <div class="mb-4 p-4 bg-error-lighter border border-error-light rounded-lg">
-                        <div class="flex items-start gap-2 mb-2">
-                            <span class="material-symbols-outlined text-error text-[20px]">error</span>
-                            <div class="flex-1">
-                                <h4 class="font-bold text-error-text mb-1">${wt('im.k656', 'Обнаружены ошибки парсинга')}</h4>
-                                <p class="text-sm text-error-text">${wt('im.k873', 'Исправьте ошибки ниже и повторите попытку')}</p>
-                            </div>
+                    <div class="mb-3 p-3 bg-error-lighter/50 border border-error-light rounded-xl shrink-0">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="material-symbols-outlined text-error text-[18px]">error</span>
+                            <span class="font-bold text-xs text-error-text">${wt('im.k656', 'Обнаружены ошибки парсинга')}</span>
                         </div>
-                        <div class="mt-3 space-y-1 max-h-32 overflow-y-auto">
+                        <div class="space-y-1 max-h-24 overflow-y-auto">
                             ${errorsList.map(err => `
-                                <div class="text-sm text-error-text font-mono bg-surface-1 p-2 rounded border border-error-light">
+                                <div class="text-xs text-error-text font-mono bg-surface-1 p-1.5 rounded border border-error-light/50">
                                     ${this.escapeHtml(err)}
                                 </div>
                             `).join('')}
@@ -2973,36 +3280,305 @@ ${remaining}
                     </div>
                 ` : ''}
 
-                <div class="mb-2 flex justify-end">
-                    <button id="import-paste-clipboard-btn"
-                        class="px-3 py-1.5 text-xs font-semibold text-text-secondary border border-border-subtle rounded hover:bg-bg-hover transition-colors">
-                        ${wt('im.k122', 'Вставить из буфера обмена')}
-                    </button>
-                </div>
+                <!-- Split Grid: 5 cols cheat sheet, 7 cols editor -->
+                <div class="import-split-grid gap-4 flex-1 min-h-0">
+                    <!-- Left: Interactive Cheat Sheet (5 cols) -->
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="import-cheatsheet-tabs">
+                        <div class="flex items-center justify-between mb-2.5 shrink-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-primary text-[18px]">menu_book</span>
+                                <h4 class="text-xs font-bold text-text-main">${wt('im.cheat_sheet_title', 'Шпаргалка форматов')}</h4>
+                            </div>
+                            <span class="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-2 text-primary">${cheatData.typeTag}</span>
+                        </div>
 
-                <textarea id="import-text-area" 
-                    class="block w-full rounded-lg border-border-subtle bg-surface-2 p-4 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm font-mono ${hasErrors ? 'border-error focus:ring-error' : ''}"
-                    rows="15"
-                    placeholder="@OPEN_ANSWER&#10;# ${wt('im.k123', 'Опишите признаки пневмонии&#10;&#10;@SEQUENCE&#10;# Алгоритм диагностики&#10;element_1: Сбор анамнеза&#10;...&#10;&#10;@CLICK_TEXT&#10;# Выберите верные утверждения&#10;+ Верный вариант&#10;- Неверный вариант&#10;&#10;@TEST&#10;# Контрольные вопросы&#10;? Вопрос&#10;+ Верный ответ&#10;- Неверный ответ">')}${this.escapeHtml(this.sourceText)}</textarea>
-                
-                <div id="import-live-counter" class="mt-2 flex flex-wrap gap-2 text-xs min-h-[24px]"></div>
-                
-                <div class="mt-3 flex items-start gap-2 p-3 bg-surface-2 border border-info-light rounded-lg">
-                    <span class="material-symbols-outlined text-info text-[20px]">info</span>
-                    <div class="text-xs text-text-secondary">
-                        <p class="font-medium mb-1">${wt('im.k874', 'Поддерживаемые форматы:')}</p>
-                        <p>${wt('im.k875', '@OPEN_ANSWER - Открытый ответ')}</p>
-                        <p>${wt('im.k876', '@SEQUENCE - Последовательность')}</p>
-                        <p>${wt('im.k877', '@CLICK_TEXT - Клик/Ошибки (текстовый выбор)')}</p>
-                        <p>${wt('im.k878', '@CLICK_WORDS - Клик/Ошибки (поиск ошибок в тексте)')}</p>
-                        <p>${wt('im.k879', '@TEST - Тест (вопросы с вариантами ответов)')}</p>
-                        <p class="mt-1 font-medium">${wt('im.k880', 'Поддерживается только подтип Клик/Ошибки (error_detection). Рисование и координатные click-задачи не поддерживаются.')}</p>
+                        <!-- Segmented Tabs -->
+                        <div class="grid grid-cols-5 gap-1 p-1 bg-surface-2 rounded-lg mb-2.5 shrink-0">
+                            ${tabs.map(t => `
+                                <button type="button" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
+                                    class="py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs' : 'text-text-secondary hover:text-text-main'}">
+                                    ${t.label}
+                                </button>
+                            `).join('')}
+                        </div>
+
+                        <!-- Syntax badges -->
+                        <div class="flex flex-wrap gap-1.5 mb-2.5 shrink-0">
+                            ${cheatData.badges.map(b => `
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
+                                    <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
+                                    <span>${this.escapeHtml(b.desc)}</span>
+                                </span>
+                            `).join('')}
+                        </div>
+
+                        <!-- Example Code Container -->
+                        <div class="flex-1 min-h-0 flex flex-col bg-surface-2 rounded-lg border border-border-subtle p-2.5 overflow-hidden">
+                            <div class="flex-1 min-h-0 overflow-y-auto">
+                                <pre class="font-mono text-[11px] text-text-main whitespace-pre-wrap leading-relaxed select-all">${this.escapeHtml(cheatData.example)}</pre>
+                            </div>
+                            <button type="button" data-role="cheat-insert-example" onclick="dashboard.importManager.insertCheatSheetExample('${cheatData.key}')"
+                                class="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-surface-1 hover:bg-surface-3 border border-border-subtle text-text-main hover:text-primary transition-colors cursor-pointer shrink-0">
+                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                <span>${wt('im.cheat_insert_example', 'Вставить пример в поле')}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Editor Textarea (7 cols) -->
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="editor-panel">
+                        <div class="flex items-center justify-between mb-2.5 shrink-0">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[18px]">edit_note</span>
+                                <span class="text-xs font-bold text-text-main">${wt('im.editor_title_text', 'Текст заданий')}</span>
+                                <span class="text-[11px] text-text-secondary">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                ${charCount > 0 ? `
+                                    <button type="button" onclick="dashboard.importManager.clearImportText()"
+                                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer"
+                                        title="${wt('im.editor_clear_btn', 'Очистить')}">
+                                        <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
+                                        <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
+                                    </button>
+                                ` : ''}
+                                <button type="button" id="import-paste-clipboard-btn" data-role="import-paste-btn" onclick="dashboard.importManager.pasteImportTextFromClipboard()"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 hover:bg-surface-3 text-text-main transition-colors cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px] text-primary">content_paste</span>
+                                    <span>${wt('im.editor_paste_btn', 'Вставить из буфера')}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Full Height Textarea -->
+                        <div class="flex-1 min-h-0 relative flex flex-col">
+                            <textarea id="import-text-area" data-role="import-source-text"
+                                class="w-full flex-1 min-h-[280px] rounded-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
+                                placeholder="${this.escapeHtml(wt('im.editor_text_placeholder', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n...'))}">${this.escapeHtml(this.sourceText)}</textarea>
+                        </div>
+
+                        <!-- Live Marker Badges -->
+                        <div id="import-live-counter" class="mt-2 flex flex-wrap gap-1.5 text-xs min-h-[22px] shrink-0"></div>
                     </div>
                 </div>
-
-                ${manualAnalysisPreview}
             </div>
         `;
+    }
+
+    renderStep2AI() {
+        const templateOptions = this.modalPurpose === 'theory_analysis'
+            ? this.getAIAgentTemplateOptions()
+            : this.getDirectAIAgentTemplateOptions();
+        const activeTemplate = this.getActiveAIAgentTemplateConfig();
+        const charCount = (this.sourceText || '').length;
+        const lineCount = (this.sourceText || '').length > 0 ? (this.sourceText || '').split('\n').length : 0;
+        const hasErrors = this.parsedResult?.parsing_errors?.length > 0;
+        const errorsList = this.parsedResult?.parsing_errors || [];
+        const isMaterialAnalysis = this.aiTemplateType === 'material_analysis';
+        const manualAnalysisPreview = this.renderManualAnalysisPreviewCard?.() || '';
+
+        return `
+            <div class="h-full flex-1 flex flex-col min-h-[420px] animate-slide-up-fade">
+                <!-- Errors alert if any -->
+                ${hasErrors ? `
+                    <div class="mb-3 p-3 bg-error-lighter/50 border border-error-light rounded-xl shrink-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="material-symbols-outlined text-error text-[18px]">error</span>
+                            <span class="font-bold text-xs text-error-text">${wt('im.k656', 'Обнаружены ошибки парсинга')}</span>
+                        </div>
+                        <div class="space-y-1 max-h-20 overflow-y-auto">
+                            ${errorsList.map(err => `
+                                <div class="text-xs text-error-text font-mono bg-surface-1 p-1 rounded border border-error-light/50">
+                                    ${this.escapeHtml(err)}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Split Grid for AI Studio (5 cols Prompt Studio, 7 cols Response Terminal) -->
+                <div class="import-split-grid gap-4 flex-1 min-h-0">
+                    <!-- Left: Prompt Studio (5 cols) -->
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="ai-prompt-column">
+                        <div class="flex items-center justify-between mb-2.5 shrink-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-primary text-[18px]">auto_awesome</span>
+                                <h4 class="text-xs font-bold text-text-main">${wt('im.ai_prompt_studio_title', 'Диспетчер промптов')}</h4>
+                            </div>
+                            <button type="button" id="ai-agent-copy-prompt-btn" onclick="dashboard.importManager.copyAIAgentPrompt()"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-all shadow-xs cursor-pointer">
+                                <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                <span data-role="copy-prompt-text">${wt('im.ai_copy_prompt_action', 'Скопировать промпт')}</span>
+                            </button>
+                        </div>
+
+                        <!-- Template Selector -->
+                        <div class="mb-2 shrink-0">
+                            <label for="ai-agent-template-type" class="block text-[11px] font-semibold text-text-secondary mb-1">${wt('im.k871', 'Тип задания')}</label>
+                            <select id="ai-agent-template-type"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-1.5 px-2.5 text-xs text-text-main focus:ring-2 focus:ring-primary">
+                                ${Object.entries(templateOptions).map(([key, value]) => `
+                                    <option value="${key}" ${this.aiTemplateType === key ? 'selected' : ''}>${this.escapeHtml(value.title)}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Hint Banner -->
+                        <div class="mb-2 p-2 bg-primary/5 rounded-lg border border-primary/20 shrink-0">
+                            <p class="text-[11px] text-text-secondary leading-tight">${wt('im.ai_prompt_hint', 'Скопируйте готовый шаблон, передайте его внешней нейросети (ChatGPT / Claude) и вставьте ответ в поле справа.')}</p>
+                        </div>
+
+                        <!-- Prompt Content Textarea -->
+                        <div class="flex-1 min-h-0 flex flex-col">
+                            <textarea id="ai-agent-prompt-textarea" readonly
+                                class="w-full flex-1 min-h-[220px] rounded-lg border border-border-subtle bg-surface-2 p-2.5 font-mono text-[11px] text-text-main leading-relaxed select-all resize-none">${this.escapeHtml(activeTemplate.prompt)}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- Right: AI Response Terminal (7 cols) -->
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="ai-terminal-column">
+                        <div class="flex items-center justify-between mb-2.5 shrink-0">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary text-[18px]">terminal</span>
+                                <span class="text-xs font-bold text-text-main">${wt('im.editor_title_ai', 'Ответ внешнего ИИ')}</span>
+                                <span class="text-[11px] text-text-secondary">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                ${charCount > 0 ? `
+                                    <button type="button" onclick="dashboard.importManager.clearImportText()"
+                                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer"
+                                        title="${wt('im.editor_clear_btn', 'Очистить')}">
+                                        <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
+                                        <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
+                                    </button>
+                                ` : ''}
+                                <button type="button" id="import-paste-clipboard-btn" data-role="import-paste-btn" onclick="dashboard.importManager.pasteImportTextFromClipboard()"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 hover:bg-surface-3 text-text-main transition-colors cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px] text-primary">content_paste</span>
+                                    <span>${wt('im.editor_paste_btn', 'Вставить из буфера')}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Textarea on 100% height -->
+                        <div class="flex-1 min-h-0 relative flex flex-col">
+                            <textarea id="import-text-area" data-role="import-source-text"
+                                class="w-full flex-1 min-h-[280px] rounded-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
+                                placeholder="${wt('im.k499', 'Вставьте ответ ИИ сюда...')}">${this.escapeHtml(this.sourceText)}</textarea>
+                        </div>
+
+                        <!-- Live Marker Badges -->
+                        <div id="import-live-counter" class="mt-2 flex flex-wrap gap-1.5 text-xs min-h-[22px] shrink-0"></div>
+
+                        ${manualAnalysisPreview}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    getCheatSheetData(tab = this.cheatSheetTab) {
+        const sheets = {
+            test: {
+                key: 'test',
+                label: wt('im.cheat_tab_test', 'Тест'),
+                typeTag: '@TEST',
+                summary: wt('im.k003', 'Тест (вопросы с вариантами ответов)'),
+                badges: [
+                    { tag: '@TEST', desc: wt('im.k008', 'Тип задания') },
+                    { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
+                    { tag: '?', desc: wt('im.cheat_tag_question', 'Вопрос') },
+                    { tag: '+', desc: wt('im.cheat_tag_correct', 'Верный ответ') },
+                    { tag: '-', desc: wt('im.cheat_tag_incorrect', 'Неверный ответ') },
+                    { tag: '>', desc: wt('im.cheat_tag_hint', 'Пояснение') },
+                ],
+                example: wt('im.cheat_example_test', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n- Желудочный сок\n- Слюну\n> Желчь вырабатывается гепатоцитами печени и накапливается в желчном пузыре.'),
+            },
+            open_answer: {
+                key: 'open_answer',
+                label: wt('im.cheat_tab_open', 'Открытый ответ'),
+                typeTag: '@OPEN_ANSWER',
+                summary: wt('im.k001', 'Открытый ответ'),
+                badges: [
+                    { tag: '@OPEN_ANSWER', desc: wt('im.k008', 'Тип задания') },
+                    { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
+                    { tag: '?', desc: wt('im.cheat_tag_question', 'Вопрос') },
+                    { tag: '*', desc: wt('im.cheat_tag_criterion', 'Критерий') },
+                ],
+                example: wt('im.cheat_example_open', '@OPEN_ANSWER\n# Признаки бактериальной пневмонии\n? Перечислите основные клинические признаки бактериальной пневмонии:\n* Кашель с гнойной или ржавой мокротой\n* Лихорадка и озноб\n* Одышка при нагрузке и в покое\n* Боли в грудной клетке при дыхании\n* Крепитация при аускультации легких'),
+            },
+            sequence: {
+                key: 'sequence',
+                label: wt('im.cheat_tab_seq', 'Последовательность'),
+                typeTag: '@SEQUENCE',
+                summary: wt('im.k002', 'Последовательность'),
+                badges: [
+                    { tag: '@SEQUENCE', desc: wt('im.k008', 'Тип задания') },
+                    { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
+                    { tag: 'element_N:', desc: wt('im.cheat_tag_element', 'Шаг цепи') },
+                ],
+                example: wt('im.cheat_example_seq', '@SEQUENCE\n# Базовая сердечно-легочная реанимация\nelement_1: Оценить безопасность места происшествия\nelement_2: Проверить сознание и дыхание пострадавшего\nelement_3: Вызвать скорую медицинскую помощь\nelement_4: Начать 30 компрессий грудной клетки\nelement_5: Выполнить 2 искусственных вдоха'),
+            },
+            click_text: {
+                key: 'click_text',
+                label: wt('im.cheat_tab_click_text', 'Выбор'),
+                typeTag: '@CLICK_TEXT',
+                summary: wt('im.k004', 'Клик/Ошибки (текстовый выбор)'),
+                badges: [
+                    { tag: '@CLICK_TEXT', desc: wt('im.k008', 'Тип задания') },
+                    { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
+                    { tag: '?', desc: wt('im.cheat_tag_question', 'Вопрос') },
+                    { tag: '+', desc: wt('im.cheat_tag_correct', 'Верный ответ') },
+                    { tag: '-', desc: wt('im.cheat_tag_incorrect', 'Неверный ответ') },
+                ],
+                example: wt('im.cheat_example_click_text', '@CLICK_TEXT\n# Нормы электрокардиограммы\n? Выберите верные утверждения относительно зубца P:\n+ Зубец P в норме положителен во II стандартном отведении\n+ Длительность зубца P в норме не превышает 0.10 сек\n- Зубец P в норме положителен в отведении aVR\n- Амплитуда зубца P в норме превышает 3.5 мм'),
+            },
+            click_words: {
+                key: 'click_words',
+                label: wt('im.cheat_tab_click_words', 'Ошибки'),
+                typeTag: '@CLICK_WORDS',
+                summary: wt('im.k005', 'Клик/Ошибки (поиск ошибок в тексте)'),
+                badges: [
+                    { tag: '@CLICK_WORDS', desc: wt('im.k008', 'Тип задания') },
+                    { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
+                    { tag: '?', desc: wt('im.cheat_tag_question', 'Вопрос') },
+                    { tag: wt('im.cheat_tag_word_token_ok', '[слово]{correct}'), desc: wt('im.cheat_tag_word_ok', 'Верное слово') },
+                    { tag: wt('im.cheat_tag_word_token_err', '[слово]{error:исправление}'), desc: wt('im.cheat_tag_word_err', 'Ошибка и правка') },
+                ],
+                example: wt('im.cheat_example_click_words', '@CLICK_WORDS\n# Ошибки в описании рентгенограммы\n? Найдите ошибки в следующем клиническом заключении:\nЛегочные поля [пневматизированы]{correct}, очаговых теней [не выявлено]{correct}. Корни легких [малоструктурны]{error:структурны}, синусы [затемнены]{error:свободны}. Сердце [не расширено]{correct}.'),
+            },
+        };
+        return sheets[tab] || sheets.test;
+    }
+
+    setCheatSheetTab(tabKey) {
+        this.cheatSheetTab = tabKey;
+        this.renderCurrentStep();
+    }
+
+    insertCheatSheetExample(tabKey) {
+        const data = this.getCheatSheetData(tabKey);
+        if (!data?.example) return;
+        const textArea = document.getElementById('import-text-area');
+        const current = (this.sourceText || '').trim();
+        this.sourceText = current.length > 0 ? current + '\n\n' + data.example : data.example;
+        if (textArea) {
+            textArea.value = this.sourceText;
+        }
+        this._updateLiveCounter(this.sourceText);
+        this.updateFooterStatus();
+        this.renderCurrentStep();
+        this.showToast(wt('im.cheat_example_inserted', 'Пример успешно вставлен в поле редактора'), 'success');
+    }
+
+    clearImportText() {
+        const textArea = document.getElementById('import-text-area');
+        this.sourceText = '';
+        if (textArea) textArea.value = '';
+        this.parsedResult = null;
+        this._updateLiveCounter('');
+        this.updateFooterStatus();
+        this.renderCurrentStep();
     }
 
     getAIAgentTemplateKeyForTaskType(taskType) {
@@ -3289,19 +3865,22 @@ ${remaining}
             `;
         }
 
-        const summary = this.parsedResult.summary || {};
         const tasks = this.parsedResult.tasks || [];
-        const selectedCount = this.selectedTasks.size;
         const notes = Array.isArray(this.parsedResult.notes)
             ? this.parsedResult.notes.filter(note => typeof note === 'string' && note.trim())
             : [];
 
         return `
-            <div class="animate-slide-up-fade">
-                <h3 class="text-lg font-bold text-text-main mb-4">${wt('im.k662', 'Просмотр распарсенных заданий')}</h3>
+            <div class="animate-slide-up-fade space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">${wt('im.k662', 'Просмотр распарсенных заданий')}</h3>
+                        <p class="text-xs text-text-secondary mt-0.5">${wt('im.step3_subtitle_text', 'Проверьте распознанные задачи, отредактируйте заголовки или исключите лишние.')}</p>
+                    </div>
+                </div>
 
                 ${notes.length ? `
-                    <div class="mb-4 p-3 bg-info-lighter border border-info-light rounded-lg">
+                    <div class="p-3 bg-info-lighter border border-info-light rounded-xl">
                         <div class="flex items-start gap-2">
                             <span class="material-symbols-outlined text-info text-[18px]">info</span>
                             <div class="text-xs text-info-text space-y-1">
@@ -3310,87 +3889,39 @@ ${remaining}
                         </div>
                     </div>
                 ` : ''}
-                
-                <!-- Summary -->
-                <div class="mb-6 p-4 bg-surface-2 rounded-lg">
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-text-main">${summary.total || 0}</div>
-                            <div class="text-xs text-text-secondary">${wt('im.k905', 'Всего')}</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-success-text">${summary.valid || 0}</div>
-                            <div class="text-xs text-text-secondary">✓ ${wt('im.k906', 'Готовы')}</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-warning-text">${summary.warnings || 0}</div>
-                            <div class="text-xs text-text-secondary">⚠ ${wt('im.k887', 'Предупреждения')}</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-error-text">${summary.errors || 0}</div>
-                            <div class="text-xs text-text-secondary">✗ ${wt('im.k845', 'Ошибки')}</div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Settings Panel -->
-                <div class="mb-4 p-4 bg-surface-1 border border-border-subtle rounded-lg shadow-sm">
-                    <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k663', 'Настройки импорта')}</h4>
-                    <div class="grid grid-cols-2 gap-4">
+                <div class="p-3.5 bg-surface-1 border border-border-subtle rounded-xl shadow-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                         <div>
                             <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
-                            <select id="conflict-resolution-select" class="block w-full rounded border-border-normal text-sm py-1.5 focus:ring-primary">
-                                <option value="skip">${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
-                                <option value="overwrite">${wt('im.k911', 'Перезаписать')}</option>
-                                <option value="new_id">${wt('im.k912', 'Создать копию (новый ID)')}</option>
+                            <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 px-2.5 focus:ring-1 focus:ring-primary">
+                                <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
+                                <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
+                                <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
                             </select>
                         </div>
-                        <div class="flex items-center">
-                            <label class="flex items-center gap-2 cursor-pointer mt-4">
-                                <input type="checkbox" id="skip-errors-checkbox" checked class="rounded text-primary focus:ring-primary w-4 h-4">
-                                <span class="text-sm text-text-secondary">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
+                        <div class="sm:pt-5">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" id="skip-errors-checkbox" ${this.skipErrors ? 'checked' : ''} class="rounded text-primary focus:ring-primary w-4 h-4">
+                                <span class="text-xs text-text-secondary font-medium">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bulk Actions -->
-                <div class="mb-4 p-3 bg-primary-lighter border border-primary-light rounded-lg flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex flex-wrap items-center gap-3 min-w-0">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                id="select-all-tasks"
-                                onchange="dashboard.importManager.toggleSelectAll()"
-                                class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary"
-                                ${this.selectedTasks.size === tasks.length && tasks.length > 0 ? 'checked' : ''}>
-                            <span class="text-sm font-medium text-text-secondary">${wt('im.k737', 'Выбрать все')}</span>
-                        </label>
-                        ${selectedCount > 0 ? `
-                            <span class="text-xs text-text-muted px-2 py-1 bg-surface-1 rounded border border-border-subtle">
-                                ${wt('im.k664', 'Выбрано:')} ${selectedCount}
-                            </span>
-                        ` : ''}
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button 
-                            onclick="dashboard.importManager.bulkExclude()"
-                            class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            ${selectedCount === 0 ? 'disabled' : ''}>
-                            ${wt('im.k132', 'Исключить выбранные')}
-                        </button>
-                        <button 
-                            onclick="dashboard.importManager.bulkInclude()"
-                            class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            ${selectedCount === 0 ? 'disabled' : ''}>
-                            ${wt('im.k133', 'Включить выбранные')}
-                        </button>
-                    </div>
-                </div>
+                <!-- Triage Filter Strip -->
+                ${this.renderPreviewFilterStrip(tasks)}
+
+                <!-- Bulk Actions Toolbar -->
+                ${this.renderPreviewToolbar(tasks)}
 
                 <!-- Tasks List -->
-                <div class="space-y-3">
+                <div id="preview-tasks-list" class="space-y-3">
                     ${tasks.map((task, i) => this.renderTaskCard(task, i)).join('')}
+                </div>
+                <div id="preview-empty-filtered-notice" class="hidden rounded-xl border border-dashed border-border-subtle bg-surface-2 p-8 text-center text-sm text-text-secondary">
+                    ${wt('im.filter_no_results', 'Нет заданий, соответствующих выбранному фильтру.')}
                 </div>
             </div>
         `;
@@ -3518,130 +4049,424 @@ ${remaining}
         `;
     }
 
-    renderArchiveTaskCard(task, index) {
-        const meta = this.getArchiveTaskPreviewStatusMeta(task);
-        const taskName = String(task.name || task.id || `${wt('im.k665', 'Задание')} ${index + 1}`);
-        const taskId = String(task.id || '');
-        const taskType = String(task.type || 'unknown');
-        
-        const rawModule = task.target_module || this.selectedModule || '';
-        const targetModule = this.resolveDisplayName(rawModule, 'module') || wt('im.k144', 'из архива');
-        
-        const rawTopic = task.target_topic || this.selectedTopic || '';
-        const targetTopic = this.resolveDisplayName(rawTopic, 'topic', rawModule) || wt('im.k145', 'из архива');
+    renderPreviewFilterStrip(tasks = []) {
+        const total = tasks.length;
+        let validCount = 0;
+        let warningCount = 0;
+        let errorCount = 0;
+        let conflictCount = 0;
+        let excludedCount = 0;
 
-        const warnings = Array.isArray(task.warnings) ? task.warnings.filter(Boolean) : [];
-        const diffKeys = Array.isArray(task.diff_keys) ? task.diff_keys.filter(Boolean) : [];
-        const existingPath = String(task.existing_path || '').trim();
-        const isSelected = this.selectedTasks.has(index);
-        const isExcluded = this.excludedTasks.has(index);
+        tasks.forEach((t, i) => {
+            if (this.excludedTasks.has(i)) {
+                excludedCount++;
+                return;
+            }
+            const st = this.getArchiveTaskPreviewStatus(t);
+            if (st === 'error') errorCount++;
+            else if (st === 'conflict') conflictCount++;
+            else if (st === 'warning') warningCount++;
+            else validCount++;
+        });
+
+        const activeStatus = this.previewFilterStatus || 'all';
+
+        const typesSet = new Set();
+        tasks.forEach(t => {
+            if (t?.type) typesSet.add(t.type);
+        });
 
         return `
-            <div data-role="archive-import-task-card" class="rounded-xl border ${meta.cardClass} overflow-hidden transition-all hover:shadow-md ${isExcluded ? 'opacity-60' : ''}">
-                <div class="p-4 border-b border-border-subtle">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-start gap-3 min-w-0 flex-1">
-                            <input
-                                type="checkbox"
-                                class="mt-1 w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary flex-shrink-0"
-                                data-task-checkbox="${index}"
-                                onchange="dashboard.importManager.toggleTaskSelection(${index})"
-                                ${isSelected ? 'checked' : ''}>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="text-xs font-bold text-text-muted">#${index + 1}</span>
-                                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">${this.escapeHtml(taskType)}</span>
-                                    ${isExcluded ? `<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">${wt('im.k914', 'исключено')}</span>` : ''}
-                                </div>
-                                <div class="mt-2 text-base font-bold text-text-main break-words">${this.escapeHtml(taskName)}</div>
-                                <div class="text-[11px] font-mono text-text-secondary break-all mt-1">${this.escapeHtml(taskId)}</div>
-                            </div>
-                        </div>
-                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${meta.badgeClass}">
-                            <span class="material-symbols-outlined text-[14px]">${meta.icon}</span>
-                            <span>${this.escapeHtml(meta.label)}</span>
-                        </span>
-                    </div>
-                    <p class="text-xs text-text-secondary mt-3">${this.escapeHtml(meta.hint)}</p>
-                </div>
-
-                <div class="p-4 bg-surface-1 space-y-3">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 min-w-0">
-                            <div class="text-text-muted uppercase tracking-wide">${wt('im.k768', 'Модуль')}</div>
-                            <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(targetModule)}</div>
-                        </div>
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 min-w-0">
-                            <div class="text-text-muted uppercase tracking-wide">${wt('im.k769', 'Тема')}</div>
-                            <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(targetTopic)}</div>
-                        </div>
-                    </div>
-
-                    ${existingPath ? `
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-xs">
-                            <div class="text-text-muted uppercase tracking-wide">${wt('im.k917', 'Текущий путь')}</div>
-                            <div class="mt-1 font-mono text-text-main break-all">${this.escapeHtml(existingPath)}</div>
-                        </div>
+            <div id="preview-filter-chips-strip" data-role="preview-filter-chips-strip" class="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface-1 border border-border-subtle rounded-xl shadow-xs">
+                <!-- Status Chips -->
+                <div class="flex flex-wrap items-center gap-2" data-role="preview-status-chips">
+                    <button type="button" 
+                        onclick="dashboard.importManager.setPreviewStatusFilter('all')"
+                        class="preview-filter-chip ${activeStatus === 'all' ? 'is-active' : ''}"
+                        data-filter="all">
+                        <span>${wt('im.filter_all', 'Все')}</span>
+                        <span class="opacity-75">(${total})</span>
+                    </button>
+                    <button type="button" 
+                        onclick="dashboard.importManager.setPreviewStatusFilter('valid')"
+                        class="preview-filter-chip ${activeStatus === 'valid' ? 'is-active' : ''}"
+                        data-filter="valid">
+                        <span>${wt('im.filter_ready', 'Готовы')}</span>
+                        <span class="opacity-75">(${validCount})</span>
+                    </button>
+                    ${warningCount > 0 ? `
+                    <button type="button" 
+                        onclick="dashboard.importManager.setPreviewStatusFilter('warning')"
+                        class="preview-filter-chip ${activeStatus === 'warning' ? 'is-active' : ''}"
+                        data-filter="warning">
+                        <span>${wt('im.filter_warnings', 'Предупреждения')}</span>
+                        <span class="opacity-75">(${warningCount})</span>
+                    </button>
                     ` : ''}
-
-                    ${diffKeys.length ? `
-                        <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
-                            <div class="font-semibold">${wt('im.k918', 'Изменённые ключи')}</div>
-                            <div class="mt-1 break-words">${this.escapeHtml(diffKeys.join(', '))}</div>
-                        </div>
+                    ${conflictCount > 0 ? `
+                    <button type="button" 
+                        onclick="dashboard.importManager.setPreviewStatusFilter('conflict')"
+                        class="preview-filter-chip ${activeStatus === 'conflict' ? 'is-active' : ''}"
+                        data-filter="conflict">
+                        <span>${wt('im.filter_conflicts', 'Конфликты')}</span>
+                        <span class="opacity-75">(${conflictCount})</span>
+                    </button>
                     ` : ''}
-
-                    ${warnings.length ? `
-                        <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
-                            <div class="font-semibold">${wt('im.k887', 'Предупреждения')}</div>
-                            <div class="mt-1 space-y-1">
-                                ${warnings.slice(0, 3).map((warning) => `<div>${this.escapeHtml(warning)}</div>`).join('')}
-                            </div>
-                        </div>
+                    ${errorCount > 0 ? `
+                    <button type="button" 
+                        onclick="dashboard.importManager.setPreviewStatusFilter('error')"
+                        class="preview-filter-chip ${activeStatus === 'error' ? 'is-active' : ''}"
+                        data-filter="error">
+                        <span>${wt('im.filter_errors', 'Ошибки')}</span>
+                        <span class="opacity-75">(${errorCount})</span>
+                    </button>
                     ` : ''}
-
-                    ${task.status === 'error' && task.error ? `
-                        <div class="rounded-lg border border-error-light bg-error-lighter px-3 py-2 text-xs text-error-text">
-                            <div class="font-semibold">${wt('im.k845', 'Ошибка')}</div>
-                            <div class="mt-1 break-words">${this.escapeHtml(task.error)}</div>
-                        </div>
+                    ${excludedCount > 0 ? `
+                    <button type="button" 
+                        onclick="dashboard.importManager.setPreviewStatusFilter('excluded')"
+                        class="preview-filter-chip ${activeStatus === 'excluded' ? 'is-active' : ''}"
+                        data-filter="excluded">
+                        <span>${wt('im.filter_excluded', 'Исключенные')}</span>
+                        <span class="opacity-75">(${excludedCount})</span>
+                    </button>
                     ` : ''}
                 </div>
 
-                ${task.status === 'conflict' ? `
-                    <div class="px-4 py-3 border-t border-border-subtle bg-warning-lighter">
-                        <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k919', 'Действие при конфликте:')}</label>
-                        <select
-                            onchange="dashboard.importManager.setPerTaskConflict(${index}, this.value)"
-                            class="block w-full rounded border-border-normal text-xs py-1.5 focus:ring-primary bg-surface-1">
-                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>${wt('im.k920', 'Как в общих настройках')}</option>
-                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>${wt('im.k921', 'Пропустить')}</option>
-                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
-                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
-                        </select>
-                    </div>
+                <!-- Type Selector if multiple types exist -->
+                ${typesSet.size > 1 ? `
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-text-secondary">${wt('im.k008', 'Тип задания')}:</span>
+                    <select 
+                        onchange="dashboard.importManager.setPreviewTypeFilter(this.value)"
+                        class="rounded-lg border border-border-subtle bg-surface-2 text-xs py-1 px-2 text-text-main focus:ring-1 focus:ring-primary">
+                        <option value="all" ${this.previewFilterType === 'all' ? 'selected' : ''}>${wt('im.filter_all', 'Все')}</option>
+                        ${Array.from(typesSet).map(type => `
+                            <option value="${this.escapeHtmlAttr(type)}" ${this.previewFilterType === type ? 'selected' : ''}>
+                                ${this.escapeHtml(this.getTaskTypeLabel(type))}
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
                 ` : ''}
+            </div>
+        `;
+    }
 
-                <div class="p-3 bg-surface-1 border-t border-border-subtle flex gap-2">
-                    <button
-                        onclick="dashboard.importManager.toggleExclude(${index})"
-                        class="flex-1 px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-hover hover:text-text-main rounded transition-colors border border-border-subtle"
-                        data-task-exclude-btn="${index}">
-                        ${isExcluded ? wt('im.k666', 'Включить') : wt('im.k667', 'Исключить')}
+    renderPreviewToolbar(tasks = []) {
+        const selectedCount = this.selectedTasks.size;
+        const selectableCount = tasks.filter((_, i) => !this.excludedTasks.has(i)).length;
+        const isAllSelected = selectableCount > 0 && selectedCount >= selectableCount;
+
+        return `
+            <div id="preview-bulk-actions-bar" data-role="preview-bulk-actions-bar" class="p-3 bg-surface-1 border border-border-subtle rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                <div class="flex flex-wrap items-center gap-3 min-w-0">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input 
+                            type="checkbox" 
+                            id="select-all-tasks"
+                            onchange="dashboard.importManager.toggleSelectAll()"
+                            class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary cursor-pointer"
+                            ${isAllSelected ? 'checked' : ''}>
+                        <span class="text-xs font-semibold text-text-secondary">${wt('im.select_all', 'Выбрать все')}</span>
+                    </label>
+                    <span id="preview-selected-counter" class="text-xs text-text-muted px-2.5 py-0.5 bg-surface-2 rounded-full border border-border-subtle ${selectedCount > 0 ? '' : 'hidden'}">
+                        ${wt('im.selected_count', 'Выбрано: {count}').replace('{count}', selectedCount)}
+                    </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button 
+                        type="button"
+                        onclick="dashboard.importManager.bulkExclude()"
+                        data-role="bulk-exclude-btn"
+                        class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        ${selectedCount === 0 ? 'disabled' : ''}>
+                        ${wt('im.bulk_exclude', 'Исключить выбранные')}
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="dashboard.importManager.bulkInclude()"
+                        data-role="bulk-include-btn"
+                        class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        ${selectedCount === 0 ? 'disabled' : ''}>
+                        ${wt('im.bulk_include', 'Включить выбранные')}
                     </button>
                 </div>
             </div>
         `;
     }
 
-    renderLimitWarningHtml() {
-        const limits = this.parsedResult?.workspace_limits;
-        if (!limits || limits.plan === 'premium') return '';
+    getTaskTypeLabel(type) {
+        const labels = {
+            'open_answer': wt('im.k167', 'Открытый ответ'),
+            'sequence_assembly': wt('im.k168', 'Последовательность'),
+            'click': wt('im.k169', 'Клик'),
+            'test': wt('im.k170', 'Тест')
+        };
+        return labels[type] || type;
+    }
 
-        const remainingTasks = limits.tasks?.remaining_personal ?? 0;
+    renderTaskStatusBadge(task = {}, index = 0, isExcluded = false) {
+        if (isExcluded) {
+            return `
+                <span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1 text-xs font-semibold text-text-disabled">
+                    <span class="material-symbols-outlined text-[14px]">block</span>
+                    <span>${wt('im.status_excluded', 'Исключено')}</span>
+                </span>
+            `;
+        }
+
+        const st = this.getArchiveTaskPreviewStatus(task);
+        if (st === 'error') {
+            return `
+                <span class="inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2.5 py-1 text-xs font-semibold text-error-text">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    <span>${wt('im.status_error', '✗ Ошибка')}</span>
+                </span>
+            `;
+        }
+        if (st === 'conflict') {
+            const isDup = String(task.conflict_type || '').toLowerCase() === 'duplicate';
+            const label = isDup ? wt('im.status_duplicate', 'Дубликат') : wt('im.status_conflict', '⚡ Конфликт');
+            return `
+                <span class="inline-flex items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-2.5 py-1 text-xs font-semibold text-warning-text">
+                    <span class="material-symbols-outlined text-[14px]">${isDup ? 'content_copy' : 'bolt'}</span>
+                    <span>${label}</span>
+                </span>
+            `;
+        }
+        if (st === 'warning') {
+            return `
+                <span class="inline-flex items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-2.5 py-1 text-xs font-semibold text-warning-text">
+                    <span class="material-symbols-outlined text-[14px]">warning</span>
+                    <span>${wt('im.status_warning', '⚠ Требует внимания')}</span>
+                </span>
+            `;
+        }
+        return `
+            <span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2.5 py-1 text-xs font-semibold text-success-darker">
+                <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                <span>${wt('im.status_ready', '✓ Готово')}</span>
+            </span>
+        `;
+    }
+
+    renderUnifiedTaskCard(task, index, isArchive = false) {
+        const isExcluded = this.excludedTasks.has(index);
+        const isSelected = this.selectedTasks.has(index);
+        const status = this.getArchiveTaskPreviewStatus(task);
+        const taskType = String(task.type || 'open_answer').toLowerCase();
+        const taskName = String(task.name || task.id || `${wt('im.k665', 'Задание')} ${index + 1}`);
+        const taskId = String(task.id || '');
+
+        const typeBadges = {
+            'open_answer': { icon: '📝', label: wt('im.k167', 'Открытый ответ'), color: 'bg-info-lighter text-info-dark' },
+            'sequence_assembly': { icon: '🔢', label: wt('im.k168', 'Последовательность'), color: 'bg-purple-100 text-purple-700' },
+            'click': { icon: '🎯', label: wt('im.k169', 'Клик'), color: 'bg-amber-100 text-amber-800' },
+            'test': { icon: '❓', label: wt('im.k170', 'Тест'), color: 'bg-emerald-100 text-emerald-800' }
+        };
+        const typeBadge = typeBadges[taskType] || { icon: '•', label: this.escapeHtml(taskType), color: 'bg-surface-2 text-text-secondary' };
+
+        const promptText = task.data?.prompt || task.prompt || '';
+        const warnings = Array.isArray(task.warnings) ? task.warnings.filter(Boolean) : [];
+        const diffKeys = Array.isArray(task.diff_keys) ? task.diff_keys.filter(Boolean) : [];
+        const existingPath = String(task.existing_path || '').trim();
+
+        // Target Module / Topic for archive
+        let targetContextHtml = '';
+        if (isArchive) {
+            const rawModule = task.target_module || this.selectedModule || '';
+            const targetModule = this.resolveDisplayName(rawModule, 'module') || wt('im.k144', 'из архива');
+            const rawTopic = task.target_topic || this.selectedTopic || '';
+            const targetTopic = this.resolveDisplayName(rawTopic, 'topic', rawModule) || wt('im.k145', 'из архива');
+            targetContextHtml = `
+                <span class="inline-flex items-center gap-1 text-[11px] text-text-secondary font-medium px-2 py-0.5 rounded-full bg-surface-2 truncate max-w-[220px]" title="${this.escapeHtmlAttr(`${targetModule} / ${targetTopic}`)}">
+                    <span class="material-symbols-outlined text-[13px] shrink-0">folder</span>
+                    <span class="truncate">${this.escapeHtml(targetModule)} / ${this.escapeHtml(targetTopic)}</span>
+                </span>
+            `;
+        }
+
+        // Type metadata for non-archive or when data is available
+        const typeMetadata = this.getTaskTypeMetadata(task);
+
+        return `
+            <div data-role="archive-import-task-card"
+                 data-task-card="${index}"
+                 data-task-status="${status}"
+                 data-task-type="${this.escapeHtmlAttr(taskType)}"
+                 data-is-excluded="${isExcluded ? '1' : '0'}"
+                 class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-xs transition-all hover:shadow-md ${isExcluded ? 'task-card-excluded' : ''}">
+                
+                <!-- Card Header -->
+                <div class="flex items-start justify-between gap-3 mb-2.5">
+                    <div class="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                        <input
+                            type="checkbox"
+                            class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary shrink-0 cursor-pointer"
+                            data-task-checkbox="${index}"
+                            onchange="dashboard.importManager.toggleTaskSelection(${index})"
+                            ${isSelected ? 'checked' : ''}>
+                        <span class="text-xs font-bold text-text-muted shrink-0">#${index + 1}</span>
+                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${typeBadge.color}">
+                            <span>${typeBadge.icon}</span>
+                            <span>${typeBadge.label}</span>
+                        </span>
+                        ${targetContextHtml}
+                        ${taskId ? `<span class="text-[11px] font-mono text-text-muted truncate max-w-[150px]">${this.escapeHtml(taskId)}</span>` : ''}
+                    </div>
+                    <div class="task-card-status-badge shrink-0" data-status-badge="${index}">
+                        ${this.renderTaskStatusBadge(task, index, isExcluded)}
+                    </div>
+                </div>
+
+                <!-- Task Name with Inline Editing -->
+                <div class="task-title-row mb-2">
+                    <div class="task-title-view flex items-center gap-2" data-task-title-view="${index}">
+                        <h4 class="task-card-title font-bold text-text-main text-base break-words flex-1 cursor-pointer hover:text-primary transition-colors ${isExcluded ? 'line-through text-text-disabled' : ''}"
+                            title="${this.escapeHtmlAttr(taskName)}"
+                            onclick="dashboard.importManager.startEditName(${index})">
+                            ${this.escapeHtml(taskName)}
+                        </h4>
+                        <button type="button"
+                            data-task-edit-btn="${index}"
+                            onclick="dashboard.importManager.startEditName(${index})"
+                            class="shrink-0 p-1 rounded-lg text-text-disabled hover:text-text-main hover:bg-surface-2 transition-colors"
+                            title="${wt('im.edit_title_tooltip', 'Редактировать название задания')}">
+                            <span class="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                    </div>
+                    <div class="task-title-edit-wrap hidden" data-task-title-edit="${index}">
+                        <input type="text"
+                            class="task-title-input"
+                            data-role="task-title-edit-input"
+                            data-task-title-input="${index}"
+                            value="${this.escapeHtmlAttr(taskName)}"
+                            onkeydown="dashboard.importManager.handleEditNameKeydown(event, ${index})">
+                        <button type="button"
+                            onclick="dashboard.importManager.saveEditName(${index})"
+                            data-role="save-task-name"
+                            data-task-title-save="${index}"
+                            class="p-1.5 rounded-lg bg-success text-white hover:bg-success-dark transition-colors shrink-0"
+                            title="${wt('im.action_save', 'Сохранить')}">
+                            <span class="material-symbols-outlined text-[16px]">check</span>
+                        </button>
+                        <button type="button"
+                            onclick="dashboard.importManager.cancelEditName(${index})"
+                            data-role="cancel-task-name"
+                            data-task-title-cancel="${index}"
+                            class="p-1.5 rounded-lg bg-surface-2 text-text-secondary hover:bg-bg-hover transition-colors shrink-0"
+                            title="${wt('im.action_cancel', 'Отмена')}">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Prompt preview -->
+                ${promptText ? `<p class="text-xs text-text-secondary line-clamp-2 mb-2.5 leading-relaxed">${this.escapeHtml(promptText)}</p>` : ''}
+
+                <!-- Metadata Row -->
+                ${typeMetadata ? `
+                    <div class="py-2 px-3 bg-surface-2 rounded-lg text-xs grid grid-cols-2 gap-2 mb-2.5">
+                        ${typeMetadata}
+                    </div>
+                ` : ''}
+
+                <!-- Archive specific details -->
+                ${existingPath ? `
+                    <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-1.5 text-xs mb-2">
+                        <div class="text-[10px] text-text-muted uppercase tracking-wider">${wt('im.k917', 'Текущий путь')}</div>
+                        <div class="font-mono text-text-main break-all mt-0.5">${this.escapeHtml(existingPath)}</div>
+                    </div>
+                ` : ''}
+
+                ${diffKeys.length ? `
+                    <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-1.5 text-xs text-warning-text mb-2">
+                        <div class="font-semibold">${wt('im.k918', 'Изменённые ключи')}:</div>
+                        <div class="mt-0.5 break-words">${this.escapeHtml(diffKeys.join(', '))}</div>
+                    </div>
+                ` : ''}
+
+                ${warnings.length ? `
+                    <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-1.5 text-xs text-warning-text mb-2">
+                        <div class="font-semibold">${wt('im.k887', 'Предупреждения')}</div>
+                        <div class="mt-0.5 space-y-0.5">
+                            ${warnings.map(w => `<div>${this.escapeHtml(w)}</div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${status === 'error' && task.error ? `
+                    <div class="rounded-lg border border-error-light bg-error-lighter px-3 py-1.5 text-xs text-error-text mb-2">
+                        <div class="font-semibold">${wt('im.k845', 'Ошибка')}</div>
+                        <div class="mt-0.5 break-words">${this.escapeHtml(task.error)}</div>
+                    </div>
+                ` : ''}
+
+                <!-- Validation Issues -->
+                ${task.validation?.issues?.length > 0 ? `
+                    <div class="rounded-lg border border-warning-light bg-warning-lighter/60 p-2.5 text-xs mb-2 space-y-1">
+                        ${task.validation.issues.slice(0, 3).map(issue => `
+                            <div class="flex items-start gap-1.5">
+                                <span class="font-bold ${issue.severity === 'error' ? 'text-error-text' : 'text-warning-text'}">
+                                    ${issue.severity === 'error' ? '✗' : '⚠'}
+                                </span>
+                                <span class="${issue.severity === 'error' ? 'text-error-text' : 'text-warning-text'}">
+                                    ${this.escapeHtml(issue.message)}
+                                </span>
+                            </div>
+                        `).join('')}
+                        ${task.validation.issues.length > 3 ? `
+                            <div class="text-[11px] text-text-muted">+${task.validation.issues.length - 3} ${wt('im.k172', 'ещё...')}</div>
+                        ` : ''}
+                    </div>
+                ` : ''}
+
+                <!-- Conflict Resolution Override -->
+                ${status === 'conflict' ? `
+                    <div class="p-2.5 rounded-lg border border-warning-light bg-warning-lighter/50 mb-2">
+                        <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k772', 'Действие при конфликте:')}</label>
+                        <select 
+                            onchange="dashboard.importManager.setPerTaskConflict(${index}, this.value)"
+                            class="block w-full rounded-md border border-border-normal bg-surface-1 text-xs py-1 px-2 focus:ring-1 focus:ring-primary">
+                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>${wt('im.k773', 'Как в общих настройках')}</option>
+                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>${wt('im.k774', 'Пропустить')}</option>
+                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>${wt('im.k761', 'Перезаписать')}</option>
+                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>${wt('im.k762', 'Создать копию (новый ID)')}</option>
+                        </select>
+                    </div>
+                ` : ''}
+
+                <!-- Card Actions -->
+                <div class="pt-2 mt-2 flex items-center justify-between gap-3">
+                    <button type="button"
+                        onclick="dashboard.importManager.showTaskDetails(${index})"
+                        class="px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-main bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors border border-border-subtle inline-flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px]">visibility</span>
+                        <span>${wt('im.k173', 'Детали')}</span>
+                    </button>
+                    <button type="button"
+                        onclick="dashboard.importManager.toggleExclude(${index})"
+                        data-task-exclude-btn="${index}"
+                        class="px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all border ${isExcluded ? 'bg-primary text-primary-contrast border-primary hover:bg-primary-dark shadow-xs' : 'bg-surface-2 text-text-secondary border-border-subtle hover:bg-bg-hover hover:text-text-main'}">
+                        ${isExcluded ? wt('im.action_include', 'Включить') : wt('im.action_exclude', 'Исключить')}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderArchiveTaskCard(task, index) {
+        return this.renderUnifiedTaskCard(task, index, true);
+    }
+
+    renderLimitWarningHtml() {
+        const limits = this.getWorkspaceLimits();
+        if (!limits || limits.plan === 'premium' || limits.unlimited === true) return '';
+
+        const remainingTasks = limits.tasks?.remaining_personal ?? Infinity;
         const importableTasksCount = this.getPreviewImportableTasks().length;
 
-        if (importableTasksCount > remainingTasks) {
+        if (Number.isFinite(remainingTasks) && importableTasksCount > remainingTasks) {
             return `
                 <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text animate-slide-up-fade">
                     <div class="font-semibold">${wt('im.limit_exceeded_title', 'Недостаточно свободных слотов для импорта')}</div>
@@ -3666,7 +4491,6 @@ ${remaining}
             `;
         }
 
-        const summary = this.parsedResult.summary || {};
         const tasks = Array.isArray(this.parsedResult.tasks) ? this.parsedResult.tasks : [];
         const warnings = Array.isArray(this.parsedResult.warnings)
             ? this.parsedResult.warnings.filter((item) => typeof item === 'string' && item.trim())
@@ -3675,8 +4499,6 @@ ${remaining}
         const duplicates = Array.isArray(this.parsedResult.conflicts?.duplicates) ? this.parsedResult.conflicts.duplicates : [];
         const overwrites = Array.isArray(this.parsedResult.conflicts?.overwrites) ? this.parsedResult.conflicts.overwrites : [];
         const brokenDeps = Array.isArray(this.parsedResult.conflicts?.broken_deps) ? this.parsedResult.conflicts.broken_deps : [];
-        const selectedCount = this.selectedTasks.size;
-        const taskWarningsCount = tasks.filter((task) => Array.isArray(task?.warnings) && task.warnings.length > 0).length;
         const overrideMode = this.selectedModule || this.selectedTopic;
         const overrideLabel = overrideMode
             ? `${this.selectedModuleName || this.selectedModule || wt('im.k146', 'Модуль не задан')} / ${this.selectedTopicName || this.selectedTopic || wt('im.k147', 'Тема из архива')}`
@@ -3684,12 +4506,16 @@ ${remaining}
         const archiveVersion = String(this.parsedResult.archive_version || '').trim();
         const blockedTasksCount = this.getPreviewBlockedTaskCount();
         const importableTasksCount = this.getPreviewImportableTasks().length;
+        const totalIssuesCount = duplicates.length + overwrites.length + brokenDeps.length + errors.length + warnings.length;
 
         return `
-            <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-5">
-                <div>
-                    <h3 class="text-lg font-bold text-text-main">${wt('im.k668', 'Предпросмотр архива')}</h3>
-                    <p class="text-sm text-text-secondary mt-1">${wt('im.k923', 'Проверьте состав пакета, конфликты и правила импорта до применения изменений.')}</p>
+            <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">${wt('im.k668', 'Предпросмотр архива')}</h3>
+                        <p class="text-xs text-text-secondary mt-0.5">${wt('im.k923', 'Проверьте состав пакета, конфликты и правила импорта до применения изменений.')}</p>
+                    </div>
+                    ${archiveVersion ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1 text-xs font-semibold text-text-secondary">Archive v${this.escapeHtml(archiveVersion)}</span>` : ''}
                 </div>
 
                 ${this.parsedResult.critical_error ? `
@@ -3703,156 +4529,109 @@ ${remaining}
                     ${this.renderLimitWarningHtml()}
                 </div>
 
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-text-secondary">${wt('im.k905', 'Всего')}</div>
-                        <div class="mt-1 text-2xl font-bold text-text-main">${summary.total || 0}</div>
+                <!-- Context and Settings Panel -->
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-3.5 shadow-xs space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 min-w-0">
+                            <div class="text-[10px] text-text-muted uppercase tracking-wider">Target override</div>
+                            <div class="mt-0.5 font-semibold text-text-main break-words">${this.escapeHtml(overrideLabel)}</div>
+                        </div>
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 min-w-0">
+                            <div class="text-[10px] text-text-muted uppercase tracking-wider">${wt('im.k929', 'Политика ошибок')}</div>
+                            <div class="mt-0.5 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `${wt('im.k986', 'Ручных исключений:')} ${this.excludedTasks.size}` : wt('im.k149', 'Исключений вручную пока нет.')}</div>
+                        </div>
                     </div>
-                    <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-success-darker">${wt('im.k925', 'Готово')}</div>
-                        <div class="mt-1 text-2xl font-bold text-success-darker">${summary.valid || 0}</div>
-                    </div>
-                    <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-warning-text">${wt('im.k926', 'Конфликты')}</div>
-                        <div class="mt-1 text-2xl font-bold text-warning-text">${summary.conflicts || 0}</div>
-                    </div>
-                    <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-error-text">${wt('im.k927', 'Ошибки')}</div>
-                        <div class="mt-1 text-2xl font-bold text-error-text">${summary.errors || 0}</div>
-                    </div>
-                    <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
-                        <div class="text-xs uppercase tracking-wide text-warning-text">Warnings</div>
-                        <div class="mt-1 text-2xl font-bold text-warning-text">${warnings.length + taskWarningsCount}</div>
-                    </div>
-                </div>
 
-                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm space-y-3">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h4 class="text-sm font-bold text-text-main">${wt('im.k669', 'Контекст импорта')}</h4>
-                            <p class="text-xs text-text-secondary mt-1">${wt('im.k928', 'Override применяется только если вы задали модуль или тему вручную.')}</p>
-                        </div>
-                        ${archiveVersion ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary">Archive v${this.escapeHtml(archiveVersion)}</span>` : ''}
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
-                            <div class="text-xs uppercase tracking-wide text-text-secondary">Target override</div>
-                            <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(overrideLabel)}</div>
-                        </div>
-                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
-                            <div class="text-xs uppercase tracking-wide text-text-secondary">${wt('im.k929', 'Политика ошибок')}</div>
-                            <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `${wt('im.k986', 'Ручных исключений:')} ${this.excludedTasks.size}` : wt('im.k149', 'Исключений вручную пока нет.')}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
-                    <h4 class="text-sm font-bold text-text-main mb-3">${wt('im.k663', 'Настройки импорта')}</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="pt-2 border-t border-border-subtle grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                         <div>
                             <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
-                            <select id="conflict-resolution-select" class="block w-full rounded border-border-normal text-sm py-1.5 focus:ring-primary">
-                                <option value="skip">${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
-                                <option value="overwrite">${wt('im.k911', 'Перезаписать')}</option>
-                                <option value="new_id">${wt('im.k912', 'Создать копию (новый ID)')}</option>
+                            <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 px-2.5 focus:ring-1 focus:ring-primary">
+                                <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
+                                <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
+                                <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
                             </select>
                         </div>
-                        <div class="flex items-center">
-                            <label class="flex items-center gap-2 cursor-pointer mt-4">
-                                <input type="checkbox" id="skip-errors-checkbox" checked class="rounded text-primary focus:ring-primary w-4 h-4">
-                                <span class="text-sm text-text-secondary">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
+                        <div class="sm:pt-5">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" id="skip-errors-checkbox" ${this.skipErrors ? 'checked' : ''} class="rounded text-primary focus:ring-primary w-4 h-4">
+                                <span class="text-xs text-text-secondary font-medium">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
                             </label>
                         </div>
                     </div>
-                    <div class="mt-4 rounded-xl border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-text">
-                        <div class="font-semibold">${wt('im.k930', 'Импорт битых заданий заблокирован')}</div>
-                        <div class="mt-1">
-                            ${blockedTasksCount > 0
-                                ? `${wt('im.k670', 'Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано:')} ${blockedTasksCount}. ${wt('im.k671', 'К импорту доступно:')} ${importableTasksCount}.`
-                                : wt('im.k150', 'Если при проверке находятся задания со статусом «Ошибка», они не добавляются и остаются только в списке предпросмотра.')}
+
+                    ${blockedTasksCount > 0 ? `
+                        <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] shrink-0">info</span>
+                            <span>${wt('im.k670', 'Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано:')} <strong>${blockedTasksCount}</strong>. ${wt('im.k671', 'К импорту доступно:')} <strong>${importableTasksCount}</strong>.</span>
                         </div>
-                    </div>
+                    ` : ''}
                 </div>
 
-                <div class="grid gap-5 lg:grid-cols-2">
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="text-sm font-bold text-text-main mb-2">${wt('im.k672', 'Конфликты и ошибки')}</h4>
-                            ${this.renderArchivePreviewIssueList(
-                                [
-                                    ...duplicates.map((item) => ({
-                                        title: item.name || item.id || wt('im.k151', 'Дубликат'),
-                                        detail: wt('im.k152', 'Идентичная версия уже есть в библиотеке.'),
-                                    })),
-                                    ...overwrites.map((item) => ({
-                                        title: item.name || item.id || wt('im.k153', 'Конфликт'),
-                                        detail: `${wt('im.k673', 'Требует решения по конфликту')}${Array.isArray(item.diff_keys) && item.diff_keys.length ? `, diff: ${item.diff_keys.join(', ')}` : '.'}`,
-                                    })),
-                                    ...brokenDeps.map((item) => ({
-                                        title: item.name || item.id || wt('im.k154', 'Проблема зависимостей'),
-                                        detail: item.error || wt('im.k155', 'В архиве отсутствуют нужные ресурсы.'),
-                                    })),
-                                    ...errors.map((item) => ({
-                                        title: item.name || item.id || wt('im.k156', 'Ошибка'),
-                                        detail: item.error || wt('im.k157', 'Не удалось проверить задание.'),
-                                    })),
-                                ],
-                                wt('im.k158', 'Проверка не нашла критичных конфликтов.'),
-                                (item) => `
-                                    <div class="font-medium text-text-main">${this.escapeHtml(item.title || wt('im.k159', 'Элемент архива'))}</div>
-                                    <div class="text-xs text-text-secondary mt-1">${this.escapeHtml(item.detail || '')}</div>
-                                `,
-                                'archive-import-issues'
-                            )}
+                <!-- Issues & Warnings Collapsible Accordion (if any) -->
+                ${totalIssuesCount > 0 ? `
+                    <details class="rounded-xl border border-warning-light bg-warning-lighter/40 p-3.5 transition-all" open>
+                        <summary class="flex items-center justify-between cursor-pointer font-semibold text-xs text-warning-text select-none">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">warning</span>
+                                <span>${wt('im.archive_issues_title', 'Конфликты и предупреждения архива')} (${totalIssuesCount})</span>
+                            </span>
+                            <span class="text-xs text-text-secondary">${wt('im.archive_issues_show', 'Свернуть / Развернуть')}</span>
+                        </summary>
+                        <div class="mt-3 pt-3 border-t border-warning-light/40 space-y-3">
+                            <div>
+                                <h5 class="text-xs font-bold text-text-main mb-1.5">${wt('im.k672', 'Конфликты и ошибки')}</h5>
+                                ${this.renderArchivePreviewIssueList(
+                                    [
+                                        ...duplicates.map((item) => ({
+                                            title: item.name || item.id || wt('im.k151', 'Дубликат'),
+                                            detail: wt('im.k152', 'Идентичная версия уже есть в библиотеке.'),
+                                        })),
+                                        ...overwrites.map((item) => ({
+                                            title: item.name || item.id || wt('im.k153', 'Конфликт'),
+                                            detail: `${wt('im.k673', 'Требует решения по конфликту')}${Array.isArray(item.diff_keys) && item.diff_keys.length ? `, diff: ${item.diff_keys.join(', ')}` : '.'}`,
+                                        })),
+                                        ...brokenDeps.map((item) => ({
+                                            title: item.name || item.id || wt('im.k154', 'Проблема зависимостей'),
+                                            detail: item.error || wt('im.k155', 'В архиве отсутствуют нужные ресурсы.'),
+                                        })),
+                                        ...errors.map((item) => ({
+                                            title: item.name || item.id || wt('im.k156', 'Ошибка'),
+                                            detail: item.error || wt('im.k157', 'Не удалось проверить задание.'),
+                                        })),
+                                    ],
+                                    wt('im.k158', 'Проверка не нашла критичных конфликтов.'),
+                                    (item) => `
+                                        <div class="font-medium text-text-main">${this.escapeHtml(item.title || wt('im.k159', 'Элемент архива'))}</div>
+                                        <div class="text-xs text-text-secondary mt-0.5">${this.escapeHtml(item.detail || '')}</div>
+                                    `,
+                                    'archive-import-issues'
+                                )}
+                            </div>
+                            <div>
+                                <h5 class="text-xs font-bold text-text-main mb-1.5">${wt('im.k674', 'Предупреждения')}</h5>
+                                ${this.renderArchivePreviewIssueList(
+                                    warnings.map((warning) => ({ warning })),
+                                    wt('im.k160', 'Дополнительных предупреждений нет.'),
+                                    (item) => `<div class="text-xs text-text-main">${this.escapeHtml(item.warning || '')}</div>`,
+                                    'archive-import-warnings'
+                                )}
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-sm font-bold text-text-main mb-2">${wt('im.k674', 'Предупреждения')}</h4>
-                            ${this.renderArchivePreviewIssueList(
-                                warnings.map((warning) => ({ warning })),
-                                wt('im.k160', 'Дополнительных предупреждений нет.'),
-                                (item) => `<div class="text-sm text-text-main">${this.escapeHtml(item.warning || '')}</div>`,
-                                'archive-import-warnings'
-                            )}
-                        </div>
-                    </div>
+                    </details>
+                ` : ''}
 
-                    <div class="space-y-4">
-                        <div class="p-3 bg-primary-lighter border border-primary-light rounded-lg flex flex-wrap items-center justify-between gap-3">
-                            <div class="flex flex-wrap items-center gap-3 min-w-0">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        id="select-all-tasks"
-                                        onchange="dashboard.importManager.toggleSelectAll()"
-                                        class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary"
-                                        ${this.selectedTasks.size === tasks.length && tasks.length > 0 ? 'checked' : ''}>
-                                    <span class="text-sm font-medium text-text-secondary">${wt('im.k737', 'Выбрать все')}</span>
-                                </label>
-                                ${selectedCount > 0 ? `
-                                    <span class="text-xs text-text-muted px-2 py-1 bg-surface-1 rounded border border-border-subtle">
-                                        ${wt('im.k664', 'Выбрано:')} ${selectedCount}
-                                    </span>
-                                ` : ''}
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button
-                                    onclick="dashboard.importManager.bulkExclude()"
-                                    class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    ${selectedCount === 0 ? 'disabled' : ''}>
-                                    ${wt('im.k161', 'Исключить выбранные')}
-                                </button>
-                                <button
-                                    onclick="dashboard.importManager.bulkInclude()"
-                                    class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    ${selectedCount === 0 ? 'disabled' : ''}>
-                                    ${wt('im.k162', 'Включить выбранные')}
-                                </button>
-                            </div>
-                        </div>
-                        <div class="space-y-3">
-                            ${tasks.map((task, index) => this.renderArchiveTaskCard(task, index)).join('')}
-                        </div>
-                    </div>
+                <!-- Triage Filter Strip -->
+                ${this.renderPreviewFilterStrip(tasks)}
+
+                <!-- Bulk Actions Toolbar -->
+                ${this.renderPreviewToolbar(tasks)}
+
+                <!-- Full Width Tasks List (100% width, no 50/50 crowding) -->
+                <div id="preview-tasks-list" class="space-y-3 w-full">
+                    ${tasks.map((task, index) => this.renderArchiveTaskCard(task, index)).join('')}
+                </div>
+                <div id="preview-empty-filtered-notice" class="hidden rounded-xl border border-dashed border-border-subtle bg-surface-2 p-8 text-center text-sm text-text-secondary">
+                    ${wt('im.filter_no_results', 'Нет заданий, соответствующих выбранному фильтру.')}
                 </div>
             </div>
         `;
@@ -3867,14 +4646,21 @@ ${remaining}
         const excludedTasksCount = this.excludedTasks.size;
         const nothingToImport = validTasks.length === 0;
 
-        const limits = this.parsedResult?.workspace_limits;
+        const limits = this.getWorkspaceLimits();
         let limitExceeded = false;
-        let remainingTasks = 0;
-        if (limits && limits.plan !== 'premium') {
-            remainingTasks = limits.tasks?.remaining_personal ?? 0;
-            if (validTasks.length > remainingTasks) {
-                limitExceeded = true;
+        let remainingTasks = Infinity;
+        let isPlanUnlimited = false;
+        if (limits) {
+            if (limits.plan === 'premium' || limits.unlimited === true) {
+                isPlanUnlimited = true;
+            } else {
+                remainingTasks = limits.tasks?.remaining_personal ?? Infinity;
+                if (Number.isFinite(remainingTasks) && validTasks.length > remainingTasks) {
+                    limitExceeded = true;
+                }
             }
+        } else {
+            isPlanUnlimited = true;
         }
         const isBlocked = nothingToImport || limitExceeded;
 
@@ -3886,210 +4672,105 @@ ${remaining}
                 .replace('{remaining}', remainingTasks)
                 .replace('{required}', validTasks.length);
         } else {
-            description = `${wt('im.k793', 'Будет импортировано ')}${validTasks.length}${wt('im.k794', ' заданий')}`;
+            description = wt('im.step4_will_import', 'Будет импортировано: {count}')
+                .replace('{count}', this.formatTasksCount(validTasks.length));
         }
 
-        let boxText = '';
+        let statusBoxHeader = '';
+        let statusBoxText = '';
+        let statusBoxClasses = '';
         if (nothingToImport) {
-            boxText = wt('im.k164', 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.');
+            statusBoxHeader = wt('im.k798', 'Импорт отключён');
+            statusBoxText = wt('im.k164', 'Кнопка импорта отключена, потому что все задания либо содержат критические ошибки, либо исключены вручную.');
+            statusBoxClasses = 'border-error-light bg-error-lighter text-error-text';
         } else if (limitExceeded) {
-            boxText = wt('im.limit_exceeded_box', 'Кнопка импорта отключена, так как количество импортируемых заданий превышает доступный лимит свободных слотов. Пожалуйста, вернитесь на предыдущий шаг и исключите некоторые задания из списка импорта.');
+            statusBoxHeader = wt('im.limit_exceeded_title', 'Превышен лимит заданий');
+            statusBoxText = wt('im.limit_exceeded_box', 'Кнопка импорта отключена, так как количество импортируемых заданий превышает доступный лимит свободных слотов. Пожалуйста, вернитесь на предыдущий шаг и исключите некоторые задания из списка импорта.');
+            statusBoxClasses = 'border-error-light bg-error-lighter text-error-text';
+        } else if (blockedTasksCount > 0) {
+            statusBoxHeader = wt('im.k799', 'Что будет при импорте');
+            statusBoxText = wt('im.step4_with_skipped_errors', 'Задания с критическими ошибками ({blocked}) будут пропущены. Импорт выполнится для оставшихся {valid}.')
+                .replace('{blocked}', this.formatTasksCount(blockedTasksCount))
+                .replace('{valid}', this.formatTasksCount(validTasks.length));
+            statusBoxClasses = 'border-warning-light bg-warning-lighter text-warning-text';
         } else {
-            boxText = `${wt('im.k800', 'Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ')}${validTasks.length}${wt('im.k801', ' заданий.')}`;
+            statusBoxHeader = wt('im.ready_all_tasks_valid_title', 'Все задания проверены');
+            statusBoxText = wt('im.ready_all_tasks_valid_desc', 'Все выбранные задания корректны и готовы к добавлению в каталог.');
+            statusBoxClasses = 'border-success-light bg-success-lighter text-success-darker';
         }
+
+        const iconName = isBlocked ? 'block' : (blockedTasksCount > 0 ? 'info' : 'check_circle');
+        const iconBg = isBlocked ? 'bg-error-light text-error-text' : (blockedTasksCount > 0 ? 'bg-warning-light text-warning-text' : 'bg-success-light text-success-text');
 
         return `
-            <div class="max-w-3xl mx-auto text-center py-8 animate-slide-up-fade">
-                <div class="w-20 h-20 ${isBlocked ? 'bg-error-light' : 'bg-success-light'} rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span class="material-symbols-outlined ${isBlocked ? 'text-error-text' : 'text-success-text'} text-[48px]">${isBlocked ? 'block' : 'check_circle'}</span>
+            <div class="max-w-3xl mx-auto text-center py-4 animate-slide-up-fade space-y-4">
+                <div>
+                    <div class="w-16 h-16 ${iconBg} rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform duration-200">
+                        <span class="material-symbols-outlined text-[36px]">${iconName}</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-text-main mb-1.5">${isBlocked ? wt('im.k791', 'Импорт недоступен') : wt('im.k792', 'Готово к импорту')}</h3>
+                    <p class="text-sm text-text-secondary">${description}</p>
                 </div>
                 
-                <h3 class="text-xl font-bold text-text-main mb-2">${isBlocked ? wt('im.k791', 'Импорт недоступен') : wt('im.k792', 'Готово к импорту')}</h3>
-                <p class="text-text-secondary mb-6">${description}</p>
-                
-                <div class="bg-surface-2 rounded-lg p-6 text-left">
-                    <div class="space-y-2 text-sm">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k768', 'Модуль')}:</span>
-                            <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedModuleName || this.selectedModule)}</span>
+                <!-- Flat Surface-1 Summary Card -->
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-5 text-left shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border-subtle text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">${wt('im.destination_label', 'Назначение')}:</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(this.selectedModuleName || this.selectedModule)}</span>
+                            <span class="text-text-muted">/</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(this.selectedTopicName || this.selectedTopic)}</span>
                         </div>
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k769', 'Тема')}:</span>
-                            <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedTopicName || this.selectedTopic)}</span>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-text-muted">${wt('im.k772', 'Действие при конфликте:')}</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-surface-2 font-medium text-text-main border border-border-subtle">${this.escapeHtml(this.getConflictResolutionLabel(this.conflictResolution))}</span>
                         </div>
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k795', 'Будет импортировано:')}</span>
-                            <span class="font-medium text-text-main">${validTasks.length}</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 text-center">
+                        <div class="p-2.5 rounded-lg bg-surface-2 border border-border-subtle">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1">${wt('im.k795', 'Будет импортировано')}</div>
+                            <div class="text-lg font-bold text-success-text">${validTasks.length}</div>
                         </div>
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k796', 'Заблокировано по ошибкам:')}</span>
-                            <span class="font-medium ${blockedTasksCount > 0 ? 'text-error-text' : 'text-text-main'}">${blockedTasksCount}</span>
+                        <div class="p-2.5 rounded-lg bg-surface-2 border border-border-subtle">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1">${wt('im.k797', 'Исключено вручную')}</div>
+                            <div class="text-lg font-bold text-text-secondary">${excludedTasksCount}</div>
                         </div>
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">${wt('im.k797', 'Исключено вручную:')}</span>
-                            <span class="font-medium text-text-main">${excludedTasksCount}</span>
+                        <div class="p-2.5 rounded-lg bg-surface-2 border border-border-subtle">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1">${wt('im.k796', 'Заблокировано')}</div>
+                            <div class="text-lg font-bold ${blockedTasksCount > 0 ? 'text-error-text' : 'text-text-muted'}">${blockedTasksCount}</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-surface-2 border border-border-subtle">
+                            <div class="text-[11px] font-semibold uppercase tracking-wider text-text-muted mb-1">${wt('im.step4_remaining_slots', 'Свободно слотов')}</div>
+                            <div class="text-lg font-bold ${limitExceeded ? 'text-error-text' : 'text-text-main'}">${isPlanUnlimited ? wt('im.step4_plan_unlimited', 'Без ограничений') : remainingTasks}</div>
                         </div>
                     </div>
                 </div>
-                <div class="mt-4 rounded-lg ${isBlocked ? 'border border-error-light bg-error-lighter text-error-text' : 'border border-warning-light bg-warning-lighter text-warning-text'} px-4 py-3 text-left text-sm">
-                    <div class="font-semibold">${isBlocked ? wt('im.k798', 'Импорт отключён') : wt('im.k799', 'Что будет при импорте')}</div>
-                    <div class="mt-1">
-                        ${boxText}
+
+                <!-- Status Feedback Box -->
+                <div class="rounded-xl border ${statusBoxClasses} px-4 py-3 text-left text-sm transition-all duration-200">
+                    <div class="font-semibold">${statusBoxHeader}</div>
+                    <div class="mt-1">${statusBoxText}</div>
+                </div>
+
+                <!-- Dynamic Progress Container for import execution -->
+                <div id="import-progress-bar-container" class="hidden text-left p-4 rounded-xl border border-border-subtle bg-surface-2 animate-fade-in shadow-xs">
+                    <div class="flex items-center justify-between text-xs font-semibold text-text-secondary mb-2">
+                        <span class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                            <span id="import-progress-label">${wt('im.k931', 'Подготовка...')}</span>
+                        </span>
+                        <span id="import-progress-percent" class="font-mono text-primary font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-surface-3 rounded-full h-2.5 overflow-hidden">
+                        <div id="import-progress-fill" class="h-full bg-primary rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
         `;
     }
     renderTaskCard(task, index) {
-        const statusColors = {
-            valid: 'border-success-light bg-success-light',
-            warning: 'border-warning-light bg-warning-light',
-            error: 'border-error-light bg-error-light',
-            conflict_overwrite: 'border-warning-light bg-warning-lighter',
-            conflict_duplicate: 'border-info-light bg-info-lighter'
-        };
-        const statusIcons = {
-            valid: '\u2713',
-            warning: '\u26A0',
-            error: '\u2717',
-            conflict_overwrite: '\u26A1',
-            conflict_duplicate: '\u2398'
-        };
-        const statusIconColors = {
-            valid: 'text-success-text',
-            warning: 'text-warning-text',
-            error: 'text-error-text',
-            conflict_overwrite: 'text-warning-dark',
-            conflict_duplicate: 'text-info-dark'
-        };
-        const statusBgColors = {
-            valid: 'bg-success-light',
-            warning: 'bg-warning-light',
-            error: 'bg-error-light',
-            conflict_overwrite: 'bg-warning-lighter',
-            conflict_duplicate: 'bg-info-light'
-        };
-
-        let statusKey = task.status;
-        let statusLabel = task.status;
-
-        if (task.status === 'conflict') {
-            if (task.conflict_type === 'duplicate') {
-                statusKey = 'conflict_duplicate';
-                statusLabel = wt('im.k165', 'Дубликат (идентичен)');
-            } else {
-                statusKey = 'conflict_overwrite';
-                statusLabel = wt('im.k166', 'Конфликт (изменен)');
-            }
-        }
-
-        // Type-specific metadata
-        const typeMetadata = this.getTaskTypeMetadata(task);
-
-        // Type badges with icons
-        const typeBadges = {
-            'open_answer': { icon: '📝', label: wt('im.k167', 'Открытый ответ'), color: 'bg-info-light text-info-dark' },
-            'sequence_assembly': { icon: '🔢', label: wt('im.k168', 'Последовательность'), color: 'bg-accent-light text-accent-dark' },
-            'click': { icon: '🎯', label: wt('im.k169', 'Клик'), color: 'bg-secondary-light text-secondary-dark' },
-            'test': { icon: '❓', label: wt('im.k170', 'Тест'), color: 'bg-warning-light text-warning-dark' }
-        };
-        const typeBadge = typeBadges[task.type] || { icon: '\u2022', label: task.type, color: 'bg-surface-2 text-text-secondary' };
-
-        return `
-            <div class="border-2 ${statusColors[statusKey] || 'border-border-subtle'} rounded-lg overflow-hidden transition-all hover:shadow-md">
-                <!-- Card Header -->
-                <div class="p-4 border-b border-border-subtle">
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-2 flex-1">
-                            <!-- Checkbox for bulk selection -->
-                            <input 
-                                type="checkbox" 
-                                class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary flex-shrink-0"
-                                data-task-checkbox="${index}"
-                                onchange="dashboard.importManager.toggleTaskSelection(${index})"
-                                ${this.selectedTasks.has(index) ? 'checked' : ''}>
-                            <span class="text-sm font-bold text-text-muted">#${index + 1}</span>
-                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded ${typeBadge.color} text-xs font-medium">
-                                <span>${typeBadge.icon}</span>
-                                <span>${typeBadge.label}</span>
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-1 px-2 py-1 rounded ${statusBgColors[statusKey]} ${statusIconColors[statusKey]}">
-                            <span class="text-lg font-bold">${statusIcons[statusKey]}</span>
-                            <span class="text-xs font-semibold capitalize">${statusLabel}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Task Name (editable) -->
-                    <h4 class="font-bold text-text-main mb-1 text-base cursor-pointer hover:bg-surface-2 rounded px-1 -mx-1 transition-colors" 
-                        ${wt('im.k171', 'title="Нажмите для редактирования"')}
-                        onclick="dashboard.importManager.startEditName(${index}, this)">${this.escapeHtml(task.name)}</h4>
-                    
-                    <!-- Prompt Preview -->
-                    <p class="text-sm text-text-muted line-clamp-2">${this.escapeHtml(task.data?.prompt || wt('im.k802', 'Нет описания'))}</p>
-                </div>
-                
-                <!-- Card Body: Metadata -->
-                <div class="p-4 bg-surface-2">
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        ${typeMetadata}
-                    </div>
-                </div>
-                
-                <!-- Validation Issues -->
-                ${task.validation?.issues?.length > 0 ? `
-                    <div class="p-4 border-t border-border-subtle bg-surface-2">
-                        <div class="space-y-2">
-                            ${task.validation.issues.slice(0, 3).map(issue => `
-                                <div class="flex items-start gap-2 text-xs">
-                                    <span class="flex-shrink-0 font-bold ${issue.severity === 'error' ? 'text-error' : 'text-warning'}">
-                                        ${issue.severity === 'error' ? '\u2717' : '\u26A0'}
-                                    </span>
-                                    <span class="${issue.severity === 'error' ? 'text-error-text' : 'text-warning-text'} flex-1">
-                                        ${this.escapeHtml(issue.message)}
-                                    </span>
-                                </div>
-                            `).join('')}
-                            ${task.validation.issues.length > 3 ? `
-                                <div class="text-xs text-text-muted font-medium">
-                                    +${task.validation.issues.length - 3} ${wt('im.k172', 'ещё...')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <!-- Per-task conflict resolution (only for conflict tasks) -->
-                ${task.status === 'conflict' ? `
-                    <div class="px-4 py-2 border-t border-border-subtle bg-warning-lighter">
-                        <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k772', 'Действие при конфликте:')}</label>
-                        <select 
-                            onchange="dashboard.importManager.setPerTaskConflict(${index}, this.value)"
-                            class="block w-full rounded border-border-normal text-xs py-1 focus:ring-primary bg-surface-1">
-                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>${wt('im.k773', 'Как в общих настройках')}</option>
-                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>${wt('im.k774', 'Пропустить')}</option>
-                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>${wt('im.k761', 'Перезаписать')}</option>
-                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>${wt('im.k762', 'Создать копию (новый ID)')}</option>
-                        </select>
-                    </div>
-                ` : ''}
-
-                <!-- Actions -->
-                <div class="p-3 bg-surface-1 border-t border-border-subtle flex gap-2">
-                    <button 
-                        onclick="dashboard.importManager.showTaskDetails(${index})"
-                        class="flex-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary hover:text-primary-fg rounded transition-colors border border-primary">
-                        ${wt('im.k173', 'Детали')}
-                    </button>
-                    <button 
-                        onclick="dashboard.importManager.toggleExclude(${index})"
-                        class="flex-1 px-3 py-1.5 text-xs font-medium text-text-muted hover:bg-bg-hover hover:text-text-on-dark rounded transition-colors border border-border-subtle"
-                        data-task-exclude-btn="${index}">
-                        ${this.excludedTasks.has(index) ? wt('im.k775', 'Включить') : wt('im.k776', 'Исключить')}
-                    </button>
-                </div>
-            </div>
-        `;
+        return this.renderUnifiedTaskCard(task, index, false);
     }
 
     getTaskTypeMetadata(task) {
@@ -4502,36 +5183,124 @@ ${remaining}
         document.body.appendChild(overlay);
     }
 
-    startEditName(index, el) {
+    startEditName(index, el = null) {
+        if (this.editingTaskIndex !== null && this.editingTaskIndex !== index) {
+            this.cancelEditName(this.editingTaskIndex);
+        }
+
+        const editWrap = document.querySelector(`[data-task-title-edit="${index}"]`);
+        const viewWrap = document.querySelector(`[data-task-title-view="${index}"]`);
+        if (editWrap && viewWrap) {
+            viewWrap.classList.add('hidden');
+            editWrap.classList.remove('hidden');
+            this.editingTaskIndex = index;
+            const input = editWrap.querySelector('input');
+            if (input) {
+                const task = this.parsedResult?.tasks?.[index];
+                if (task && task.name) {
+                    input.value = task.name;
+                }
+                input.focus();
+                input.select();
+            }
+            return;
+        }
+
+        // Backward compatibility fallback for legacy call sites passing an element
+        if (el) {
+            const task = this.parsedResult?.tasks?.[index];
+            if (!task) return;
+
+            const currentName = task.name || '';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentName;
+            input.className = 'w-full text-base font-bold text-text-main bg-surface-2 border border-primary rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-primary';
+
+            const commit = () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    task.name = newName;
+                    if (task.data) task.data.name = newName;
+                }
+                el.textContent = task.name;
+                el.style.display = '';
+                input.remove();
+                this.editingTaskIndex = null;
+            };
+
+            input.addEventListener('blur', commit);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commit(); }
+                if (e.key === 'Escape') { el.style.display = ''; input.remove(); this.editingTaskIndex = null; }
+            });
+
+            el.style.display = 'none';
+            el.parentNode.insertBefore(input, el.nextSibling);
+            input.focus();
+            input.select();
+            this.editingTaskIndex = index;
+        }
+    }
+
+    saveEditName(index) {
         const task = this.parsedResult?.tasks?.[index];
+        const editWrap = document.querySelector(`[data-task-title-edit="${index}"]`);
+        const viewWrap = document.querySelector(`[data-task-title-view="${index}"]`);
         if (!task) return;
 
-        const currentName = task.name || '';
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = currentName;
-        input.className = 'w-full text-base font-bold text-text-main bg-surface-2 border border-primary rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-primary';
-
-        const commit = () => {
-            const newName = input.value.trim();
-            if (newName && newName !== currentName) {
-                task.name = newName;
+        if (editWrap) {
+            const input = editWrap.querySelector('input');
+            if (input) {
+                const newName = input.value.trim();
+                if (newName) {
+                    task.name = newName;
+                    if (task.data) task.data.name = newName;
+                }
             }
-            el.textContent = task.name;
-            el.style.display = '';
-            input.remove();
-        };
+        }
 
-        input.addEventListener('blur', commit);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') { e.preventDefault(); commit(); }
-            if (e.key === 'Escape') { el.style.display = ''; input.remove(); }
-        });
+        if (viewWrap) {
+            const titleEl = viewWrap.querySelector('.task-card-title');
+            if (titleEl) {
+                titleEl.textContent = task.name;
+                titleEl.setAttribute('title', task.name);
+            }
+        }
 
-        el.style.display = 'none';
-        el.parentNode.insertBefore(input, el.nextSibling);
-        input.focus();
-        input.select();
+        if (editWrap && viewWrap) {
+            editWrap.classList.add('hidden');
+            viewWrap.classList.remove('hidden');
+        }
+        this.editingTaskIndex = null;
+    }
+
+    cancelEditName(index) {
+        const task = this.parsedResult?.tasks?.[index];
+        const editWrap = document.querySelector(`[data-task-title-edit="${index}"]`);
+        const viewWrap = document.querySelector(`[data-task-title-view="${index}"]`);
+        if (editWrap) {
+            const input = editWrap.querySelector('input');
+            if (input && task) {
+                input.value = task.name || '';
+            }
+        }
+        if (editWrap && viewWrap) {
+            editWrap.classList.add('hidden');
+            viewWrap.classList.remove('hidden');
+        }
+        this.editingTaskIndex = null;
+    }
+
+    handleEditNameKeydown(event, index) {
+        if (!event) return;
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this.saveEditName(index);
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            this.cancelEditName(index);
+        }
     }
 
     setPerTaskConflict(index, value) {
@@ -4548,14 +5317,36 @@ ${remaining}
         } else {
             this.excludedTasks.add(index);
         }
+        const isExcluded = this.excludedTasks.has(index);
 
-        // Update button text and card opacity
-        const btn = document.querySelector(`[data-task-exclude-btn="${index}"]`);
-        if (btn) {
-            btn.textContent = this.excludedTasks.has(index) ? wt('im.k195', 'Включить') : wt('im.k196', 'Исключить');
-            const card = btn.closest('[data-role="archive-import-task-card"]');
-            if (card) {
-                card.classList.toggle('opacity-60', this.excludedTasks.has(index));
+        // Update Card in DOM
+        const card = document.querySelector(`[data-task-card="${index}"]`) ||
+                     document.querySelector(`[data-task-exclude-btn="${index}"]`)?.closest('[data-role="archive-import-task-card"]');
+        if (card) {
+            card.setAttribute('data-is-excluded', isExcluded ? '1' : '0');
+            card.classList.toggle('task-card-excluded', isExcluded);
+            card.classList.toggle('opacity-60', isExcluded);
+
+            const titleEl = card.querySelector('.task-card-title');
+            if (titleEl) {
+                titleEl.classList.toggle('line-through', isExcluded);
+                titleEl.classList.toggle('text-text-disabled', isExcluded);
+            }
+
+            const badgeContainer = card.querySelector(`[data-status-badge="${index}"]`) || card.querySelector('.task-card-status-badge');
+            const task = this.parsedResult?.tasks?.[index] || {};
+            if (badgeContainer) {
+                badgeContainer.innerHTML = this.renderTaskStatusBadge(task, index, isExcluded);
+            }
+
+            const btn = card.querySelector(`[data-task-exclude-btn="${index}"]`);
+            if (btn) {
+                btn.textContent = isExcluded ? wt('im.action_include', 'Включить') : wt('im.action_exclude', 'Исключить');
+                if (isExcluded) {
+                    btn.className = "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all border bg-primary text-primary-contrast border-primary hover:bg-primary-dark shadow-xs";
+                } else {
+                    btn.className = "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all border bg-surface-2 text-text-secondary border-border-subtle hover:bg-bg-hover hover:text-text-main";
+                }
             }
         }
 
@@ -4565,7 +5356,87 @@ ${remaining}
             warningContainer.innerHTML = this.renderLimitWarningHtml();
         }
 
+        // Refresh filter strip counts
+        this.updateFilterChips();
+
+        // Refresh bulk selection counter / select-all checkbox
+        this.updateBulkSelectionUI();
+
+        // Re-apply preview status/type filter
+        this.applyPreviewFilters();
+
+        // Update navigation buttons (Next/Import enable/disable)
         this.updateNavigationButtons();
+
+        // Update modal footer status text
+        this.updateFooterStatus();
+    }
+
+    setPreviewStatusFilter(status) {
+        this.previewFilterStatus = status || 'all';
+        this.updateFilterChips();
+        this.applyPreviewFilters();
+    }
+
+    setPreviewTypeFilter(type) {
+        this.previewFilterType = type || 'all';
+        this.applyPreviewFilters();
+    }
+
+    updateFilterChips() {
+        const container = document.getElementById('preview-filter-strip-container');
+        const tasks = this.parsedResult?.tasks || [];
+        if (container) {
+            container.outerHTML = this.renderPreviewFilterStrip(tasks);
+        }
+    }
+
+    applyPreviewFilters() {
+        const cards = document.querySelectorAll('[data-task-card]');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const index = parseInt(card.getAttribute('data-task-card'), 10);
+            const cardStatus = card.getAttribute('data-task-status') || 'valid';
+            const cardType = (card.getAttribute('data-task-type') || '').toLowerCase();
+            const isExcluded = this.excludedTasks.has(index);
+
+            let statusMatch = true;
+            if (this.previewFilterStatus === 'valid') {
+                statusMatch = !isExcluded && cardStatus === 'valid';
+            } else if (this.previewFilterStatus === 'warning') {
+                statusMatch = !isExcluded && cardStatus === 'warning';
+            } else if (this.previewFilterStatus === 'conflict') {
+                statusMatch = !isExcluded && cardStatus === 'conflict';
+            } else if (this.previewFilterStatus === 'error') {
+                statusMatch = !isExcluded && cardStatus === 'error';
+            } else if (this.previewFilterStatus === 'excluded') {
+                statusMatch = isExcluded;
+            }
+
+            let typeMatch = true;
+            if (this.previewFilterType && this.previewFilterType !== 'all') {
+                typeMatch = cardType === this.previewFilterType.toLowerCase();
+            }
+
+            if (statusMatch && typeMatch) {
+                card.style.display = '';
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+                card.classList.add('hidden');
+            }
+        });
+
+        const emptyNotice = document.getElementById('preview-empty-filtered-notice');
+        if (emptyNotice) {
+            if (visibleCount === 0 && cards.length > 0) {
+                emptyNotice.classList.remove('hidden');
+            } else {
+                emptyNotice.classList.add('hidden');
+            }
+        }
     }
 
     // =========================================================================
@@ -4582,6 +5453,7 @@ ${remaining}
                 this.selectedModule = e.target.value;
                 this.selectedModuleName = e.target.selectedOptions[0]?.textContent || e.target.value;
                 this.updateTopicSelect();
+                this.updateNavigationButtons();
             });
         }
         if (topicSelect && !topicSelect.dataset.importBound) {
@@ -4589,6 +5461,7 @@ ${remaining}
             topicSelect.addEventListener('change', (e) => {
                 this.selectedTopic = e.target.value;
                 this.selectedTopicName = e.target.selectedOptions[0]?.textContent || e.target.value;
+                this.updateNavigationButtons();
             });
         }
 
@@ -4683,6 +5556,23 @@ ${remaining}
             }
             this.updateAIAgentPromptTextarea();
         }
+
+        if (this.currentStep === 3) {
+            const conflictSelect = document.getElementById('conflict-resolution-select');
+            if (conflictSelect && !conflictSelect.dataset.importBound) {
+                conflictSelect.dataset.importBound = '1';
+                conflictSelect.addEventListener('change', (e) => {
+                    this.conflictResolution = e.target.value;
+                });
+            }
+            const skipCheckbox = document.getElementById('skip-errors-checkbox');
+            if (skipCheckbox && !skipCheckbox.dataset.importBound) {
+                skipCheckbox.dataset.importBound = '1';
+                skipCheckbox.addEventListener('change', (e) => {
+                    this.skipErrors = !!e.target.checked;
+                });
+            }
+        }
     }
 
     attachAIComposerEventListeners() {
@@ -4731,6 +5621,7 @@ ${remaining}
     }
 
     _updateLiveCounter(text) {
+        this.updateFooterStatus();
         const container = document.getElementById('import-live-counter');
         if (!container) return;
 
@@ -5254,6 +6145,14 @@ text: Сердце человека состоит из [трёх] камер. �
         try {
             const active = this.getActiveAIAgentTemplateConfig();
             await this.writeToClipboard(active.prompt);
+            const labelEl = document.querySelector('[data-role="copy-prompt-text"]');
+            if (labelEl) {
+                const original = labelEl.textContent;
+                labelEl.textContent = wt('im.editor_copied', 'Скопировано! ✓');
+                setTimeout(() => {
+                    labelEl.textContent = original;
+                }, 2000);
+            }
             this.showToast(wt('im.k219', 'Промпт для ИИ-агента скопирован в буфер обмена.'), 'success');
         } catch (error) {
             this.showToast(wt('im.k220', 'Не удалось скопировать промпт. Скопируйте текст вручную.'), 'error');
@@ -5735,78 +6634,89 @@ text: Сердце человека состоит из [трёх] камер. �
                         analysis_coverage_role: selectedRecommendation?.coverage_role || null,
                     }
                     : { source: 'text' };
-                const result = await this.executeImport(this.selectedModule, this.selectedTopic, validTasks, {
-                    importContext,
-                    idempotencyKey: this.importRequestKey,
-                });
-                if (result.ok) {
-                    this.recordImportHistory({
-                        status: 'ok',
-                        imported: result.imported,
-                        skipped: result.skipped || 0,
-                        errors: result.errors || 0,
-                        message: 'text_or_ai',
+
+                this.showImportProgressBar(wt('im.step4_saving_tasks', 'Сохранение заданий в каталог...'));
+                this.updateImportProgress(40, wt('im.step4_saving_tasks', 'Сохранение заданий в каталог...'));
+
+                try {
+                    const result = await this.executeImport(this.selectedModule, this.selectedTopic, validTasks, {
+                        importContext,
+                        idempotencyKey: this.importRequestKey,
                     });
-                    if (this.importMode === 'ai' && activeSession && selectedTaskType) {
-                        this.showVoiceToast({
-                            severity: 'success',
-                            what: wt('im.k253', 'Импорт завершён.'),
-                            impact: `${wt('im.k680', 'Добавлено:')} ${result.imported}.`,
-                            next: wt('im.k254', 'Сессия анализа сохранена. Можно выбрать следующий тип задания в карте покрытия.'),
+                    if (result.ok) {
+                        this.updateImportProgress(100, wt('im.step4_import_finished', 'Импорт завершён'));
+                        this.recordImportHistory({
+                            status: 'ok',
+                            imported: result.imported,
+                            skipped: result.skipped || 0,
+                            errors: result.errors || 0,
+                            message: 'text_or_ai',
                         });
-                        this.setManualAnalysisSelectedTaskType(selectedTaskType);
-                        this.clearManualAnalysisDraft(selectedTaskType, {
-                            status: 'imported',
-                            imported_count: Math.max(0, Number((activeSession.recommendation_state?.[selectedTaskType]?.imported_count || 0))) + Number(result.imported || 0),
-                            imported_batches: Math.max(0, Number((activeSession.recommendation_state?.[selectedTaskType]?.imported_batches || 0))) + 1,
-                            last_imported_at: new Date().toISOString(),
-                        });
-                        this.sourceText = '';
-                        this.parsedResult = null;
-                        this.excludedTasks.clear();
-                        this.selectedTasks.clear();
-                        this.importRequestKey = null;
-                        this.currentStep = 2;
-                        this.theorySubMode = 'coverage_map';
-                        if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
-                            this.dashboard.loadWorkspaceLimits().catch(() => {});
+                        if (this.importMode === 'ai' && activeSession && selectedTaskType) {
+                            this.showVoiceToast({
+                                severity: 'success',
+                                what: wt('im.k253', 'Импорт завершён.'),
+                                impact: `${wt('im.k680', 'Добавлено:')} ${this.formatTasksCount(result.imported)}.`,
+                                next: wt('im.k254', 'Сессия анализа сохранена. Можно выбрать следующий тип задания в карте покрытия.'),
+                            });
+                            this.setManualAnalysisSelectedTaskType(selectedTaskType);
+                            this.clearManualAnalysisDraft(selectedTaskType, {
+                                status: 'imported',
+                                imported_count: Math.max(0, Number((activeSession.recommendation_state?.[selectedTaskType]?.imported_count || 0))) + Number(result.imported || 0),
+                                imported_batches: Math.max(0, Number((activeSession.recommendation_state?.[selectedTaskType]?.imported_batches || 0))) + 1,
+                                last_imported_at: new Date().toISOString(),
+                            });
+                            this.sourceText = '';
+                            this.parsedResult = null;
+                            this.excludedTasks.clear();
+                            this.selectedTasks.clear();
+                            this.importRequestKey = null;
+                            this.currentStep = 2;
+                            this.theorySubMode = 'coverage_map';
+                            if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                                this.dashboard.loadWorkspaceLimits().catch(() => {});
+                            }
+                            await this.dashboard.loadCatalog();
+                            this.showToast(wt('im.k255', 'Тип импортирован. Можно продолжить с другим типом в карте покрытия ниже.'), 'success');
+                            this.renderCurrentStep();
+                            this.updateNavigationButtons();
+                        } else {
+                            this.showVoiceToast({
+                                severity: 'success',
+                                what: wt('im.k256', 'Импорт завершён.'),
+                                impact: `${wt('im.k680', 'Добавлено:')} ${this.formatTasksCount(result.imported)}.`,
+                                next: wt('im.k257', 'Каталог обновлён, можно переходить к редактуре.'),
+                            });
+                            if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
+                                this.dashboard.loadWorkspaceLimits().catch(() => {});
+                            }
+                            this.dashboard.closeImportModal({ skipConfirm: true });
+                            this.dashboard.loadCatalog();
                         }
-                        await this.dashboard.loadCatalog();
-                        this.showToast(wt('im.k255', 'Тип импортирован. Можно продолжить с другим типом в карте покрытия ниже.'), 'success');
-                        this.renderCurrentStep();
-                        this.updateNavigationButtons();
                     } else {
-                        this.showVoiceToast({
-                            severity: 'success',
-                            what: wt('im.k256', 'Импорт завершён.'),
-                            impact: `${wt('im.k680', 'Добавлено:')} ${result.imported}.`,
-                            next: wt('im.k257', 'Каталог обновлён, можно переходить к редактуре.'),
+                        this.recordImportHistory({
+                            status: 'error',
+                            imported: 0,
+                            skipped: 0,
+                            errors: 1,
+                            message: result.error || 'import_failed',
                         });
-                        if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
-                            this.dashboard.loadWorkspaceLimits().catch(() => {});
-                        }
-                        this.dashboard.closeImportModal({ skipConfirm: true });
-                        this.dashboard.loadCatalog();
+                        this.showVoiceToast({
+                            severity: 'error',
+                            what: wt('im.k258', 'Импорт завершился ошибкой.'),
+                            impact: wt('im.k259', 'Изменения в каталог не были применены полностью.'),
+                            next: `${wt('im.k681', 'Проверьте источник и повторите импорт. Детали:')} ${result.error || 'unknown_error'}`,
+                        });
                     }
-                } else {
-                    this.recordImportHistory({
-                        status: 'error',
-                        imported: 0,
-                        skipped: 0,
-                        errors: 1,
-                        message: result.error || 'import_failed',
-                    });
-                    this.showVoiceToast({
-                        severity: 'error',
-                        what: wt('im.k258', 'Импорт завершился ошибкой.'),
-                        impact: wt('im.k259', 'Изменения в каталог не были применены полностью.'),
-                        next: `${wt('im.k681', 'Проверьте источник и повторите импорт. Детали:')} ${result.error || 'unknown_error'}`,
-                    });
+                } finally {
+                    this.hideImportProgressBar();
                 }
             } else {
                 // Archive Import
-                const conflictRes = document.getElementById('conflict-resolution-select')?.value || 'skip';
-                const skipErrors = document.getElementById('skip-errors-checkbox')?.checked || false;
+                const conflictRes = document.getElementById('conflict-resolution-select')?.value || this.conflictResolution || 'skip';
+                const skipErrors = document.getElementById('skip-errors-checkbox')
+                    ? !!document.getElementById('skip-errors-checkbox').checked
+                    : (this.skipErrors !== undefined ? !!this.skipErrors : true);
                 if (this.getPreviewImportableTasks().length === 0) {
                     this.showToast(wt('im.k260', 'В архиве не осталось заданий, которые можно импортировать.'), 'warning');
                     return;
@@ -5845,21 +6755,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     btn.textContent = wt('im.k261', 'Импорт...');
                 }
 
-                // Create visual progress bar
-                const progressContainer = document.createElement('div');
-                progressContainer.id = 'import-progress-bar-container';
-                progressContainer.className = 'mt-4 px-2';
-                progressContainer.innerHTML = `
-                    <div class="flex items-center justify-between text-sm text-text-secondary mb-1">
-                        <span id="import-progress-label">${wt('im.k931', 'Подготовка...')}</span>
-                        <span id="import-progress-percent">0%</span>
-                    </div>
-                    <div class="w-full bg-surface-alt rounded-full h-3 overflow-hidden">
-                        <div id="import-progress-fill" class="h-full bg-primary rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
-                    </div>
-                `;
-                const stepContent = document.querySelector('#import-step-content') || btn?.parentElement;
-                if (stepContent) stepContent.appendChild(progressContainer);
+                this.showImportProgressBar(wt('im.k931', 'Подготовка...'));
 
                 try {
                     const response = await fetch('/api/editor/import/confirm', {
@@ -5897,13 +6793,8 @@ text: Сердце человека состоит из [трёх] камер. �
                                 const msg = JSON.parse(line);
                                 if (msg.type === 'progress') {
                                     const pct = Math.round((msg.current / (msg.total || 1)) * 100);
-                                    const fill = document.getElementById('import-progress-fill');
-                                    const label = document.getElementById('import-progress-label');
-                                    const pctEl = document.getElementById('import-progress-percent');
-                                    if (fill) fill.style.width = `${pct}%`;
-                                    if (label) label.textContent = msg.status || `${wt('im.k665', 'Задание')} ${msg.current} ${wt('im.k682', 'из')} ${msg.total}`;
-                                    if (pctEl) pctEl.textContent = `${pct}%`;
-                                    if (btn) btn.textContent = `${wt('im.k683', 'Импорт...')} ${pct}%`;
+                                    const statusLabel = msg.status || `${wt('im.k665', 'Задание')} ${msg.current} ${wt('im.k682', 'из')} ${msg.total}`;
+                                    this.updateImportProgress(pct, statusLabel);
                                 } else if (msg.type === 'result') {
                                     finalResult = msg.data;
                                 } else if (msg.type === 'error') {
@@ -5924,13 +6815,20 @@ text: Сердце человека состоит из [трёх] камер. �
                                 errors: finalResult.errors,
                                 message: 'archive_stream',
                             });
+                            const isAllSkippedWarning = finalResult.imported === 0 && finalResult.skipped > 0;
+                            const toastSeverity = finalResult.errors > 0 || isAllSkippedWarning ? 'warning' : 'success';
+                            let toastNext = wt('im.k264', 'Каталог обновлён и готов к работе.');
+                            if (finalResult.errors > 0) {
+                                toastNext = wt('im.k263', 'Проверьте проблемные задания и при необходимости повторите импорт.');
+                            } else if (isAllSkippedWarning) {
+                                toastNext = wt('im.all_skipped_hint', 'Все задания пропущены из-за совпадения ID. Выберите «Создать копию» или «Перезаписать» для добавления.');
+                            }
+
                             this.showVoiceToast({
-                                severity: finalResult.errors > 0 ? 'warning' : 'success',
+                                severity: toastSeverity,
                                 what: wt('im.k262', 'Импорт архива завершён.'),
-                                impact: `${wt('im.k680', 'Добавлено:')} ${finalResult.imported}, ${wt('im.k684', 'пропущено:')} ${finalResult.skipped}, ${wt('im.k685', 'ошибок:')} ${finalResult.errors}.`,
-                                next: finalResult.errors > 0
-                                    ? wt('im.k263', 'Проверьте проблемные задания и при необходимости повторите импорт.')
-                                    : wt('im.k264', 'Каталог обновлён и готов к работе.'),
+                                impact: `${wt('im.k680', 'Добавлено:')} ${this.formatTasksCount(finalResult.imported)}, ${wt('im.k684', 'пропущено:')} ${this.formatTasksCount(finalResult.skipped)}, ${wt('im.k685', 'ошибок:')} ${finalResult.errors}.`,
+                                next: toastNext,
                             });
                             if (this.dashboard && typeof this.dashboard.loadWorkspaceLimits === 'function') {
                                 this.dashboard.loadWorkspaceLimits().catch(() => {});
@@ -5963,8 +6861,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         btn.disabled = false;
                         btn.textContent = originalText || wt('im.k269', 'Импортировать');
                     }
-                    const pc = document.getElementById('import-progress-bar-container');
-                    if (pc) pc.remove();
+                    this.hideImportProgressBar();
                 }
             }
         } catch (error) {
@@ -5994,22 +6891,62 @@ text: Сердце человека состоит из [трёх] камер. �
     // Bulk Actions
     // =========================================================================
 
+    updateBulkSelectionUI() {
+        const tasks = this.parsedResult?.tasks || [];
+        const totalCount = tasks.length;
+        const selectedCount = this.selectedTasks.size;
+
+        // Update select-all checkbox
+        const selectAllCheckbox = document.getElementById('select-all-tasks');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = totalCount > 0 && selectedCount === totalCount;
+            selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < totalCount;
+        }
+
+        // Update selected counter
+        const counterEl = document.getElementById('preview-selected-counter');
+        if (counterEl) {
+            counterEl.textContent = wt('im.selected_count', 'Выбрано: {count}').replace('{count}', selectedCount);
+            if (selectedCount > 0) {
+                counterEl.classList.remove('hidden');
+            } else {
+                counterEl.classList.add('hidden');
+            }
+        }
+
+        // Update bulk action buttons
+        const excludeBtn = document.querySelector('[data-role="bulk-exclude-btn"]');
+        if (excludeBtn) {
+            excludeBtn.disabled = selectedCount === 0;
+        }
+        const includeBtn = document.querySelector('[data-role="bulk-include-btn"]');
+        if (includeBtn) {
+            includeBtn.disabled = selectedCount === 0;
+        }
+
+        // Update individual checkboxes
+        tasks.forEach((_, index) => {
+            const cb = document.querySelector(`[data-task-checkbox="${index}"]`);
+            if (cb) {
+                cb.checked = this.selectedTasks.has(index);
+            }
+        });
+    }
+
     toggleSelectAll() {
         const tasks = this.parsedResult?.tasks || [];
         const checkbox = document.getElementById('select-all-tasks');
+        const shouldSelect = checkbox ? checkbox.checked : (this.selectedTasks.size === 0);
 
-        if (checkbox.checked) {
-            // Select all
+        if (shouldSelect) {
             tasks.forEach((_, index) => {
                 this.selectedTasks.add(index);
             });
         } else {
-            // Deselect all
             this.selectedTasks.clear();
         }
 
-        // Re-render to update checkboxes
-        this.renderCurrentStep();
+        this.updateBulkSelectionUI();
     }
 
     toggleTaskSelection(index) {
@@ -6019,45 +6956,87 @@ text: Сердце человека состоит из [трёх] камер. �
             this.selectedTasks.add(index);
         }
 
-        // Update select-all checkbox state
-        const tasks = this.parsedResult?.tasks || [];
-        const selectAllCheckbox = document.getElementById('select-all-tasks');
-        if (selectAllCheckbox) {
-            selectAllCheckbox.checked = this.selectedTasks.size === tasks.length && tasks.length > 0;
-        }
-
-        // Update counter
-        this.renderCurrentStep();
+        this.updateBulkSelectionUI();
     }
 
     bulkExclude() {
         if (this.selectedTasks.size === 0) return;
 
-        // Add all selected tasks to excluded set
         this.selectedTasks.forEach(index => {
             this.excludedTasks.add(index);
+            const card = document.querySelector(`[data-task-card="${index}"]`);
+            if (card) {
+                card.setAttribute('data-is-excluded', '1');
+                card.classList.add('task-card-excluded', 'opacity-60');
+                const titleEl = card.querySelector('.task-card-title');
+                if (titleEl) {
+                    titleEl.classList.add('line-through', 'text-text-disabled');
+                }
+                const badgeContainer = card.querySelector(`[data-status-badge="${index}"]`) || card.querySelector('.task-card-status-badge');
+                const task = this.parsedResult?.tasks?.[index] || {};
+                if (badgeContainer) {
+                    badgeContainer.innerHTML = this.renderTaskStatusBadge(task, index, true);
+                }
+                const btn = card.querySelector(`[data-task-exclude-btn="${index}"]`);
+                if (btn) {
+                    btn.textContent = wt('im.action_include', 'Включить');
+                    btn.className = "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all border bg-primary text-primary-contrast border-primary hover:bg-primary-dark shadow-xs";
+                }
+            }
         });
 
-        // Clear selection
         this.selectedTasks.clear();
 
-        // Re-render
-        this.renderCurrentStep();
+        const warningContainer = document.getElementById('import-limit-warning-container');
+        if (warningContainer) {
+            warningContainer.innerHTML = this.renderLimitWarningHtml();
+        }
+
+        this.updateFilterChips();
+        this.updateBulkSelectionUI();
+        this.applyPreviewFilters();
+        this.updateNavigationButtons();
+        this.updateFooterStatus();
     }
 
     bulkInclude() {
         if (this.selectedTasks.size === 0) return;
 
-        // Remove all selected tasks from excluded set
         this.selectedTasks.forEach(index => {
             this.excludedTasks.delete(index);
+            const card = document.querySelector(`[data-task-card="${index}"]`);
+            if (card) {
+                card.setAttribute('data-is-excluded', '0');
+                card.classList.remove('task-card-excluded', 'opacity-60');
+                const titleEl = card.querySelector('.task-card-title');
+                if (titleEl) {
+                    titleEl.classList.remove('line-through', 'text-text-disabled');
+                }
+                const badgeContainer = card.querySelector(`[data-status-badge="${index}"]`) || card.querySelector('.task-card-status-badge');
+                const task = this.parsedResult?.tasks?.[index] || {};
+                if (badgeContainer) {
+                    badgeContainer.innerHTML = this.renderTaskStatusBadge(task, index, false);
+                }
+                const btn = card.querySelector(`[data-task-exclude-btn="${index}"]`);
+                if (btn) {
+                    btn.textContent = wt('im.action_exclude', 'Исключить');
+                    btn.className = "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all border bg-surface-2 text-text-secondary border-border-subtle hover:bg-bg-hover hover:text-text-main";
+                }
+            }
         });
 
-        // Clear selection
         this.selectedTasks.clear();
 
-        // Re-render
-        this.renderCurrentStep();
+        const warningContainer = document.getElementById('import-limit-warning-container');
+        if (warningContainer) {
+            warningContainer.innerHTML = this.renderLimitWarningHtml();
+        }
+
+        this.updateFilterChips();
+        this.updateBulkSelectionUI();
+        this.applyPreviewFilters();
+        this.updateNavigationButtons();
+        this.updateFooterStatus();
     }
 
     // =========================================================================
@@ -6078,6 +7057,7 @@ text: Сердце человека состоит из [трёх] камер. �
         this.applyPresetSelection();
         this.applyTheoryReportPanelState();
         this.restoreTheoryAnalysisViewState();
+        this.updateNavigationButtons();
     }
 
     captureTheoryAnalysisViewState() {
@@ -6270,10 +7250,6 @@ text: Сердце человека состоит из [трёх] камер. �
                 : (isCoverageMap
                     ? (hasSession ? wt('im.k287', 'Шаг 1: карта покрытия') : wt('im.k288', 'Шаг 1: анализ материала'))
                     : wt('im.k289', 'Шаг 2: генерация типа')));
-        const primaryActionLabel = isImportStep
-            ? (this.importInProgress ? wt('im.k290', 'Импорт...') : wt('im.k291', 'Импортировать'))
-            : (isPreviewStep ? wt('im.k292', 'К импорту') : (isCoverageMap ? wt('im.k293', 'Разобрать анализ') : wt('im.k294', 'Проверить текст')));
-        const primaryActionDisabled = this.importInProgress || this.aiAnalyzing || this.aiGenerating;
 
         return `
             <div class="w-full animate-slide-up-fade space-y-5">
@@ -6341,22 +7317,6 @@ text: Сердце человека состоит из [трёх] камер. �
                 ` : ''}
 
                 ${isPromptStep ? this.renderStep2() : (isPreviewStep ? this.renderStep3() : this.renderStep4())}
-
-                <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex flex-wrap gap-2">
-                        ${isPreviewStep || isImportStep ? `
-                            <button onclick="dashboard.importManager.prevStep()"
-                                class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                                ${wt('im.k580', 'Назад')}
-                            </button>
-                        ` : ''}
-                    </div>
-                    <button onclick="dashboard.importManager.handleNext()"
-                        class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        ${primaryActionDisabled ? 'disabled' : ''}>
-                        ${primaryActionLabel}
-                    </button>
-                </div>
             </div>
         `;
     }
@@ -10069,45 +11029,19 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
         if (this.isInternalAiGenerationInDevelopment()) {
             return `
-                <div class="space-y-5 animate-fade-in">
-                    <div class="p-4 bg-primary-lighter border border-primary-light rounded-lg">
-                        <div class="flex items-start gap-3">
-                            <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">auto_awesome</span>
-                            <div>
-                                <h4 class="text-sm font-bold text-text-main mb-1">${wt('im.k728', 'Единственный путь: через внешний ИИ')}</h4>
-                                <ol class="text-xs text-text-secondary space-y-1 list-decimal list-inside">
-                                    <li>${wt('im.k1075', 'Выберите модуль и тему, куда пойдут задания')}</li>
-                                    <li>${wt('im.k1076', 'На следующем шаге получите готовый промпт для внешней нейросети')}</li>
-                                    <li>${wt('im.k1077', 'Сгенерируйте задания вне платформы и вставьте ответ сюда')}</li>
-                                    <li>${wt('im.k1078', 'Проверьте парсинг и импортируйте результат')}</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="p-4 border border-border-subtle rounded-lg bg-surface-1">
-                        <div class="flex items-start gap-2">
-                            <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">tips_and_updates</span>
-                            <div class="text-sm text-text-secondary leading-relaxed">
-                                ${wt('im.k516', 'Встроенная автоматическая генерация в этом разделе больше не используется.')}
-                                ${wt('im.k517', 'Здесь остаётся только сценарий с выдачей промптов для самостоятельной работы')}
-                                ${wt('im.k518', 'с нейросетями "на стороне".')}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-4 animate-fade-in">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
                             <select id="import-module-select" 
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                                 ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
                             <select id="import-topic-select"
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
                                 disabled>
                                 <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                             </select>
@@ -10204,7 +11138,7 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
         `;
     }
 
-    renderStep2AI() {
+    renderStep2InternalAI() {
         if (this.aiAnalyzing) {
             return `
                 <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">

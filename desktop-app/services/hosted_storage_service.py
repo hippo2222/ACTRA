@@ -555,6 +555,62 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
             workspace_meta=workspace_meta,
         )
 
+    def duplicate_task(
+        self,
+        module_id: str,
+        topic_id: str,
+        source_task_id: str,
+        target_module_id: Optional[str] = None,
+        target_topic_id: Optional[str] = None,
+        workspace_meta: Optional[Dict[str, Any]] = None,
+        validate: bool = True,
+    ) -> Dict[str, Any]:
+        try:
+            self.ensure_persistence_ready()
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("duplicate_task", exc)
+            return StorageService.duplicate_task(
+                self,
+                module_id,
+                topic_id,
+                source_task_id,
+                target_module_id=target_module_id,
+                target_topic_id=target_topic_id,
+                workspace_meta=workspace_meta,
+                validate=validate,
+            )
+
+        result = super().duplicate_task(
+            module_id,
+            topic_id,
+            source_task_id,
+            target_module_id=target_module_id,
+            target_topic_id=target_topic_id,
+            workspace_meta=workspace_meta,
+            validate=validate,
+        )
+        if not result or not result.get("success"):
+            return result
+
+        try:
+            self._sync_catalog_from_shadow()
+            self._sync_task_content_from_shadow(
+                result["module_id"],
+                result["topic_id"],
+                result["task_id"],
+                import_only=False,
+            )
+        except Exception as exc:
+            self.logger.exception(
+                "[HOSTED] Failed to sync task content after duplication %s/%s/%s: %s",
+                result.get("module_id"),
+                result.get("topic_id"),
+                result.get("task_id"),
+                exc,
+            )
+
+        return result
+
     def delete_task(self, module_id: str, topic_id: str, task_id: str) -> bool:
         try:
             self.ensure_persistence_ready()

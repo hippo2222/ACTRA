@@ -1197,6 +1197,104 @@ def export_tasks() -> Any:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@editor_bp.route("/api/editor/tasks/duplicate", methods=["POST"])
+def duplicate_tasks() -> Any:
+    """Duplicate selected tasks in bulk or single."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        raw_tasks = payload.get("tasks", [])
+        if not raw_tasks:
+            return jsonify({"ok": False, "error": "no_tasks_provided"}), 400
+
+        clean_tasks = []
+        for item in raw_tasks:
+            if not isinstance(item, dict):
+                continue
+            module_id = str(item.get("module_id") or "").strip()
+            topic_id = str(item.get("topic_id") or "").strip()
+            task_id = str(item.get("task_id") or "").strip()
+            if module_id and topic_id and task_id:
+                clean_tasks.append({
+                    "module_id": module_id,
+                    "topic_id": topic_id,
+                    "task_id": task_id,
+                    "target_module_id": str(item.get("target_module_id") or "").strip() or None,
+                    "target_topic_id": str(item.get("target_topic_id") or "").strip() or None,
+                })
+
+        if not clean_tasks:
+            return jsonify({"ok": False, "error": "invalid_tasks_payload"}), 400
+
+        _assert_export_task_refs_not_archived(ctx, clean_tasks, action="duplicate")
+
+        service = getattr(ctx, "workspace_limits_service", None)
+        if service:
+            requests = [{"entity_kind": "task", "limit_kind": "personal", "slots": len(clean_tasks)}]
+            evaluation = service.evaluate_capacity(ctx.user_id, requests=requests)
+            service._raise_for_blocked_evaluation(evaluation)
+
+        workspace_meta = None
+        if is_hosted_web_runtime():
+            workspace_meta = _build_hosted_editor_workspace_meta(current_user_id=ctx.user_id)
+
+        duplicated_list = []
+        errors = []
+
+        for task_info in clean_tasks:
+            module_id = task_info["module_id"]
+            topic_id = task_info["topic_id"]
+            task_id = task_info["task_id"]
+            target_module_id = task_info.get("target_module_id")
+            target_topic_id = task_info.get("target_topic_id")
+
+            try:
+                res = ctx.storage_service.duplicate_task(
+                    module_id,
+                    topic_id,
+                    task_id,
+                    target_module_id=target_module_id,
+                    target_topic_id=target_topic_id,
+                    workspace_meta=workspace_meta,
+                )
+                if res and res.get("success"):
+                    duplicated_list.append({
+                        "source_module_id": module_id,
+                        "source_topic_id": topic_id,
+                        "source_task_id": task_id,
+                        "module_id": res["module_id"],
+                        "topic_id": res["topic_id"],
+                        "task_id": res["task_id"],
+                        "name": res["name"],
+                    })
+                else:
+                    errors.append(f"Failed to duplicate {task_id}")
+            except Exception as exc:
+                logger.exception("[HTTP] Error duplicating task %s/%s/%s: %s", module_id, topic_id, task_id, exc)
+                errors.append(f"Error duplicating {task_id}: {str(exc)}")
+
+        return jsonify({
+            "ok": True,
+            "duplicated_count": len(duplicated_list),
+            "duplicated": duplicated_list,
+            "errors": errors,
+        })
+
+    except PremiumArchivedContentError as exc:
+        return _premium_archive_response(exc)
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc)
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Duplication failed: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @editor_bp.route("/api/editor/export/bulk", methods=["POST"])
 def export_bulk() -> Any:
     """Export all tasks from a module or topic as ZIP."""

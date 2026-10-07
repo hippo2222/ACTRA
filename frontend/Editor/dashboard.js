@@ -1632,6 +1632,10 @@ class EditorDashboard {
                     ${wt('db.k062', 'Все')}
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
+                <button data-role="selection-duplicate" onclick="dashboard.duplicateSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-surface-2 text-text-main border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors font-medium">
+                    <span class="material-symbols-outlined">content_copy</span>
+                    ${wt('db.k_duplicate', 'Дублировать')}
+                </button>
                 <button data-role="selection-export" onclick="dashboard.exportSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark transition-colors font-medium">
                     <span class="material-symbols-outlined">archive</span>
                     ${wt('db.k063', 'Экспорт')}
@@ -5500,6 +5504,7 @@ class EditorDashboard {
 
         const count = this.selectedTasks.size;
         const exportBtn = bar.querySelector('[data-role="selection-export"]') || document.querySelector('#selection-action-bar [onclick*="exportSelectedTasks"]');
+        const duplicateBtn = bar.querySelector('[data-role="selection-duplicate"]') || document.querySelector('#selection-action-bar [onclick*="duplicateSelectedTasks"]');
         const hasArchivedSelection = Array.from(this.selectedTasks)
             .some((uniqueId) => this.isTaskUniqueIdPremiumArchived(uniqueId));
 
@@ -5510,6 +5515,16 @@ class EditorDashboard {
             bar.classList.add('translate-y-[200%]');
         }
 
+        if (duplicateBtn) {
+            const duplicateBlocked = count === 0 || hasArchivedSelection;
+            duplicateBtn.disabled = duplicateBlocked;
+            duplicateBtn.classList.toggle('opacity-60', duplicateBlocked);
+            duplicateBtn.classList.toggle('cursor-not-allowed', duplicateBlocked);
+            duplicateBtn.title = hasArchivedSelection
+                ? wt('db.k_duplicate_blocked_archive', 'Дублирование недоступно: среди выбранных заданий есть архив Premium.')
+                : wt('db.k_duplicate_title', 'Дублировать выбранные задания');
+        }
+
         if (exportBtn) {
             const exportBlocked = count === 0 || hasArchivedSelection;
             exportBtn.disabled = exportBlocked;
@@ -5518,6 +5533,119 @@ class EditorDashboard {
             exportBtn.title = hasArchivedSelection
                 ? wt('db.k298', 'Экспорт недоступен: среди выбранных заданий есть архив Premium.')
                 : wt('db.k299', 'Экспортировать выбранные задания');
+        }
+    }
+
+    async duplicateSelectedTasks() {
+        if (this.selectedTasks.size === 0) return;
+        const hasArchivedSelection = Array.from(this.selectedTasks)
+            .some((uniqueId) => this.isTaskUniqueIdPremiumArchived(uniqueId));
+        if (hasArchivedSelection) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: wt('db.k_duplicate_toast_archive_what', 'Дублирование недоступно для архива Premium.'),
+                impact: wt('db.k_duplicate_toast_archive_impact', 'Среди выбранных заданий есть материалы с ограниченным доступом.'),
+                next: wt('db.k_duplicate_toast_archive_next', 'Снимите выделение с архивных заданий или продлите Premium.'),
+            });
+            return;
+        }
+
+        const tasksToDuplicate = [];
+        this.selectedTasks.forEach(uniqueId => {
+            const [moduleId, topicId, ...taskIdParts] = String(uniqueId || '').split(':');
+            const taskId = taskIdParts.join(':');
+            if (moduleId && topicId && taskId) {
+                tasksToDuplicate.push({
+                    module_id: moduleId,
+                    topic_id: topicId,
+                    task_id: taskId
+                });
+            }
+        });
+
+        if (!tasksToDuplicate.length) return;
+
+        const btn = document.querySelector('#selection-action-bar [data-role="selection-duplicate"]') || document.querySelector('#selection-action-bar [onclick*="duplicateSelectedTasks"]');
+        let originalText = '';
+        if (btn) {
+            originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>';
+        }
+
+        try {
+            const response = await fetch('/api/editor/tasks/duplicate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tasks: tasksToDuplicate })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.ok) {
+                this.selectedTasks.clear();
+                this.cancelSelection();
+
+                await this.loadCatalog();
+                this.renderSidebar();
+                this.refreshCurrentView();
+                this.renderRecoveryCenter();
+
+                const countCreated = data.duplicated_count || (data.duplicated ? data.duplicated.length : 0);
+                this.showVoiceToast({
+                    severity: 'success',
+                    what: `${wt('db.k_duplicate_success_what', 'Задания успешно продублированы')}: ${countCreated}.`,
+                    impact: wt('db.k_duplicate_success_impact', 'Новые копии добавлены в каталог и готовы к редактированию.'),
+                    next: wt('db.k_duplicate_success_next', 'Каталог обновлён автоматически.'),
+                });
+
+                if (data.errors && data.errors.length > 0) {
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: wt('db.k_duplicate_warning_partial', 'Дублирование выполнено частично.'),
+                        impact: `${wt('db.k_duplicate_errors_label', 'Ошибки')}: ${data.errors.join(', ')}.`,
+                        next: wt('db.k_duplicate_warning_next', 'Проверьте проблемные задания.'),
+                        timeout: 6000,
+                    });
+                }
+            } else {
+                const errorKey = (data && data.error) || (data && data.details && data.details.code) || 'unknown_error';
+                let message = wt('db.k_duplicate_failed_generic', 'Не удалось продублировать задания.');
+                let impact = (data && data.message) || wt('db.k_duplicate_failed_impact', 'Проверьте параметры и повторите попытку.');
+                let next = wt('db.k_duplicate_failed_next', 'Обратитесь к администратору или обновите страницу.');
+
+                if (errorKey === 'workspace_task_limit_exceeded' || response.status === 409 || response.status === 422) {
+                    message = wt('db.k_duplicate_limit_exceeded', 'Превышен лимит заданий на тарифе.');
+                    impact = wt('db.k_duplicate_limit_impact', 'Для создания новых копий требуется свободное место в библиотеке.');
+                    next = wt('db.k_duplicate_limit_next', 'Удалите ненужные задания или перейдите на тариф Premium.');
+                } else if (errorKey === 'guest_cannot_edit') {
+                    message = wt('db.k_duplicate_guest_blocked', 'Гостевой режим не поддерживает создание копий.');
+                    impact = wt('db.k_duplicate_guest_impact', 'Требуется войти в аккаунт.');
+                    next = wt('db.k_duplicate_guest_next', 'Войдите в систему для продолжения работы.');
+                }
+
+                this.showVoiceToast({
+                    severity: 'error',
+                    what: message,
+                    impact: impact,
+                    next: next,
+                    timeout: 6000,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to duplicate selected tasks:', error);
+            this.showVoiceToast({
+                severity: 'error',
+                what: wt('db.k_duplicate_failed_generic', 'Не удалось продублировать задания.'),
+                impact: (error && error.message) || wt('db.k_duplicate_network_error', 'Сетевая ошибка при обращении к серверу.'),
+                next: wt('db.k_duplicate_failed_next', 'Обратитесь к администратору или обновите страницу.'),
+            });
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                this.updateActionBar();
+            }
         }
     }
 
@@ -6088,6 +6216,8 @@ class EditorDashboard {
             modal._cancelListenerAdded = true;
         }
 
+        modal.classList.remove('hidden', 'closing');
+
         if (typeof modal.showModal === 'function' && !modal.open) {
             modal.showModal();
         } else {
@@ -6164,6 +6294,8 @@ class EditorDashboard {
                 });
                 modal._cancelListenerAdded = true;
             }
+
+            modal.classList.remove('hidden', 'closing');
 
             if (typeof modal.showModal === 'function' && !modal.open) {
                 modal.showModal();

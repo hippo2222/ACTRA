@@ -1357,75 +1357,164 @@
             #import-modal.closing::backdrop {
                 opacity: 0;
             }
+            #import-modal .editor-import-modal-shell {
+                width: min(94vw, 76rem);
+                height: min(90vh, 56rem);
+                max-height: 92vh;
+            }
+            #import-modal #import-text-area {
+                min-height: 280px;
+                height: 100%;
+            }
+            #import-modal #ai-agent-prompt-textarea {
+                min-height: 220px;
+                height: 100%;
+            }
+            #import-modal [data-role="cheat-sheet-panel"] pre {
+                min-height: 180px;
+            }
+            #import-modal .import-split-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                flex: 1;
+                min-height: 0;
+                height: 100%;
+            }
+            @media (min-width: 900px) {
+                #import-modal .import-split-grid {
+                    grid-template-columns: 5fr 7fr;
+                }
+            }
+            #import-modal .task-card-excluded {
+                opacity: 0.45 !important;
+                filter: grayscale(1) !important;
+                border-style: dashed !important;
+                background-color: var(--color-surface-2, rgba(240, 240, 240, 0.6)) !important;
+            }
+            #import-modal .task-card-excluded .task-card-title {
+                text-decoration: line-through !important;
+                color: var(--color-text-disabled, #8c8c8c) !important;
+            }
+            #import-modal .preview-filter-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.375rem;
+                padding: 0.375rem 0.75rem;
+                border-radius: 9999px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                transition: all 0.15s ease-in-out;
+                cursor: pointer;
+                border: 1px solid var(--color-border-subtle, rgba(0,0,0,0.1));
+                background-color: var(--color-surface-2, #f5f5f5);
+                color: var(--color-text-secondary, #555);
+                user-select: none;
+            }
+            #import-modal .preview-filter-chip:hover {
+                background-color: var(--color-bg-hover, #ebebeb);
+                color: var(--color-text-main, #111);
+            }
+            #import-modal .preview-filter-chip.is-active {
+                background-color: var(--color-primary, #2563eb);
+                color: var(--color-primary-fg, #fff);
+                border-color: var(--color-primary, #2563eb);
+                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            }
+            #import-modal .task-title-edit-wrap {
+                display: flex;
+                align-items: center;
+                gap: 0.375rem;
+                width: 100%;
+            }
+            #import-modal .task-title-input {
+                flex: 1;
+                font-size: 0.95rem;
+                font-weight: 700;
+                color: var(--color-text-main, #111);
+                background: var(--color-surface-1, #fff);
+                border: 1.5px solid var(--color-primary, #2563eb);
+                border-radius: 0.375rem;
+                padding: 0.25rem 0.5rem;
+                outline: none;
+                box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+            }
         </style>
         <div
-            class="editor-import-modal-shell relative bg-surface-1 rounded-2xl text-left shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border-2 border-border-strong w-[90vw] max-w-[64rem] h-[92vh] max-h-[58rem] mx-auto my-auto overflow-hidden flex flex-col">
+            class="editor-import-modal-shell relative bg-surface-1 rounded-2xl text-left shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border-2 border-border-strong mx-auto my-auto overflow-hidden flex flex-col min-h-0">
             <!-- Header -->
-            <div class="editor-import-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4 shrink-0">
-                <h2 class="editor-flow-wrap text-xl font-bold text-text-main" data-role="import-modal-title" data-i18n="md.import_tasks">Импорт заданий</h2>
+            <div class="editor-import-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4 shrink-0" data-role="import-header">
+                <div class="min-w-0 flex-1">
+                    <h2 class="editor-flow-wrap text-xl font-bold text-text-main leading-tight" data-role="import-modal-title" data-i18n="md.import_tasks">Импорт заданий</h2>
+                    <p class="editor-flow-wrap mt-1 text-sm text-text-secondary leading-normal" data-role="import-modal-subtitle" data-i18n="md.import_modal_subtitle">Быстрый импорт готовых задач или прямой AI-import по конкретному типу.</p>
+                </div>
                 <button onclick="dashboard.closeImportModal()"
-                    class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors">
-                    <span class="material-symbols-outlined">close</span>
+                    data-role="close-import-modal"
+                    class="shrink-0 p-1.5 rounded-lg text-text-disabled hover:text-text-secondary hover:bg-surface-2 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+                    data-i18n-aria="md.close_aria"
+                    aria-label="Закрыть">
+                    <span class="material-symbols-outlined text-xl">close</span>
                 </button>
             </div>
             <!-- Progress Steps -->
-            <div class="editor-import-steps-panel px-6 py-4 border-b border-border-subtle shrink-0" data-role="import-steps-panel">
-                <div class="editor-import-steps flex items-center justify-between" data-role="import-steps">
+            <div class="editor-import-steps-panel px-6 py-3.5 border-b border-border-subtle bg-surface-1/50 shrink-0" data-role="import-stepper" data-role-panel="import-steps-panel">
+                <div class="editor-import-steps flex items-center justify-between max-w-3xl mx-auto" data-role="import-steps">
                     <!-- Step 1 -->
-                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="1">
-                        <div
-                            class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm">
+                    <div class="editor-import-step-item flex flex-col items-center gap-1.5 flex-1 min-w-0" data-step="1">
+                        <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-bold text-sm shadow-sm transition-all duration-200" data-role="step-circle-1">
                             1
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-secondary" data-i18n="md.step1_label">Модуль/Тема</span>
+                        <span class="editor-import-step-label text-xs font-semibold text-text-main text-center truncate max-w-full px-1" data-role="step-label-1" data-i18n="md.step1_label">Модуль/Тема</span>
                     </div>
-                    <!-- Divider -->
-                    <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
+                    <!-- Divider 1 -->
+                    <div class="flex-1 h-[2px] bg-border-subtle mx-2 rounded-full transition-colors duration-200" data-role="step-divider-1"></div>
                     <!-- Step 2 -->
-                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="2">
-                        <div
-                            class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
+                    <div class="editor-import-step-item flex flex-col items-center gap-1.5 flex-1 min-w-0" data-step="2">
+                        <div class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-200" data-role="step-circle-2">
                             2
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-disabled" data-i18n="md.step2_label">Текст</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled text-center truncate max-w-full px-1" data-role="step-label-2" data-i18n="md.step2_label">Текст</span>
                     </div>
-                    <!-- Divider -->
-                    <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
+                    <!-- Divider 2 -->
+                    <div class="flex-1 h-[2px] bg-border-subtle mx-2 rounded-full transition-colors duration-200" data-role="step-divider-2"></div>
                     <!-- Step 3 -->
-                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="3">
-                        <div
-                            class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
+                    <div class="editor-import-step-item flex flex-col items-center gap-1.5 flex-1 min-w-0" data-step="3">
+                        <div class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-200" data-role="step-circle-3">
                             3
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-disabled" data-i18n="md.step3_label">Превью</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled text-center truncate max-w-full px-1" data-role="step-label-3" data-i18n="md.step3_label">Превью</span>
                     </div>
-                    <!-- Divider -->
-                    <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
+                    <!-- Divider 3 -->
+                    <div class="flex-1 h-[2px] bg-border-subtle mx-2 rounded-full transition-colors duration-200" data-role="step-divider-3"></div>
                     <!-- Step 4 -->
-                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="4">
-                        <div
-                            class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
+                    <div class="editor-import-step-item flex flex-col items-center gap-1.5 flex-1 min-w-0" data-step="4">
+                        <div class="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-200" data-role="step-circle-4">
                             4
                         </div>
-                        <span class="editor-import-step-label text-xs font-medium text-text-disabled" data-i18n="md.step4_label">Подтверждение</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled text-center truncate max-w-full px-1" data-role="step-label-4" data-i18n="md.step4_label">Подтверждение</span>
                     </div>
                 </div>
             </div>
             <!-- Content Area -->
-            <div class="editor-import-content-shell flex-1 overflow-y-auto p-6" data-role="import-content">
+            <div class="editor-import-content-shell flex-1 overflow-y-auto p-6 min-h-0 flex flex-col" data-role="import-content">
                 <!-- Content will be rendered by JavaScript -->
                 <div class="text-center text-text-disabled" data-i18n="md.loading">Загрузка...</div>
             </div>
             <!-- Footer -->
-            <div class="editor-import-footer px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0" data-role="import-footer">
+            <div class="editor-import-footer px-6 py-3.5 border-t border-border-subtle bg-surface-1 flex items-center justify-between gap-4 shrink-0 z-10" data-role="import-footer">
                 <button onclick="dashboard.importPrevStep()" data-role="import-prev"
-                    class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="md.back"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-main hover:bg-surface-2 border border-border-subtle transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     disabled>
-                    Назад
+                    <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                    <span data-role="import-prev-text" data-i18n="md.back">Назад</span>
                 </button>
+                <div class="editor-import-footer-status flex items-center justify-center gap-2 text-xs text-text-secondary min-w-0 flex-1 px-4 text-center truncate" data-role="import-footer-status">
+                    <!-- Dynamic status text/badge -->
+                </div>
                 <button onclick="dashboard.importNextStep()" data-role="import-next"
-                    class="px-6 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="md.next">
-                    Далее
+                    class="inline-flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-contrast hover:bg-primary-dark transition-all shadow-sm hover:shadow disabled:opacity-40 disabled:cursor-not-allowed">
+                    <span data-role="import-next-text" data-i18n="md.next">Далее</span>
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </button>
             </div>
         </div>
