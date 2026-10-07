@@ -63,7 +63,7 @@ def _hosted_runtime_asset_degraded_response(
 
 
 def _resolve_active_sessions_user_id(session_api: Any, requested_user_id: Any = None) -> str:
-    ctx_user_id = _resolve_effective_user_id(requested_user_id, fallback="guest")
+    ctx_user_id = _resolve_effective_user_id(requested_user_id)
     if ctx_user_id:
         return ctx_user_id
 

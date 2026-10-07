@@ -89,7 +89,7 @@ class SessionAPI:
         self._complex_service = complex_service
         self._storage_service = storage_service
         self._statistics_service = statistics_service
-        self._default_user_id = default_user_id
+        self._default_user_id = str(default_user_id or "").strip() or "default_user"
         self._scattered_group_pure_test_cache: Dict[str, Optional[bool]] = {}
         self._controller_context: contextvars.ContextVar[ComplexSessionController] = contextvars.ContextVar(
             "session_api_controller",

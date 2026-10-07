@@ -58,6 +58,7 @@ from routes._helpers import (
     _maybe_hosted_shadow_write_error_response,
     _compute_inherited_theory_for_topics,
     _make_safe_id,
+    _resolve_effective_user_id,
     _resolve_task_display_info,
     _resolve_editor_image_path,
     _serialize_workspace_catalog_modules,
@@ -2962,7 +2963,8 @@ def serve_editor_image() -> Any:
 def editor_start_preview_session() -> Any:
     """Start author preview session for one or multiple tasks."""
     ctx = get_ctx()
-    if ctx.user_id == "guest":
+    effective_user_id = _resolve_effective_user_id(ctx.user_id)
+    if effective_user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_preview"}), 403
 
     session_api = getattr(ctx, "session_api", None)
@@ -2982,7 +2984,7 @@ def editor_start_preview_session() -> Any:
     source_context = payload.get("source_context") if isinstance(payload.get("source_context"), dict) else None
 
     # Check for existing paused preview session
-    existing = session_api.get_active_preview_session(ctx.user_id)
+    existing = session_api.get_active_preview_session(effective_user_id)
     if existing and not force:
         queue = getattr(existing, "queue", []) or []
         ui_state = getattr(existing, "ui_state", None) or {}
@@ -3053,13 +3055,13 @@ def editor_start_preview_session() -> Any:
 
     if existing and force:
         try:
-            session_api.cancel_session(existing.id, user_id=ctx.user_id)
+            session_api.cancel_session(existing.id, user_id=effective_user_id)
         except Exception:
             logger.warning("[HTTP] Failed to cancel previous preview session %s", existing.id, exc_info=True)
 
     result = session_api.start_preview_session(
         task_refs=clean_task_refs,
-        user_id=ctx.user_id,
+        user_id=effective_user_id,
         source_context=source_context,
     )
     status_code = 200 if result.get("ok") else 400
@@ -3070,7 +3072,8 @@ def editor_start_preview_session() -> Any:
 def editor_restart_preview_session() -> Any:
     """Reset preview session progress and restart from the beginning."""
     ctx = get_ctx()
-    if ctx.user_id == "guest":
+    effective_user_id = _resolve_effective_user_id(ctx.user_id)
+    if effective_user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_preview"}), 403
 
     session_api = getattr(ctx, "session_api", None)
@@ -3082,7 +3085,7 @@ def editor_restart_preview_session() -> Any:
 
     result = session_api.restart_preview_session(
         session_id=str(session_id).strip() if session_id else None,
-        user_id=ctx.user_id,
+        user_id=effective_user_id,
     )
     status_code = 200 if result.get("ok") else 400
     return jsonify(result), status_code
@@ -3096,7 +3099,8 @@ def editor_get_active_preview_session() -> Any:
     if not session_api:
         return jsonify({"ok": False, "error": "session_api_unavailable"}), 500
 
-    session = session_api.get_active_preview_session(ctx.user_id)
+    effective_user_id = _resolve_effective_user_id(ctx.user_id)
+    session = session_api.get_active_preview_session(effective_user_id)
     if not session:
         return jsonify({"ok": True, "active": False, "active_session": None})
 
@@ -3157,14 +3161,15 @@ def editor_cancel_preview_session() -> Any:
     if not session_api:
         return jsonify({"ok": False, "error": "session_api_unavailable"}), 500
 
+    effective_user_id = _resolve_effective_user_id(ctx.user_id)
     payload = request.get_json(silent=True) or {}
     session_id = payload.get("session_id")
     if not session_id:
-        active = session_api.get_active_preview_session(ctx.user_id)
+        active = session_api.get_active_preview_session(effective_user_id)
         session_id = getattr(active, "id", None) if active else None
 
     if not session_id:
         return jsonify({"ok": True, "message": "no_active_preview_to_cancel"})
 
-    result = session_api.cancel_session(str(session_id).strip(), user_id=ctx.user_id)
+    result = session_api.cancel_session(str(session_id).strip(), user_id=effective_user_id)
     return jsonify({"ok": True, "result": result})
