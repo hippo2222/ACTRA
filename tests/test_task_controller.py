@@ -150,6 +150,15 @@ class TestDetermineDifficultyLevel:
         assert level == 3
         assert ctrl._explicit_difficulty_level is None  # reset after use
 
+    def test_explicit_normalized_by_dm(self):
+        ctrl = _make_ctrl(with_dm=True)
+        ctrl.difficulty_manager.get_available_levels.return_value = [3]
+        ctrl.difficulty_manager.normalize_requested_level.side_effect = lambda req, avail: 3
+        ctrl._explicit_difficulty_level = 1
+        level = ctrl._determine_difficulty_level("m1", "t1", "tk1", _task_data())
+        assert level == 3
+        assert ctrl._explicit_difficulty_level is None
+
     def test_from_progress(self):
         ctrl = _make_ctrl()
         ctrl.progress_service.get_task_progress.return_value = {"current_difficulty": 2}

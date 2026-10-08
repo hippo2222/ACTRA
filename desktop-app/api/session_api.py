@@ -585,6 +585,7 @@ class SessionAPI:
         task_refs: List[str],
         user_id: Optional[str] = None,
         source_context: Optional[Dict[str, Any]] = None,
+        difficulty: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Запустить тестовое прохождение заданий (author preview / sandbox) без влияния на учебную статистику.
 
@@ -625,22 +626,87 @@ class SessionAPI:
         if not valid_task_refs:
             return {"ok": False, "error": "tasks_not_found", "user_id": user_id}
 
-        logger.info("[SessionAPI.start_preview_session] task_refs=%s (valid=%s), user_id=%s, context=%s", task_refs, valid_task_refs, user_id, source_context)
+        logger.info("[SessionAPI.start_preview_session] task_refs=%s (valid=%s), user_id=%s, context=%s, difficulty=%s", task_refs, valid_task_refs, user_id, source_context, difficulty)
 
         try:
             from task_system.core.models.complex_models import ComplexSession, QueuedTask, Complex
             from datetime import datetime
             import uuid
 
+            diff_mgr = getattr(
+                getattr(self._controller, "task_controller", None),
+                "difficulty_manager",
+                None,
+            ) or getattr(self._session_manager, "difficulty_manager", None)
+
             session_id = str(uuid.uuid4())
-            queue = [
-                QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=1,
-                    is_retry=False,
+            queue = []
+            for task_ref in valid_task_refs:
+                task_difficulty = 1
+                task_data = None
+                parts = [p.strip() for p in task_ref.replace(":", "/").split("/") if p.strip()]
+                if self._storage_service and len(parts) >= 3:
+                    try:
+                        task_payload = self._storage_service.load_task(parts[0], parts[1], parts[-1])
+                        if isinstance(task_payload, dict):
+                            task_data = task_payload.get("task_data")
+                    except Exception:
+                        logger.debug("[SessionAPI.start_preview_session] Failed to load task_data for %s", task_ref)
+
+                if diff_mgr and isinstance(task_data, dict):
+                    try:
+                        if difficulty is not None:
+                            task_type = None
+                            subtype = None
+                            resolve_identity = getattr(diff_mgr, "_resolve_task_identity", None)
+                            if callable(resolve_identity):
+                                try:
+                                    resolved = resolve_identity(task_data=task_data)
+                                    if isinstance(resolved, (tuple, list)) and len(resolved) >= 2:
+                                        task_type, subtype = resolved[0], resolved[1]
+                                except Exception:
+                                    pass
+                            if not task_type:
+                                task_type = task_data.get("type") or (task_data.get("content") or {}).get("type")
+                                subtype = task_data.get("subtype") or (task_data.get("content") or {}).get("subtype")
+
+                            get_levels = getattr(diff_mgr, "get_available_levels", None)
+                            if callable(get_levels):
+                                available_levels = get_levels(
+                                    task_type or "click",
+                                    task_ref=task_ref,
+                                    task_data=task_data,
+                                    subtype=subtype,
+                                )
+                                normalize = getattr(diff_mgr, "normalize_requested_level", None)
+                                if callable(normalize) and isinstance(available_levels, list) and available_levels:
+                                    task_difficulty = normalize(difficulty, available_levels)
+                                else:
+                                    task_difficulty = int(difficulty)
+                            else:
+                                task_difficulty = int(difficulty)
+                        else:
+                            get_initial = getattr(diff_mgr, "get_initial_level", None)
+                            if callable(get_initial):
+                                task_difficulty = get_initial(task_data)
+                            else:
+                                task_difficulty = 1
+                    except Exception:
+                        logger.exception("[SessionAPI.start_preview_session] Failed to determine difficulty for %s", task_ref)
+                        task_difficulty = int(difficulty) if difficulty is not None else 1
+                elif difficulty is not None:
+                    try:
+                        task_difficulty = int(difficulty)
+                    except Exception:
+                        task_difficulty = 1
+
+                queue.append(
+                    QueuedTask(
+                        task_ref=task_ref,
+                        difficulty=task_difficulty,
+                        is_retry=False,
+                    )
                 )
-                for task_ref in valid_task_refs
-            ]
 
             now_dt = datetime.utcnow()
             session = ComplexSession(

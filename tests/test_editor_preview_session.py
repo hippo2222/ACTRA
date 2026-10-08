@@ -100,6 +100,15 @@ class DummyStorageService:
                 "task_data": {"id": "task2", "type": "test", "name": "Task 2"},
                 "answer_key": {"answer": "B"},
             },
+            ("mod3", "top3", "task3"): {
+                "task_data": {
+                    "id": "task3",
+                    "type": "click",
+                    "name": "Task 3 (Click)",
+                    "settings": {"allowed_difficulties": [3]},
+                },
+                "answer_key": {},
+            },
         }
 
     def load_task(self, module_id, topic_id, task_id):
@@ -239,4 +248,60 @@ def test_preview_session_validation_not_found(session_api_fixture):
     )
     assert res["ok"] is False
     assert res["error"] == "tasks_not_found"
+
+
+def test_preview_session_respects_allowed_difficulties(session_api_fixture):
+    api, controller, manager, _ = session_api_fixture
+    mock_dm = MagicMock()
+    mock_dm.get_initial_level.return_value = 3
+    controller.task_controller.difficulty_manager = mock_dm
+
+    res = api.start_preview_session(
+        task_refs=["mod3/top3/task3"],
+        user_id="user_123",
+    )
+    assert res["ok"] is True
+    session_id = res["session_id"]
+    sess = api.get_session(session_id, user_id="user_123")
+    assert len(sess.queue) == 1
+    assert sess.queue[0].difficulty == 3
+    mock_dm.get_initial_level.assert_called_once()
+
+
+def test_preview_session_with_explicit_difficulty(session_api_fixture):
+    api, controller, manager, _ = session_api_fixture
+    mock_dm = MagicMock()
+    mock_dm.get_available_levels.return_value = [2, 3]
+    mock_dm.normalize_requested_level.return_value = 2
+    controller.task_controller.difficulty_manager = mock_dm
+
+    res = api.start_preview_session(
+        task_refs=["mod3/top3/task3"],
+        user_id="user_123",
+        difficulty=2,
+    )
+    assert res["ok"] is True
+    session_id = res["session_id"]
+    sess = api.get_session(session_id, user_id="user_123")
+    assert len(sess.queue) == 1
+    assert sess.queue[0].difficulty == 2
+
+
+def test_preview_session_normalizes_invalid_difficulty(session_api_fixture):
+    api, controller, manager, _ = session_api_fixture
+    mock_dm = MagicMock()
+    mock_dm.get_available_levels.return_value = [3]
+    mock_dm.normalize_requested_level.return_value = 3
+    controller.task_controller.difficulty_manager = mock_dm
+
+    res = api.start_preview_session(
+        task_refs=["mod3/top3/task3"],
+        user_id="user_123",
+        difficulty=1,
+    )
+    assert res["ok"] is True
+    session_id = res["session_id"]
+    sess = api.get_session(session_id, user_id="user_123")
+    assert len(sess.queue) == 1
+    assert sess.queue[0].difficulty == 3
 

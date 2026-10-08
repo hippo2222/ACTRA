@@ -308,6 +308,39 @@ class TaskController:
             )
             # Сбрасываем флаг после использования
             self._explicit_difficulty_level = None
+
+            # Защитный шлюз: нормализуем даже явно заданный уровень по разрешённым сложностям задания
+            if self.difficulty_manager:
+                try:
+                    task_type = None
+                    subtype = None
+                    resolve_identity = getattr(self.difficulty_manager, "_resolve_task_identity", None)
+                    if callable(resolve_identity):
+                        try:
+                            resolved = resolve_identity(task_data=task_data)
+                            if isinstance(resolved, (tuple, list)) and len(resolved) >= 2:
+                                task_type, subtype = resolved[0], resolved[1]
+                        except Exception:
+                            pass
+                    if not task_type and isinstance(task_data, dict):
+                        task_type = task_data.get("type") or (task_data.get("content") or {}).get("type")
+                        subtype = task_data.get("subtype") or (task_data.get("content") or {}).get("subtype")
+
+                    task_ref = f"{module_id}/{topic_id}/{task_id}"
+                    get_levels = getattr(self.difficulty_manager, "get_available_levels", None)
+                    if callable(get_levels):
+                        available_levels = get_levels(
+                            task_type or "click",
+                            task_ref=task_ref,
+                            task_data=task_data,
+                            subtype=subtype,
+                        )
+                        normalize = getattr(self.difficulty_manager, "normalize_requested_level", None)
+                        if callable(normalize) and isinstance(available_levels, list) and available_levels:
+                            level = normalize(level, available_levels)
+                except Exception as e:
+                    self.logger.debug(f"Не удалось нормализовать _explicit_difficulty_level: {e}")
+
             return level
         
         # 1.5. Пробуем взять уровень из сохранённого прогресса

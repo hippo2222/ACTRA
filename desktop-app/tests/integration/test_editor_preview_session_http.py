@@ -63,6 +63,59 @@ def temp_test_task():
         _headless_app_ctx.storage_service.reload_modules()
 
 
+@pytest.fixture
+def temp_click_task_level3():
+    """Создает тестовое задание типа Click только с 3-м уровнем сложности."""
+    modules_dir = Path(_headless_app_ctx.storage_service.modules_dir)
+    module_id = f"mod_prev_{uuid.uuid4().hex[:8]}"
+    topic_id = f"top_prev_{uuid.uuid4().hex[:8]}"
+    task_id = f"task_{uuid.uuid4().hex[:6]}"
+
+    module_dir = modules_dir / module_id
+    topic_dir = module_dir / "topics" / topic_id
+    task_dir = topic_dir / "tasks" / task_id
+
+    try:
+        (module_dir / "topics").mkdir(parents=True, exist_ok=True)
+        (topic_dir / "tasks").mkdir(parents=True, exist_ok=True)
+        task_dir.mkdir(parents=True, exist_ok=True)
+
+        (module_dir / "module.json").write_text(
+            json.dumps({"id": module_id, "name": module_id, "topics": []}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (topic_dir / "topic.json").write_text(
+            json.dumps({"id": topic_id, "name": topic_id, "tasks": []}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        task_payload = {
+            "version": "1.0",
+            "type": "click",
+            "meta": {"name": "Click Task Level 3"},
+            "settings": {"allowed_difficulties": [3]},
+            "content": {
+                "type": "click",
+                "image": "test.png",
+                "mode": "draw_and_label",
+                "regions": [],
+            },
+        }
+        (task_dir / "task.json").write_text(
+            json.dumps(task_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        _headless_app_ctx.storage_service.reload_modules()
+        yield module_id, topic_id, task_id, task_dir
+
+    finally:
+        import shutil
+        if module_dir.exists():
+            shutil.rmtree(module_dir, ignore_errors=True)
+        _headless_app_ctx.storage_service.reload_modules()
+
+
 def test_preview_session_http_endpoints(client, temp_test_task):
     module_id, topic_id, task_id, _ = temp_test_task
     task_ref = f"{module_id}/{topic_id}/{task_id}"
@@ -157,3 +210,52 @@ def test_preview_session_http_endpoints(client, temp_test_task):
     active_after = client.get("/api/editor/preview-session/active")
     assert active_after.status_code == 200
     assert active_after.get_json()["active"] is False
+
+
+def test_preview_session_click_task_only_difficulty_3(client, temp_click_task_level3):
+    module_id, topic_id, task_id, _ = temp_click_task_level3
+    task_ref = f"{module_id}/{topic_id}/{task_id}"
+
+    client.post("/api/editor/preview-session/cancel")
+
+    # 1. Start preview without explicit difficulty -> starts at 3
+    resp = client.post(
+        "/api/editor/preview-session/start",
+        json={"task_refs": [task_ref], "force": True},
+    )
+    assert resp.status_code == 200, resp.data
+    data = resp.get_json()
+    assert data["ok"] is True
+    session_id = data["session_id"]
+
+    task_resp = client.get(f"/api/session/{session_id}/task")
+    assert task_resp.status_code == 200
+    task_payload = task_resp.get_json()
+    assert task_payload.get("ok") is True
+    task_data = task_payload.get("task") or {}
+    assert task_data.get("difficulty") == 3
+    assert task_data.get("available_levels") == [3]
+    assert task_data.get("task_data", {}).get("_difficulty_level") == 3
+    assert task_data.get("task_data", {}).get("content", {}).get("mode") == "draw_and_label"
+
+    client.post("/api/editor/preview-session/cancel")
+
+    # 2. Start preview with explicit invalid difficulty=1 -> normalized to 3
+    resp2 = client.post(
+        "/api/editor/preview-session/start",
+        json={"task_refs": [task_ref], "difficulty": 1, "force": True},
+    )
+    assert resp2.status_code == 200, resp2.data
+    session_id2 = resp2.get_json()["session_id"]
+
+    task_resp2 = client.get(f"/api/session/{session_id2}/task")
+    assert task_resp2.status_code == 200
+    task_payload2 = task_resp2.get_json()
+    assert task_payload2.get("ok") is True
+    task_data2 = task_payload2.get("task") or {}
+    assert task_data2.get("difficulty") == 3
+    assert task_data2.get("available_levels") == [3]
+    assert task_data2.get("task_data", {}).get("_difficulty_level") == 3
+    assert task_data2.get("task_data", {}).get("content", {}).get("mode") == "draw_and_label"
+
+    client.post("/api/editor/preview-session/cancel")

@@ -2982,6 +2982,13 @@ def editor_start_preview_session() -> Any:
 
     force = bool(payload.get("force", False))
     source_context = payload.get("source_context") if isinstance(payload.get("source_context"), dict) else None
+    raw_difficulty = payload.get("difficulty")
+    difficulty = None
+    if raw_difficulty is not None:
+        try:
+            difficulty = int(raw_difficulty)
+        except Exception:
+            difficulty = None
 
     # Check for existing paused preview session
     existing = session_api.get_active_preview_session(effective_user_id)
@@ -3068,6 +3075,7 @@ def editor_start_preview_session() -> Any:
         task_refs=clean_task_refs,
         user_id=effective_user_id,
         source_context=source_context,
+        difficulty=difficulty,
     )
     status_code = 200 if result.get("ok") else 400
     return jsonify(result), status_code
