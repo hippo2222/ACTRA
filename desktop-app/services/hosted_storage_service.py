@@ -242,9 +242,29 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         task_data = copy.deepcopy(content_row.get("task_data") or {})
-        answer_key = copy.deepcopy(content_row.get("answer_key") or {})
+        raw_ak = content_row.get("answer_key")
+        answer_key = copy.deepcopy(raw_ak or {})
         if isinstance(task_data, dict) and isinstance(answer_key, dict):
-            answer_key = self._normalize_answer_key(task_data, answer_key)
+            normalized = self._normalize_answer_key(task_data, answer_key)
+            if normalized != raw_ak and isinstance(raw_ak, dict):
+                try:
+                    self.content_repository.upsert_task_content(
+                        module_id,
+                        topic_id,
+                        task_id,
+                        task_data=task_data,
+                        answer_key=normalized,
+                        updated_at=content_row.get("updated_at") or self._task_updated_at(task_data, task_id),
+                    )
+                except Exception as exc:
+                    self.logger.warning(
+                        "[HOSTED] Self-healing answer_key persistence failed for %s/%s/%s: %s",
+                        module_id,
+                        topic_id,
+                        task_id,
+                        exc,
+                    )
+            answer_key = normalized
 
         resolved_metadata = dict(metadata) if isinstance(metadata, dict) else {"id": task_id}
         if not resolved_metadata.get("name") and isinstance(task_data, dict):

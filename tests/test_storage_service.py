@@ -239,6 +239,99 @@ class TestNormalizeAnswerKey:
         result = svc._normalize_answer_key({"type": "click", "content": {}}, None)
         assert isinstance(result, dict)
 
+    def test_click_desync_with_stale_targets_heals_to_annotations(self, svc):
+        """Hippopotamus bug: task has 1 annotation, but answer_key had 18 targets."""
+        task_data = {
+            "type": "click",
+            "content": {
+                "annotations": [
+                    {"type": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Artery"},
+                ]
+            },
+        }
+        stale_ak = {
+            "targets": [
+                {"shape": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Artery"},
+            ] + [
+                {"shape": "polygon", "points": [[i, i], [i + 5, i], [i + 5, i + 5]], "label": f"Old_{i}"}
+                for i in range(1, 18)
+            ]
+        }
+        assert len(stale_ak["targets"]) == 18
+        result = svc._normalize_answer_key(task_data, stale_ak)
+        assert len(result["targets"]) == 1
+        assert result["targets"][0]["label"] == "Artery"
+
+    def test_click_deleted_all_annotations_empties_targets(self, svc):
+        task_data = {
+            "type": "click",
+            "content": {
+                "annotations": []
+            },
+        }
+        stale_ak = {
+            "targets": [
+                {"shape": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Artery"}
+            ]
+        }
+        result = svc._normalize_answer_key(task_data, stale_ak)
+        assert result["targets"] == []
+
+    def test_click_renamed_label_updates_in_targets(self, svc):
+        task_data = {
+            "type": "click",
+            "content": {
+                "annotations": [
+                    {"type": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "New Name"},
+                ]
+            },
+        }
+        old_ak = {
+            "targets": [
+                {"shape": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Old Name"}
+            ]
+        }
+        result = svc._normalize_answer_key(task_data, old_ak)
+        assert len(result["targets"]) == 1
+        assert result["targets"][0]["label"] == "New Name"
+
+    def test_click_preserves_custom_tolerance_by_label(self, svc):
+        task_data = {
+            "type": "click",
+            "content": {
+                "annotations": [
+                    {"type": "freehand", "points": [[0, 0], [10, 10]], "label": "Nerve"},
+                ]
+            },
+        }
+        old_ak = {
+            "targets": [
+                {"shape": "freehand", "points": [[0, 0], [10, 10]], "label": "Nerve", "tolerance_px": 15}
+            ]
+        }
+        result = svc._normalize_answer_key(task_data, old_ak)
+        assert result["targets"][0]["tolerance_px"] == 15
+
+    def test_draw_existing_targets_preserved(self, svc):
+        task_data = {
+            "type": "draw",
+            "content": {
+                "regions": [
+                    {"type": "polygon", "points": [[0, 0], [50, 0], [50, 50]], "label": "Active Region"},
+                ]
+            },
+        }
+        existing_ak = {
+            "targets": [
+                {"shape": "polygon", "points": [[0, 0], [50, 0], [50, 50]], "label": "Custom Region"},
+                {"shape": "polygon", "points": [[1, 1], [2, 2], [3, 3]], "label": "Extra Region"},
+            ]
+        }
+        result = svc._normalize_answer_key(task_data, existing_ak)
+        assert len(result["targets"]) == 2
+        assert result["targets"][0]["label"] == "Custom Region"
+
+
 
 # ═══════════════════════════════════════════════════════════════════
 # _resolve_task_path
@@ -631,3 +724,107 @@ class TestEdgeCases:
         modules = svc.load_modules()
         # Should not crash, module should be skipped
         assert len([m for m in modules if m.get("id") == "bad"]) == 0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Answer Key Sync & Self-Healing Round-Trips
+# ═══════════════════════════════════════════════════════════════════
+
+
+class TestAnswerKeySyncAndSelfHealing:
+    def test_duplicate_and_edit_click_task_synchronizes_answer_key(self, data_dir):
+        _make_module(data_dir, "cardio", "Cardiology")
+        _make_topic(data_dir, "cardio", "anatomy", "Heart Anatomy")
+
+        # Create original task with 3 annotations
+        original_task_data = {
+            "id": "heart_base",
+            "name": "Heart Base",
+            "type": "click",
+            "meta": {"id": "heart_base", "name": "Heart Base", "module": "cardio", "topic": "anatomy"},
+            "content": {
+                "annotations": [
+                    {"type": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Aorta"},
+                    {"type": "polygon", "points": [[20, 20], [30, 20], [30, 30]], "label": "Pulmonary Artery"},
+                    {"type": "polygon", "points": [[40, 40], [50, 40], [50, 50]], "label": "Vena Cava"},
+                ]
+            },
+        }
+        svc = StorageService(str(data_dir))
+        svc.save_task("cardio", "anatomy", "heart_base", original_task_data)
+
+        # Duplicate task
+        dup_result = svc.duplicate_task("cardio", "anatomy", "heart_base")
+        assert dup_result["success"] is True
+        dup_id = dup_result["task_id"]
+
+        # Duplicate should initially have 3 targets
+        dup_loaded = svc.load_task("cardio", "anatomy", dup_id)
+        assert len(dup_loaded["answer_key"]["targets"]) == 3
+
+        # Now simulate user editing the duplicate in Editor: delete 2 annotations, keep only 1
+        edited_task_data = copy_dict = dict(dup_loaded["task_data"])
+        edited_task_data["content"] = {
+            "annotations": [
+                {"type": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Aorta"},
+            ]
+        }
+        save_ok = svc.save_task("cardio", "anatomy", dup_id, edited_task_data)
+        assert save_ok is True
+
+        # Verify load_task now returns exactly 1 target
+        reloaded = svc.load_task("cardio", "anatomy", dup_id)
+        assert len(reloaded["answer_key"]["targets"]) == 1
+        assert reloaded["answer_key"]["targets"][0]["label"] == "Aorta"
+
+        # Verify answer_key.json on disk contains exactly 1 target
+        ak_disk_path = data_dir / "modules" / "cardio" / "topics" / "anatomy" / "tasks" / dup_id / "answer_key.json"
+        assert ak_disk_path.exists()
+        with open(ak_disk_path, "r", encoding="utf-8") as f:
+            ak_on_disk = json.load(f)
+        assert len(ak_on_disk["targets"]) == 1
+        assert ak_on_disk["targets"][0]["label"] == "Aorta"
+
+    def test_load_task_self_heals_stale_answer_key_on_disk(self, data_dir):
+        _make_module(data_dir, "cardio", "Cardiology")
+        _make_topic(data_dir, "cardio", "anatomy", "Heart Anatomy")
+
+        # Manually create task dir where task.json has 1 annotation, but answer_key.json has 18 targets
+        task_dir = data_dir / "modules" / "cardio" / "topics" / "anatomy" / "tasks" / "stale_task"
+        task_dir.mkdir(parents=True)
+        task_data = {
+            "id": "stale_task",
+            "name": "Stale Task",
+            "type": "click",
+            "meta": {"id": "stale_task", "name": "Stale Task", "module": "cardio", "topic": "anatomy"},
+            "content": {
+                "annotations": [
+                    {"type": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Aorta"},
+                ]
+            },
+        }
+        (task_dir / "task.json").write_text(json.dumps(task_data, ensure_ascii=False), encoding="utf-8")
+
+        stale_targets = [
+            {"shape": "polygon", "points": [[0, 0], [10, 0], [10, 10]], "label": "Aorta"}
+        ] + [
+            {"shape": "polygon", "points": [[i, i], [i + 5, i], [i + 5, i + 5]], "label": f"Deleted_{i}"}
+            for i in range(1, 18)
+        ]
+        (task_dir / "answer_key.json").write_text(
+            json.dumps({"targets": stale_targets}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        svc = StorageService(str(data_dir))
+        # Load task - should self-heal immediately
+        loaded = svc.load_task("cardio", "anatomy", "stale_task")
+        assert len(loaded["answer_key"]["targets"]) == 1
+        assert loaded["answer_key"]["targets"][0]["label"] == "Aorta"
+
+        # Verify the physical answer_key.json file was self-healed on disk
+        with open(task_dir / "answer_key.json", "r", encoding="utf-8") as f:
+            disk_healed = json.load(f)
+        assert len(disk_healed["targets"]) == 1
+        assert disk_healed["targets"][0]["label"] == "Aorta"
+

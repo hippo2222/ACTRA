@@ -350,21 +350,16 @@ class StorageService:
         base = answer_key if isinstance(answer_key, dict) else {}
         base = dict(base)
 
-        # 1. CLICK & 2. DRAW / SEGMENTATION
-        if task_type == 'click' or task_type == 'draw' or task_type == 'region_segmentation':
-            # Existing answer key already has targets? Keep them.
+        # 1. DRAW / SEGMENTATION
+        if task_type == 'draw' or task_type == 'region_segmentation':
+            # Existing answer key already has targets? Keep them (tested in test_draw_storage_integration.py).
             if isinstance(base.get('targets'), list) and base.get('targets'):
                 return base
 
             targets = []
-            
-            # Source 1: 'annotations' (Click Editor)
-            annotations = content.get('annotations')
-            # Source 2: 'regions' (Draw Editor)
             regions = content.get('regions')
-
-            source_list = annotations if isinstance(annotations, list) else (regions if isinstance(regions, list) else [])
-
+            annotations = content.get('annotations')
+            source_list = regions if isinstance(regions, list) else (annotations if isinstance(annotations, list) else [])
             if not source_list:
                 return base
 
@@ -377,6 +372,57 @@ class StorageService:
                 point = item.get('point') or item.get('coordinates')
                 label = item.get('label', '')
 
+                if item_type == 'freehand' and isinstance(points, list) and len(points) >= 2:
+                    t = {'shape': 'freehand', 'points': points, 'label': label}
+                    if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
+                    elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
+                    targets.append(t)
+                elif item_type == 'polygon' or (not item_type and isinstance(points, list) and len(points) >= 3):
+                    targets.append({'shape': 'polygon', 'points': points, 'label': label})
+                elif isinstance(points, list) and len(points) >= 2:
+                    t = {'shape': 'freehand', 'points': points, 'label': label}
+                    if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
+                    elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
+                    targets.append(t)
+                elif item_type == 'point' or (isinstance(point, (list, tuple)) and len(point) >= 2):
+                    t = {'shape': 'point', 'point': [point[0], point[1]], 'label': label}
+                    if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
+                    elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
+                    targets.append(t)
+
+            if targets:
+                base['targets'] = targets
+            return base
+
+        # 2. CLICK
+        elif task_type == 'click':
+            # Canonical source is content.annotations (or content.regions)
+            source_list = None
+            if isinstance(content.get('annotations'), list):
+                source_list = content.get('annotations')
+            elif isinstance(content.get('regions'), list):
+                source_list = content.get('regions')
+
+            # If content does NOT define annotations or regions at all,
+            # fall back to preserving existing targets from answer_key.
+            if source_list is None:
+                if isinstance(base.get('targets'), list) and base.get('targets'):
+                    return base
+                return base
+
+            targets = []
+            existing_targets = base.get('targets') if isinstance(base.get('targets'), list) else []
+
+            for item in source_list:
+                if not isinstance(item, dict):
+                    continue
+
+                item_type = item.get('type') or item.get('shape') or item.get('target_type')
+                points = item.get('points')
+                point = item.get('point') or item.get('coordinates')
+                label = item.get('label', '')
+
+                t = None
                 # Freehand must win over generic "3+ points" fallback, otherwise
                 # long freehand traces degrade into polygons in runtime/UI.
                 if item_type == 'freehand' and isinstance(points, list) and len(points) >= 2:
@@ -385,16 +431,13 @@ class StorageService:
                         'points': points,
                         'label': label,
                     }
-                    if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
-                    elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
-                    targets.append(t)
                 # Polygon / Region
                 elif item_type == 'polygon' or (not item_type and isinstance(points, list) and len(points) >= 3):
-                     targets.append({
+                    t = {
                         'shape': 'polygon',
                         'points': points,
                         'label': label,
-                    })
+                    }
                 # Freehand fallback for legacy shapes without explicit type
                 elif isinstance(points, list) and len(points) >= 2:
                     t = {
@@ -402,22 +445,48 @@ class StorageService:
                         'points': points,
                         'label': label,
                     }
-                    if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
-                    elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
-                    targets.append(t)
                 # Point
                 elif item_type == 'point' or (isinstance(point, (list, tuple)) and len(point) >= 2):
-                     t = {
+                    t = {
                         'shape': 'point',
                         'point': [point[0], point[1]],
                         'label': label,
                     }
-                     if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
-                     elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
-                     targets.append(t)
-            
-            if targets:
-                base['targets'] = targets
+                # Span
+                elif item_type == 'span' or (item.get('start') is not None and item.get('end') is not None):
+                    t = {
+                        'shape': 'span',
+                        'start': item.get('start'),
+                        'end': item.get('end'),
+                        'label': label,
+                    }
+                elif item_type:
+                    t = dict(item)
+                    if 'shape' not in t:
+                        t['shape'] = item_type
+
+                if t is not None:
+                    if 'id' in item and item['id'] is not None:
+                        t['id'] = item['id']
+                    if 'tolerance_px' in item:
+                        t['tolerance_px'] = item['tolerance_px']
+                    elif 'tolerancePx' in item:
+                        t['tolerancePx'] = item['tolerancePx']
+                    else:
+                        match = None
+                        if 'id' in t:
+                            match = next((et for et in existing_targets if isinstance(et, dict) and et.get('id') == t['id']), None)
+                        if not match and label:
+                            match = next((et for et in existing_targets if isinstance(et, dict) and et.get('label') == label), None)
+                        if match:
+                            if 'tolerance_px' in match:
+                                t['tolerance_px'] = match['tolerance_px']
+                            elif 'tolerancePx' in match:
+                                t['tolerancePx'] = match['tolerancePx']
+
+                    targets.append(t)
+
+            base['targets'] = targets
             return base
 
         # 3. OPEN ANSWER
@@ -430,7 +499,7 @@ class StorageService:
             if 'sequence_matters' not in base:
                 if 'sequence_matters' in content and content.get('sequence_matters') is not None:
                     base['sequence_matters'] = content['sequence_matters']
-                elif 'settings' in task_data and isinstance(task_data['settings'], dict) and 'sequence_matters' in task_data['settings'] and task_data['settings'].get('sequence_matters') is not None:
+                elif 'settings' in task_data and isinstance(task_data.get('settings'), dict) and 'sequence_matters' in task_data['settings'] and task_data['settings'].get('sequence_matters') is not None:
                     base['sequence_matters'] = task_data['settings']['sequence_matters']
             
             # Reference answer (D-2 fix)
@@ -441,7 +510,7 @@ class StorageService:
             if 'max_length' not in base:
                 if 'max_length' in content and content.get('max_length') is not None:
                     base['max_length'] = content['max_length']
-                elif 'settings' in task_data and isinstance(task_data['settings'], dict) and 'max_length' in task_data['settings'] and task_data['settings'].get('max_length') is not None:
+                elif 'settings' in task_data and isinstance(task_data.get('settings'), dict) and 'max_length' in task_data['settings'] and task_data['settings'].get('max_length') is not None:
                     base['max_length'] = task_data['settings']['max_length']
             
             # min_keywords / require_all_keywords (D-1 fix)
@@ -451,23 +520,26 @@ class StorageService:
                 base['require_all_keywords'] = content['require_all_keywords']
             
             # Multi-question support
-            if 'questions' not in base and isinstance(content.get('questions'), list) and content.get('questions'):
+            if 'questions' in content and isinstance(content.get('questions'), list) and content.get('questions'):
                 base['questions'] = content['questions']
-            if 'display_mode' not in base and content.get('display_mode'):
+            elif 'questions' not in base and isinstance(content.get('questions'), list):
+                base['questions'] = content['questions']
+
+            if 'display_mode' in content and content.get('display_mode'):
                 base['display_mode'] = content['display_mode']
-            if 'case_text' not in base and content.get('case_text'):
+            if 'case_text' in content and content.get('case_text'):
                 base['case_text'] = content['case_text']
             
             return base
 
         # 4. SEQUENCE ASSEMBLY
         elif task_type == 'sequence_assembly' or task_type == 'sequence':
-            if 'elements' not in base and isinstance(content.get('elements'), list):
+            if 'elements' in content and isinstance(content.get('elements'), list):
                 base['elements'] = content['elements']
 
             # Editor saves 'sequence' list in content
             # Evaluator expects 'levels' list in answer_key
-            if 'levels' not in base and 'sequence' in content:
+            if 'sequence' in content:
                 editor_sequence = content['sequence']
                 levels = []
                 if isinstance(editor_sequence, list):
@@ -492,14 +564,13 @@ class StorageService:
                             'blocks': blocks
                         })
                 
-                if levels:
-                    base['levels'] = levels
+                base['levels'] = levels
             
             # Map booleans
-            if 'sequence_within_level_matters' not in base and 'order_inside_matters' in content:
+            if 'order_inside_matters' in content:
                 base['sequence_within_level_matters'] = content['order_inside_matters']
             
-            if 'level_order_matters' not in base and 'level_order_matters' in content:
+            if 'level_order_matters' in content:
                 base['level_order_matters'] = content['level_order_matters']
 
             return base
@@ -1466,6 +1537,54 @@ class StorageService:
                 except Exception:
                     pass
 
+    def _synchronize_task_answer_key_on_save(
+        self,
+        module_id: str,
+        topic_id: str,
+        task_id: str,
+        task_data: Dict[str, Any],
+        task_dir: Path,
+    ) -> None:
+        """
+        Synchronize or generate answer_key.json on task save.
+        Ensures that if an answer_key already exists on disk or if task_data specifies
+        content that normalizes into an answer key, the answer_key.json file stays in 100% sync.
+        """
+        if not isinstance(task_data, dict):
+            return
+
+        answer_key_path = task_dir / "answer_key.json"
+        existing_ak = {}
+        had_existing_file = answer_key_path.exists()
+        if had_existing_file:
+            try:
+                with open(answer_key_path, "r", encoding="utf-8") as ak_f:
+                    loaded = json.load(ak_f)
+                    if isinstance(loaded, dict):
+                        existing_ak = loaded
+            except Exception as e:
+                self.logger.warning(f"Could not read existing answer_key.json for sync: {e}")
+
+        # Check if incoming task_data already has explicit answer_key
+        if not existing_ak and isinstance(task_data.get("answer_key"), dict) and task_data.get("answer_key"):
+            existing_ak = dict(task_data["answer_key"])
+
+        # Normalize answer_key against updated task_data
+        normalized_ak = self._normalize_answer_key(task_data, existing_ak)
+
+        should_write = had_existing_file or bool(
+            normalized_ak.get("targets")
+            or normalized_ak.get("keywords")
+            or normalized_ak.get("levels")
+            or normalized_ak.get("questions")
+            or normalized_ak.get("reference_answer")
+        )
+        if should_write:
+            try:
+                self._write_task_answer_key(module_id, topic_id, task_id, normalized_ak)
+            except Exception as e:
+                self.logger.exception(f"Failed to synchronize answer_key on save: {e}")
+
     def _sync_task_content_after_materialization(
         self,
         module_id: str,
@@ -1736,7 +1855,13 @@ class StorageService:
                     td = result.get('task_data')
                     ak = result.get('answer_key')
                     if isinstance(td, dict) and isinstance(ak, dict):
-                        result['answer_key'] = self._normalize_answer_key(td, ak)
+                        normalized = self._normalize_answer_key(td, ak)
+                        if normalized != ak and (task_dir / "answer_key.json").exists():
+                            try:
+                                self._write_task_answer_key(module_id, topic_id, task_id, normalized)
+                            except Exception:
+                                pass
+                        result['answer_key'] = normalized
                 except Exception:
                     self.logger.exception("Failed to normalize answer_key")
                 result = _ensure_route_context(result)
@@ -1804,7 +1929,13 @@ class StorageService:
 
         try:
             if isinstance(task_data, dict) and isinstance(answer_key, dict):
-                answer_key = self._normalize_answer_key(task_data, answer_key)
+                normalized = self._normalize_answer_key(task_data, answer_key)
+                if normalized != answer_key and answer_key_path.exists():
+                    try:
+                        self._write_task_answer_key(module_id, topic_id, task_id, normalized)
+                    except Exception:
+                        pass
+                answer_key = normalized
         except Exception:
             self.logger.exception("Failed to normalize answer_key")
         
@@ -1989,6 +2120,9 @@ class StorageService:
             from task_system.core.io.task_io import TaskIO
             TaskIO.save(task_data_obj, str(task_json_path), validate=validate)
             self._postprocess_saved_open_answer_task(task_json_path)
+
+            # 3.1. Synchronize answer_key.json
+            self._synchronize_task_answer_key_on_save(module_id, topic_id, task_id, task_data, task_dir)
 
             # 4. Update module.json (ensure registered)
             self._ensure_task_registered_in_module(module_id, topic_id, task_id, task_data)
@@ -2873,8 +3007,11 @@ class StorageService:
             raise RuntimeError(f"Failed to save duplicated task {new_task_id}")
 
         source_answer_key = source_payload.get("answer_key")
-        if isinstance(source_answer_key, dict) and source_answer_key:
-            normalized_ak = self._normalize_answer_key(cloned_task_data, source_answer_key)
+        normalized_ak = self._normalize_answer_key(
+            cloned_task_data,
+            source_answer_key if isinstance(source_answer_key, dict) else {},
+        )
+        if normalized_ak:
             self._write_task_answer_key(target_module, target_topic, new_task_id, normalized_ak)
 
         self._modules_cache = None
