@@ -270,6 +270,51 @@ describe("ClickUI Result Registry (Stage 4)", () => {
     expect(rows[0]?.textContent).toContain("Покрытие: 92% (порог: 75%)");
   });
 
+  it("rounds fractional coverage percentage to 1 decimal place in Registry", () => {
+    const task = createL3DrawTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: true,
+      details: {
+        found_targets: [0],
+        polygon_results: [
+          { target_index: 0, polygon_success: true, coverage: 87.36440163151957, threshold: 75 },
+        ],
+      },
+    });
+
+    const rows = Array.from(container.querySelectorAll('[data-clickui="target-row"]'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain("Сердце");
+    expect(rows[0]?.textContent).toContain("Покрытие: 87.4% (порог: 75%)");
+  });
+
+  it("rounds fractional low coverage percentage in status pill and detail in Registry", () => {
+    const task = createL3DrawTaskFixture();
+    const container = document.getElementById("app");
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    dom.window.ClickUI.applyCheckFeedback({
+      success: false,
+      details: {
+        found_targets: [],
+        polygon_results: [
+          { target_index: 0, polygon_success: false, coverage: 46.7891234, threshold: 75 },
+        ],
+      },
+    });
+
+    const rows = Array.from(container.querySelectorAll('[data-clickui="target-row"]'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain("Сердце");
+    expect(rows[0]?.textContent).toContain("46.8%");
+    expect(rows[0]?.textContent).toContain("Покрытие: 46.8% (порог: 75%)");
+  });
+
   it("filters items by errors and all when filter buttons are clicked", () => {
     const task = createL1ClickTaskFixture();
     const container = document.getElementById("app");

@@ -149,6 +149,33 @@ class TestDrawTaskEvaluatorCoverageThreshold:
         assert result_low["details"]["coverage_threshold"] == 30
         assert result_high["details"]["coverage_threshold"] == 90
 
+    def test_coverage_results_and_average_rounded_to_one_decimal(self):
+        """Проверяет, что coverage_results и average_coverage округляются до 1 знака после запятой."""
+        evaluator = DrawTaskEvaluator()
+        reference_data = {
+            "polygons": [
+                [(0, 0), (100, 0), (100, 100), (0, 100)],
+                [(200, 200), (300, 200), (300, 300), (200, 300)],
+            ],
+            "coverage_threshold": 50,
+        }
+        user_input = {
+            "brush_radius": 8,
+            "drawing": [
+                {"type": "brush_stroke", "points": [(0, 0), (50, 0), (100, 0), (100, 50)]}
+            ],
+        }
+        result = evaluator.evaluate(user_input, reference_data)
+        for cov in result["details"]["individual_coverage"]:
+            assert isinstance(cov, (int, float))
+            assert round(cov, 1) == cov
+            assert len(str(cov).split(".")[1]) <= 1
+        avg_cov = result["details"]["coverage"]
+        assert isinstance(avg_cov, (int, float))
+        assert round(avg_cov, 1) == avg_cov
+        assert len(str(avg_cov).split(".")[1]) <= 1
+
+
 
 class TestDrawTaskEvaluatorEdgeCases:
     """Тесты граничных случаев."""

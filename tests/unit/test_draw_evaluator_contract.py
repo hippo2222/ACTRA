@@ -282,3 +282,85 @@ class TestDrawEvaluatorContract:
         assert result.details["message_key"] == "draw_control_fail"
         assert result.details["message_params"]["successes"] == 1
         assert result.details["message_params"]["total_targets"] == 2
+
+    def test_draw_coverage_rounded_to_one_decimal(self, evaluator):
+        """Проверяет, что покрытие (coverage) для полигонов в DrawTask округляется до 1 знака."""
+        task_data = {
+            "type": "draw",
+            "content": {
+                "prompt": "Обведите очаг",
+                "settings": {"coverage_threshold": 50},
+            },
+        }
+        answer_key = {
+            "targets": [
+                {
+                    "shape": "polygon",
+                    "points": [[10, 10], [100, 10], [100, 100], [10, 100]],
+                    "label": "Очаг 1",
+                }
+            ]
+        }
+        user_input = {
+            "polygons": [
+                {
+                    "points": [[15, 12], [95, 14], [98, 97], [12, 93]],
+                    "label": "Очаг 1",
+                }
+            ],
+            "lines": [],
+        }
+
+        result = evaluator.evaluate_draw_task(user_input, answer_key, task_data)
+
+        assert len(result.details["polygon_results"]) == 1
+        cov = result.details["polygon_results"][0]["coverage"]
+        assert isinstance(cov, float)
+        assert round(cov, 1) == cov
+        # Проверяем отсутствие длинного IEEE 754 хвоста
+        assert len(str(cov).split(".")[1]) <= 1
+
+    def test_click_contour_coverage_rounded_to_one_decimal(self, evaluator):
+        """Проверяет, что для Click заданий уровня 3 (контур/полигон) coverage округляется до 1 знака."""
+        task_data = {
+            "type": "click",
+            "difficulty": 3,
+            "content": {
+                "prompt": "Выделите контур",
+                "requires_drawing": True,
+                "targets": [
+                    {
+                        "shape": "polygon",
+                        "points": [[10, 10], [100, 10], [100, 100], [10, 100]],
+                        "label": "Очаг 1",
+                    }
+                ],
+            },
+        }
+        answer_key = {
+            "targets": [
+                {
+                    "shape": "polygon",
+                    "points": [[10, 10], [100, 10], [100, 100], [10, 100]],
+                    "label": "Очаг 1",
+                }
+            ]
+        }
+        user_input = {
+            "polygons": [
+                {
+                    "points": [[15, 12], [95, 14], [98, 97], [12, 93]],
+                    "label": "Очаг 1",
+                }
+            ],
+            "clicks": [],
+        }
+
+        result = evaluator.evaluate_click_task(user_input, answer_key, task_data)
+
+        assert len(result.details["polygon_results"]) == 1
+        cov = result.details["polygon_results"][0]["coverage"]
+        assert isinstance(cov, float)
+        assert round(cov, 1) == cov
+        assert len(str(cov).split(".")[1]) <= 1
+

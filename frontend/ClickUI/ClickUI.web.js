@@ -387,11 +387,16 @@
     return numeric > 0 && numeric <= 1 ? numeric * 100 : numeric;
   }
 
-  function _formatPercentValue(value) {
+  function _formatPercentNumber(value) {
     const numeric = _normalizePercentValue(value);
     if (!Number.isFinite(numeric)) return "";
     const rounded = Math.round(numeric * 10) / 10;
-    return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  }
+
+  function _formatPercentValue(value) {
+    const num = _formatPercentNumber(value);
+    return num ? `${num}%` : "";
   }
 
   function _collectUserActions() {
@@ -4543,7 +4548,7 @@
       } else if (isLowCoverage) {
         item.classList.add("ring-2", "ring-error-light/30", "bg-error-lighter/20");
         pillClass = "inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
-        pillText = `${contourRes.coverage}%`;
+        pillText = `${_formatPercentNumber(contourRes.coverage)}%`;
         pillIcon = "close";
       }
 
@@ -4584,8 +4589,8 @@
           "div",
           "mt-0.5 pl-10 text-[12px] text-text-secondary border-t border-border-subtle pt-1",
           wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
-            .replace("{cov}", contourRes.coverage)
-            .replace("{thr}", contourRes.threshold || 75)
+            .replace("{cov}", _formatPercentNumber(contourRes.coverage))
+            .replace("{thr}", _formatPercentNumber(contourRes.threshold || 75))
         );
         item.appendChild(covBox);
       } else if (!isFound) {
@@ -5382,16 +5387,14 @@
               inspectorDesc.textContent = wt("clickui.inspector_click_hit_desc", "Анатомическая область определена верно");
             }
           } else if (action.kind === "polygon" || action.kind === "line") {
-            const cov = _formatPercentValue(interpretation && interpretation.coverage);
-            const thr = _formatPercentValue(interpretation && interpretation.threshold);
+            const covVal = _formatPercentNumber(interpretation && interpretation.coverage) || "0";
+            const thrVal = _formatPercentNumber(interpretation && interpretation.threshold) || "75";
             const isContourSuccess = interpretation && interpretation.success === true;
             inspectorBar.className = isContourSuccess
               ? "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-xs select-none transition-all duration-200 ease-out"
               : "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-200 ease-out";
             inspectorIcon.textContent = isContourSuccess ? "check_circle" : "cancel";
             inspectorIcon.className = "material-symbols-outlined text-[20px] " + (isContourSuccess ? "text-emerald-500" : "text-rose-500") + " shrink-0 transition-colors";
-            const covVal = String(cov || "0%").replace("%", "");
-            const thrVal = String(thr || "75%").replace("%", "");
             inspectorDesc.textContent = wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
               .replace("{cov}", covVal)
               .replace("{thr}", thrVal);
@@ -5432,14 +5435,16 @@
             .replace("{correct}", expectedLabel);
           inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
         } else if (contourRes && isLowCoverage) {
+          const covVal = _formatPercentNumber(contourRes.coverage);
+          const thrVal = _formatPercentNumber(contourRes.threshold || 75);
           inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 shadow-xs select-none transition-all duration-200 ease-out";
           inspectorIcon.textContent = "cancel";
           inspectorIcon.className = "material-symbols-outlined text-[20px] text-rose-500 shrink-0 transition-colors";
           inspectorTitle.textContent = wt("clickui.inspector_ref_missed_title", "Область «{label}» · Недостаточное покрытие").replace("{label}", targetLabel || "");
           inspectorDesc.textContent = wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
-            .replace("{cov}", contourRes.coverage)
-            .replace("{thr}", contourRes.threshold || 75);
-          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${contourRes.coverage}%</span>`;
+            .replace("{cov}", covVal)
+            .replace("{thr}", thrVal);
+          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">${covVal}%</span>`;
         } else if (isFound) {
           const hasTypo = !!(labelStatus && labelStatus.hasTypo);
           if (hasTypo) {
@@ -5461,6 +5466,10 @@
             const clickRes = clickResults.find((r) => r.target_index === targetIndex && r.click_success);
             if (clickRes && clickRes.matched_click_idx != null) {
               inspectorDesc.textContent = wt("clickui.inspector_ref_found_by_click", "Засчитано вашим кликом {n}").replace("{n}", clickRes.matched_click_idx + 1);
+            } else if (contourRes) {
+              inspectorDesc.textContent = wt("clickui.coverage_stat", "Покрытие: {cov}% (порог: {thr}%)")
+                .replace("{cov}", _formatPercentNumber(contourRes.coverage))
+                .replace("{thr}", _formatPercentNumber(contourRes.threshold || 75));
             } else {
               inspectorDesc.textContent = wt("clickui.inspector_ref_found_desc", "Целевая анатомическая область обнаружена");
             }

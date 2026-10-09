@@ -57,7 +57,8 @@ class DrawTaskEvaluator(BaseTaskEvaluator):
         
         for idx, polygon_points in enumerate(reference_polygons):
             coverage = self.calculate_polygon_coverage(polygon_points, user_drawing, brush_radius)
-            coverage_results.append(coverage)
+            coverage_rounded = round(coverage, 1)
+            coverage_results.append(coverage_rounded)
             
             # FIX: Используем настраиваемый порог вместо hardcoded 75%
             if coverage >= coverage_threshold:
@@ -68,7 +69,7 @@ class DrawTaskEvaluator(BaseTaskEvaluator):
         success = successful_targets >= required_correct
         
         # Средний процент покрытия для статистики
-        average_coverage = sum(coverage_results) / len(coverage_results) if coverage_results else 0
+        average_coverage = round(sum(coverage_results) / len(coverage_results), 1) if coverage_results else 0.0
         
         return {
             "success": success,

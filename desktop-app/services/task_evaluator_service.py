@@ -2347,7 +2347,7 @@ class TaskEvaluatorService:
             polygon_results.append({
                 'target_index': target_idx,
                 'polygon_success': coverage_value >= threshold,
-                'coverage': coverage_value,
+                'coverage': round(coverage_value, 1),
                 'threshold': threshold,
                 'matched_polygon_idx': best_idx
             })
@@ -2404,7 +2404,7 @@ class TaskEvaluatorService:
             line_results.append({
                 'target_index': target_idx,
                 'line_success': ok,
-                'coverage': coverage,
+                'coverage': round(coverage, 1),
                 'threshold': line_threshold * 100,
                 'matched_line_idx': matched_line_idx if matched_line_idx is not None and matched_line_idx >= 0 else None
             })
@@ -2423,7 +2423,7 @@ class TaskEvaluatorService:
                 for r in polygon_results:
                     if not r.get('polygon_success'):
                         r['polygon_success'] = True
-                        r['coverage'] = fallback_coverage
+                        r['coverage'] = round(fallback_coverage, 1)
                         r['matched_polygon_idx'] = r.get('matched_polygon_idx') or 0
         for r in polygon_results:
             if r.get('polygon_success'):
@@ -2568,7 +2568,7 @@ class TaskEvaluatorService:
             value = item.get('coverage') if isinstance(item, dict) else None
             if isinstance(value, (int, float)):
                 drawing_coverage_values.append(float(value))
-        aggregate_drawing_coverage = max(drawing_coverage_values) if drawing_coverage_values else 0.0
+        aggregate_drawing_coverage = round(max(drawing_coverage_values), 1) if drawing_coverage_values else 0.0
 
         return EvaluationResult(
             success=combined_success,
@@ -2659,7 +2659,7 @@ class TaskEvaluatorService:
         return {
             'success': draw_result.success,
             'message': draw_result.message,
-            'coverage': details.get('coverage', 0.0),
+            'coverage': round(float(details.get('coverage', 0.0) or 0.0), 1),
             'target_index': details.get('target_index', -1)
         }
     
@@ -3698,6 +3698,7 @@ class TaskEvaluatorService:
         
         # Порог прохождения для обводки
         threshold = self.default_draw_threshold
+        coverage = round(coverage, 1)
         draw_success = coverage >= threshold
         
         target_label = target.get('label', f'Аннотация {closest_idx + 1}')
@@ -3971,7 +3972,7 @@ class TaskEvaluatorService:
             polygon_results.append({
                 'target_index': target_idx,
                 'polygon_success': best_cov >= threshold,
-                'coverage': float(best_cov),
+                'coverage': round(float(best_cov), 1),
                 'threshold': threshold,
                 'matched_polygon_idx': int(best_poly_idx),
             })
@@ -4039,7 +4040,7 @@ class TaskEvaluatorService:
             line_results.append({
                 'target_index': target_idx,
                 'line_success': best_cov >= line_threshold,
-                'coverage': float(best_cov),
+                'coverage': round(float(best_cov), 1),
                 'threshold': float(line_threshold),
                 'matched_line_idx': int(best_line_idx),
             })
@@ -4326,7 +4327,7 @@ class TaskEvaluatorService:
             polygon_results.append({
                 'index': idx,
                 'label': target.get('label', f'Полигон {idx + 1}'),
-                'coverage': coverage,
+                'coverage': round(coverage, 1),
                 'success': success
             })
         
