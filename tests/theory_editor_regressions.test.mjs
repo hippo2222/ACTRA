@@ -1673,6 +1673,36 @@ describe("Theory editor regressions", () => {
         expect(dom.window.sessionStorage.getItem("theory-editor-draft:theory:50")).toBeNull();
         expect(listTheoryDrafts().length).toBe(0);
     });
+
+    it("hideTheoryDraftBanner and applyRestoredTheoryDraft ensure theory-draft-banner has both hidden attribute and hidden class", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            showTheoryDraftBanner,
+            hideTheoryDraftBanner,
+            applyRestoredTheoryDraft,
+        } = dom.window.__theoryEditorTestExports;
+
+        const banner = dom.window.document.getElementById("theory-draft-banner");
+        const mockDraft = {
+            title: "Черновик",
+            delta: { ops: [{ insert: "Тест\n" }] },
+            savedAt: new Date().toISOString(),
+        };
+
+        showTheoryDraftBanner(mockDraft, "");
+        expect(banner.hidden).toBe(false);
+        expect(banner.classList.contains("hidden")).toBe(false);
+
+        hideTheoryDraftBanner();
+        expect(banner.hidden).toBe(true);
+        expect(banner.classList.contains("hidden")).toBe(true);
+
+        showTheoryDraftBanner(mockDraft, "");
+        expect(banner.hidden).toBe(false);
+        applyRestoredTheoryDraft(mockDraft);
+        expect(banner.hidden).toBe(true);
+        expect(banner.classList.contains("hidden")).toBe(true);
+    });
 });
 
 

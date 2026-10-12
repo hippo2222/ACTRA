@@ -1444,6 +1444,7 @@ function hideTheoryDraftBanner() {
     const banner = document.getElementById("theory-draft-banner");
     if (banner) {
         banner.hidden = true;
+        banner.classList.add("hidden");
     }
 }
 
@@ -1495,6 +1496,7 @@ function showTheoryDraftBanner(draft, theoryId = "") {
         };
     }
 
+    banner.classList.remove("hidden");
     banner.hidden = false;
     updateTheoryDraftsBadge();
 }
@@ -1546,7 +1548,7 @@ function openTheoryDraftModal(draft, theoryId = "") {
                     const activeCls = idx === 0 ? "is-active" : "";
                     return `<button type="button" class="theory-snapshot-pill ${activeCls}" data-snapshot-index="${idx}">
                         <span>${escapeTheoryHtml(timeStr || `#${idx + 1}`)}</span>
-                        <span class="opacity-75 text-[10px]">· ${wordsStr}</span>
+                        <span class="text-[10px] text-text-muted">· ${wordsStr}</span>
                     </button>`;
                 }).join("")}
             </div>
@@ -1804,7 +1806,7 @@ function openTheoryDraftsRegistryModal() {
                     ? `<span class="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">${escapeTheoryHtml(wt('te.k178', 'Привязан к курсу/теме'))}</span>`
                     : `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escapeTheoryHtml(wt('te.k177', 'Автономный материал'))}</span>`;
                 const currentBadge = d.isCurrent
-                    ? `<span class="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">${escapeTheoryHtml(wt('the.k061', 'Черновик'))}</span>`
+                    ? `<span class="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning-text">${escapeTheoryHtml(wt('the.k061', 'Черновик'))}</span>`
                     : '';
                 const previewSnippet = d.previewText ? escapeTheoryHtml(d.previewText.slice(0, 160)) : escapeTheoryHtml(wt('te.k164', 'Черновик пуст'));
 

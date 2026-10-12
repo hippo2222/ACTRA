@@ -775,6 +775,37 @@
             color: var(--color-primary-fg) !important;
             font-weight: 700;
         }
+
+        .theory-snapshot-pill.is-active span {
+            color: var(--color-primary-fg) !important;
+        }
+
+        [hidden],
+        #theory-draft-banner[hidden],
+        #theory-draft-banner.hidden,
+        #theory-draft-banner-registry-btn[hidden],
+        #theory-draft-banner-registry-btn.hidden {
+            display: none !important;
+        }
+
+        #theory-draft-banner:not([hidden]):not(.hidden) {
+            display: flex;
+        }
+
+        #theory-draft-banner .btn-primary,
+        #theory-draft-banner .btn-secondary {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
+            line-height: 1.2;
+            min-height: 1.85rem;
+            border-radius: 0.5rem;
+        }
+
+        .theory-registry-open-btn {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
+            line-height: 1.2;
+        }
     </style>
 </head>
 
@@ -888,7 +919,7 @@
                 <section class="theory-card theory-panel theory-workspace-panel card-elevated animate-slide-up px-4 py-4 sm:px-6 sm:py-5 flex flex-col min-h-0" data-onboarding-target="theory-editor-workspace">
                     <div class="theory-content-stack flex flex-col flex-1 min-h-0">
                         <div id="theory-limit-banner" class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker" hidden></div>
-                        <div id="theory-draft-banner" class="rounded-xl border border-warning/35 bg-warning/10 px-4 py-2.5 text-xs text-text-main flex items-center justify-between gap-3 shadow-xs transition-all" hidden>
+                        <div id="theory-draft-banner" class="hidden rounded-xl border border-warning/35 bg-warning/10 px-4 py-2.5 text-xs text-text-main items-center justify-between gap-3 shadow-xs transition-all" hidden>
                             <div class="flex items-center gap-2.5 min-w-0">
                                 <span class="material-symbols-outlined text-[18px] text-warning shrink-0">history_edu</span>
                                 <div class="min-w-0">
