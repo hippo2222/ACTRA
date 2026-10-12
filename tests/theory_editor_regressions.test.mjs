@@ -1045,6 +1045,13 @@ describe("Theory editor regressions", () => {
         const banner = dom.window.document.getElementById("theory-draft-banner");
         expect(banner).toBeTruthy();
         expect(banner.hidden).toBe(true);
+
+        // Header title must have proper line-height and breathing room to avoid descender clipping
+        const titleH1 = header.querySelector("h1");
+        expect(titleH1).toBeTruthy();
+        expect(titleH1.classList.contains("leading-normal")).toBe(true);
+        expect(titleH1.classList.contains("py-0.5")).toBe(true);
+        expect(theoryEditorHtml).not.toMatch(/\.theory-title\s*\{[^}]*font-size:\s*2rem/);
     });
 
     it("saves draft to localStorage with metadata (words, chars, images, preview)", () => {
