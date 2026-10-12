@@ -57,6 +57,8 @@ function setupTheoryEditorDom(url = "http://localhost/editor/Theory_Editor.html"
                     <div id="theory-stats-counter"></div>
                     <input id="theory-title" />
                     <div id="theory-toolbar">
+                        <button id="theory-undo" disabled></button>
+                        <button id="theory-redo" disabled></button>
                         <button id="theory-bold" aria-pressed="false"></button>
                         <button id="theory-italic" aria-pressed="false"></button>
                         <button id="theory-underline" aria-pressed="false"></button>
@@ -115,6 +117,18 @@ window.__theoryEditorTestExports = {
     initTheorySidebarToggle,
     updateTheoryStatsCounter,
     updateTheoryToolbarActiveStates,
+    theoryUndoManager,
+    pushTheoryUndoState,
+    performTheoryUndo,
+    performTheoryRedo,
+    updateTheoryUndoButtons,
+    initTheoryUndoHistory,
+    toggleTheoryHeading,
+    toggleTheoryList,
+    executeTheoryListCommand,
+    handleTheoryEditorKeydown,
+    bindTheoryToolbar,
+    bindTheoryEditorEvents,
 };`);
 
     return dom;
@@ -619,4 +633,359 @@ describe("Theory editor regressions", () => {
         renderTheoryDeltaToEditor(delta);
         expect(editor.innerHTML).toBe("<h1>Основной заголовок</h1><p>Содержимое раздела</p>");
     });
+
+    it("includes undo/redo controls, script reference, and disabled button CSS in Theory_Editor.html", () => {
+        expect(theoryEditorHtml).toContain('<script src="/editor/undo_manager.js"></script>');
+        expect(theoryEditorHtml).toContain('id="theory-undo"');
+        expect(theoryEditorHtml).toContain('id="theory-redo"');
+        expect(theoryEditorHtml).toContain('data-i18n-title="the.k053"');
+        expect(theoryEditorHtml).toContain('data-i18n-title="the.k054"');
+        expect(theoryEditorHtml).toContain('.theory-toolbar-btn:disabled');
+        expect(theoryEditorHtml).toContain('pointer-events: none;');
+    });
+
+    it("manages undo and redo snapshots, button states, and history truncation correctly", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            initTheoryUndoHistory,
+            pushTheoryUndoState,
+            performTheoryUndo,
+            performTheoryRedo,
+        } = dom.window.__theoryEditorTestExports;
+
+        const undoBtn = dom.window.document.getElementById("theory-undo");
+        const redoBtn = dom.window.document.getElementById("theory-redo");
+        const titleInput = dom.window.document.getElementById("theory-title");
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        initTheoryUndoHistory();
+        expect(undoBtn.disabled).toBe(true);
+        expect(redoBtn.disabled).toBe(true);
+
+        titleInput.value = "Теория V1";
+        editor.innerHTML = "<p>Текст версии 1</p>";
+        pushTheoryUndoState(true);
+
+        titleInput.value = "Теория V2";
+        editor.innerHTML = "<p>Текст версии 2</p>";
+        pushTheoryUndoState(true);
+
+        expect(undoBtn.disabled).toBe(false);
+        expect(redoBtn.disabled).toBe(true);
+
+        // Undo to V1
+        const undoSuccess = performTheoryUndo();
+        expect(undoSuccess).toBe(true);
+        expect(titleInput.value).toBe("Теория V1");
+        expect(editor.innerHTML).toBe("<p>Текст версии 1</p>");
+        expect(undoBtn.disabled).toBe(false); // Can still undo back to initial empty state
+        expect(redoBtn.disabled).toBe(false);
+
+        // Undo to initial state
+        const undoToRootSuccess = performTheoryUndo();
+        expect(undoToRootSuccess).toBe(true);
+        expect(undoBtn.disabled).toBe(true); // Now at root
+        expect(redoBtn.disabled).toBe(false);
+
+        // Redo to V1
+        const redoToV1Success = performTheoryRedo();
+        expect(redoToV1Success).toBe(true);
+        expect(titleInput.value).toBe("Теория V1");
+        expect(editor.innerHTML).toBe("<p>Текст версии 1</p>");
+        expect(undoBtn.disabled).toBe(false);
+        expect(redoBtn.disabled).toBe(false);
+
+        // Redo to V2
+        const redoSuccess = performTheoryRedo();
+        expect(redoSuccess).toBe(true);
+        expect(titleInput.value).toBe("Теория V2");
+        expect(editor.innerHTML).toBe("<p>Текст версии 2</p>");
+        expect(undoBtn.disabled).toBe(false);
+        expect(redoBtn.disabled).toBe(true);
+
+        // Undo and make a new branch to verify redo history truncation
+        performTheoryUndo();
+        expect(titleInput.value).toBe("Теория V1");
+        expect(redoBtn.disabled).toBe(false);
+
+        editor.innerHTML = "<p>Альтернативная ветка</p>";
+        pushTheoryUndoState(true);
+        expect(redoBtn.disabled).toBe(true);
+        expect(undoBtn.disabled).toBe(false);
+    });
+
+    it("routes Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z globally but ignores them in library search", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            initTheoryUndoHistory,
+            pushTheoryUndoState,
+            bindTheoryEditorEvents,
+        } = dom.window.__theoryEditorTestExports;
+
+        bindTheoryEditorEvents();
+        const titleInput = dom.window.document.getElementById("theory-title");
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        initTheoryUndoHistory();
+        titleInput.value = "Исходное состояние";
+        editor.innerHTML = "<p>Шаг 1</p>";
+        pushTheoryUndoState(true);
+
+        editor.innerHTML = "<p>Шаг 2</p>";
+        pushTheoryUndoState(true);
+
+        // Dispatch Ctrl+Z
+        const undoEvent = new dom.window.KeyboardEvent("keydown", {
+            bubbles: true,
+            cancelable: true,
+            key: "z",
+            ctrlKey: true,
+        });
+        dom.window.document.dispatchEvent(undoEvent);
+        expect(editor.innerHTML).toBe("<p>Шаг 1</p>");
+
+        // Dispatch Ctrl+Y
+        const redoEvent = new dom.window.KeyboardEvent("keydown", {
+            bubbles: true,
+            cancelable: true,
+            key: "y",
+            ctrlKey: true,
+        });
+        dom.window.document.dispatchEvent(redoEvent);
+        expect(editor.innerHTML).toBe("<p>Шаг 2</p>");
+
+        // Dispatch Ctrl+Shift+Z
+        dom.window.document.dispatchEvent(undoEvent);
+        expect(editor.innerHTML).toBe("<p>Шаг 1</p>");
+
+        const redoShiftEvent = new dom.window.KeyboardEvent("keydown", {
+            bubbles: true,
+            cancelable: true,
+            key: "z",
+            ctrlKey: true,
+            shiftKey: true,
+        });
+        dom.window.document.dispatchEvent(redoShiftEvent);
+        expect(editor.innerHTML).toBe("<p>Шаг 2</p>");
+
+        // When focused in search input, Ctrl+Z should not affect editor
+        const searchInput = dom.window.document.createElement("input");
+        searchInput.id = "theory-library-search";
+        dom.window.document.body.appendChild(searchInput);
+        searchInput.focus();
+
+        const searchUndoEvent = new dom.window.KeyboardEvent("keydown", {
+            bubbles: true,
+            cancelable: true,
+            key: "z",
+            ctrlKey: true,
+        });
+        dom.window.document.dispatchEvent(searchUndoEvent);
+        expect(editor.innerHTML).toBe("<p>Шаг 2</p>");
+    });
+
+    it("executes list commands via execCommand and connects toolbar buttons", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            toggleTheoryList,
+            bindTheoryToolbar,
+        } = dom.window.__theoryEditorTestExports;
+
+        bindTheoryToolbar();
+        const execSpy = dom.window.document.execCommand;
+
+        toggleTheoryList("ul");
+        expect(execSpy).toHaveBeenCalledWith("insertUnorderedList", false, null);
+
+        toggleTheoryList("ol");
+        expect(execSpy).toHaveBeenCalledWith("insertOrderedList", false, null);
+
+        // Click toolbar button
+        const ulBtn = dom.window.document.getElementById("theory-ul");
+        ulBtn.click();
+        expect(execSpy).toHaveBeenCalledWith("insertUnorderedList", false, null);
+
+        const olBtn = dom.window.document.getElementById("theory-ol");
+        olBtn.click();
+        expect(execSpy).toHaveBeenCalledWith("insertOrderedList", false, null);
+    });
+
+    it("handles smart list navigation for Tab, Shift+Tab, Enter, and Backspace on empty items", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            handleTheoryEditorKeydown,
+        } = dom.window.__theoryEditorTestExports;
+
+        const editor = dom.window.document.getElementById("theory-editor");
+        const execSpy = dom.window.document.execCommand;
+
+        // 1. Tab and Shift+Tab inside <li>
+        editor.innerHTML = "<ul><li id='test-item'>Пункт списка</li></ul>";
+        const liItem = dom.window.document.getElementById("test-item");
+
+        dom.window.getSelection = () => ({
+            rangeCount: 1,
+            isCollapsed: true,
+            getRangeAt: () => ({
+                startContainer: liItem,
+                collapsed: true,
+            }),
+        });
+
+        let tabEvent = {
+            key: "Tab",
+            shiftKey: false,
+            preventDefault: vi.fn(),
+            defaultPrevented: false,
+        };
+        handleTheoryEditorKeydown(tabEvent);
+        expect(tabEvent.preventDefault).toHaveBeenCalled();
+        expect(execSpy).toHaveBeenCalledWith("indent", false, null);
+
+        let shiftTabEvent = {
+            key: "Tab",
+            shiftKey: true,
+            preventDefault: vi.fn(),
+            defaultPrevented: false,
+        };
+        handleTheoryEditorKeydown(shiftTabEvent);
+        expect(shiftTabEvent.preventDefault).toHaveBeenCalled();
+        expect(execSpy).toHaveBeenCalledWith("outdent", false, null);
+
+        // 2. Enter on empty <li> exits the list
+        editor.innerHTML = "<ul><li id='empty-item'><br></li></ul>";
+        const emptyLi = dom.window.document.getElementById("empty-item");
+        dom.window.getSelection = () => ({
+            rangeCount: 1,
+            isCollapsed: true,
+            getRangeAt: () => ({
+                startContainer: emptyLi,
+                collapsed: true,
+            }),
+        });
+
+        let enterEvent = {
+            key: "Enter",
+            shiftKey: false,
+            ctrlKey: false,
+            metaKey: false,
+            preventDefault: vi.fn(),
+            defaultPrevented: false,
+        };
+        handleTheoryEditorKeydown(enterEvent);
+        expect(enterEvent.preventDefault).toHaveBeenCalled();
+        expect(execSpy).toHaveBeenCalledWith("insertUnorderedList", false, null);
+
+        // 3. Backspace on empty <li> exits the list
+        let backspaceEvent = {
+            key: "Backspace",
+            preventDefault: vi.fn(),
+            defaultPrevented: false,
+        };
+        handleTheoryEditorKeydown(backspaceEvent);
+        expect(backspaceEvent.preventDefault).toHaveBeenCalled();
+        expect(execSpy).toHaveBeenCalledWith("insertUnorderedList", false, null);
+    });
+
+    it("prevents silent data loss in editorHtmlToTheoryDelta on nested and non-standard list structures", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+        } = dom.window.__theoryEditorTestExports;
+
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        // Nested lists (e.g., from browser execCommand indent or pasted HTML)
+        editor.innerHTML = `
+            <ul>
+                <li>Родитель 1
+                    <ul>
+                        <li>Подпункт 1.1</li>
+                        <li>Подпункт 1.2</li>
+                    </ul>
+                </li>
+                <li>Родитель 2</li>
+            </ul>
+        `;
+
+        const delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Родитель 1" },
+            { insert: "\n", attributes: { list: "bullet" } },
+            { insert: "Подпункт 1.1" },
+            { insert: "\n", attributes: { list: "bullet" } },
+            { insert: "Подпункт 1.2" },
+            { insert: "\n", attributes: { list: "bullet" } },
+            { insert: "Родитель 2" },
+            { insert: "\n", attributes: { list: "bullet" } },
+        ]);
+
+        // Roundtrip back to editor
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.textContent).toContain("Родитель 1");
+        expect(editor.textContent).toContain("Подпункт 1.1");
+        expect(editor.textContent).toContain("Подпункт 1.2");
+        expect(editor.textContent).toContain("Родитель 2");
+
+        // Non-li direct children inside list are also preserved instead of dropped
+        editor.innerHTML = `
+            <ul>
+                <p>Текст внутри списка</p>
+                <li>Элемент списка</li>
+            </ul>
+        `;
+        const nonLiDelta = editorHtmlToTheoryDelta();
+        const texts = nonLiDelta.ops.filter((op) => typeof op.insert === "string" && op.insert !== "\n").map((op) => op.insert);
+        expect(texts).toContain("Текст внутри списка");
+        expect(texts).toContain("Элемент списка");
+    });
+
+    it("toggles headings back to paragraph when clicked again", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            toggleTheoryHeading,
+        } = dom.window.__theoryEditorTestExports;
+
+        const execSpy = dom.window.document.execCommand;
+
+        // 1. When formatBlock is currently h1, clicking h1 toggles back to <p>
+        dom.window.document.queryCommandValue = vi.fn((cmd) => cmd === "formatBlock" ? "h1" : "");
+        toggleTheoryHeading(1);
+        expect(execSpy).toHaveBeenCalledWith("formatBlock", false, "<p>");
+
+        // 2. When formatBlock is p, clicking h1 changes to <h1>
+        dom.window.document.queryCommandValue = vi.fn((cmd) => cmd === "formatBlock" ? "p" : "");
+        toggleTheoryHeading(1);
+        expect(execSpy).toHaveBeenCalledWith("formatBlock", false, "<h1>");
+
+        // 3. When formatBlock is h2, clicking h2 toggles back to <p>
+        dom.window.document.queryCommandValue = vi.fn((cmd) => cmd === "formatBlock" ? "h2" : "");
+        toggleTheoryHeading(2);
+        expect(execSpy).toHaveBeenCalledWith("formatBlock", false, "<p>");
+    });
+
+    it("cleanTheoryWordHtml preserves img src and anchor href attributes while stripping Word bloat", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            cleanTheoryWordHtml,
+        } = dom.window.__theoryEditorTestExports;
+
+        const sampleWordHtml = `
+            <p class="MsoNormal" style="margin-left:0cm;text-indent:0cm">
+                <span lang="RU">Текст с картинкой: </span>
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" alt="Диаграмма" style="width:200px">
+                <a href="https://example.com/handbook">Справочник</a>
+                <o:p></o:p>
+            </p>
+        `;
+
+        const cleaned = cleanTheoryWordHtml(sampleWordHtml);
+        expect(cleaned).toContain('src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="');
+        expect(cleaned).toContain('href="https://example.com/handbook"');
+        expect(cleaned).toContain("Справочник");
+        expect(cleaned).not.toContain("o:p");
+        expect(cleaned).not.toContain("MsoNormal");
+    });
 });
+

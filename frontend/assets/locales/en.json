@@ -7536,7 +7536,11 @@
     "k049": "Image align left",
     "k050": "Image align center",
     "k051": "Image align right",
-    "k052": "No wrap"
+    "k052": "No wrap",
+    "k053": "Undo (Ctrl+Z)",
+    "k054": "Redo (Ctrl+Y)",
+    "k055": "Undo",
+    "k056": "Redo"
   },
   "open_answer_editor.page_title": "ACTRA — Open Answer Editor",
   "open_answer_editor.back_title": "Task Library",

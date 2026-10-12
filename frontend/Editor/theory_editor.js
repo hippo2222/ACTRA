@@ -43,6 +43,138 @@ let theoryEditorOnboardingImageVariantActive = false;
 let theoryEditorOnboardingImageMarkerEventsBound = false;
 let theoryEditorOnboardingImageMarkerTimer = 0;
 
+const EditorUndoManager = (typeof UndoManager !== "undefined")
+    ? UndoManager
+    : class {
+        constructor(maxHistory = 50) {
+            this.history = [];
+            this.currentIndex = -1;
+            this.maxHistory = maxHistory;
+        }
+        pushState(state) {
+            this.history = this.history.slice(0, this.currentIndex + 1);
+            this.history.push(JSON.parse(JSON.stringify(state)));
+            this.currentIndex++;
+            if (this.history.length > this.maxHistory) {
+                this.history.shift();
+                this.currentIndex--;
+            }
+        }
+        undo() {
+            if (this.canUndo()) {
+                this.currentIndex--;
+                return JSON.parse(JSON.stringify(this.history[this.currentIndex]));
+            }
+            return null;
+        }
+        redo() {
+            if (this.canRedo()) {
+                this.currentIndex++;
+                return JSON.parse(JSON.stringify(this.history[this.currentIndex]));
+            }
+            return null;
+        }
+        canUndo() { return this.currentIndex > 0; }
+        canRedo() { return this.currentIndex < this.history.length - 1; }
+        clear() { this.history = []; this.currentIndex = -1; }
+    };
+
+const theoryUndoManager = new EditorUndoManager(50);
+let theoryUndoDebounceTimer = null;
+let isRestoringTheoryUndoState = false;
+
+function captureTheoryEditorSnapshot() {
+    const editor = document.getElementById("theory-editor");
+    const titleEl = document.getElementById("theory-title");
+    return {
+        html: editor ? editor.innerHTML : "",
+        title: titleEl ? titleEl.value : "",
+    };
+}
+
+function updateTheoryUndoButtons() {
+    const undoBtn = document.getElementById("theory-undo");
+    const redoBtn = document.getElementById("theory-redo");
+    if (undoBtn) undoBtn.disabled = !theoryUndoManager.canUndo();
+    if (redoBtn) redoBtn.disabled = !theoryUndoManager.canRedo();
+}
+
+function pushTheoryUndoState(immediate = true) {
+    if (isRestoringTheoryUndoState) return;
+    const snapshot = captureTheoryEditorSnapshot();
+
+    const doPush = () => {
+        const current = theoryUndoManager.history[theoryUndoManager.currentIndex];
+        if (!current || current.html !== snapshot.html || current.title !== snapshot.title) {
+            theoryUndoManager.pushState(snapshot);
+            updateTheoryUndoButtons();
+        }
+    };
+
+    if (immediate) {
+        if (theoryUndoDebounceTimer) {
+            clearTimeout(theoryUndoDebounceTimer);
+            theoryUndoDebounceTimer = null;
+        }
+        doPush();
+    } else {
+        if (theoryUndoDebounceTimer) clearTimeout(theoryUndoDebounceTimer);
+        theoryUndoDebounceTimer = setTimeout(doPush, 350);
+    }
+}
+
+function performTheoryUndo() {
+    if (!theoryUndoManager.canUndo()) return false;
+    const state = theoryUndoManager.undo();
+    if (!state) return false;
+    applyTheoryEditorSnapshot(state);
+    return true;
+}
+
+function performTheoryRedo() {
+    if (!theoryUndoManager.canRedo()) return false;
+    const state = theoryUndoManager.redo();
+    if (!state) return false;
+    applyTheoryEditorSnapshot(state);
+    return true;
+}
+
+function applyTheoryEditorSnapshot(snapshot) {
+    if (!snapshot) return;
+    isRestoringTheoryUndoState = true;
+    try {
+        const titleEl = document.getElementById("theory-title");
+        const editor = document.getElementById("theory-editor");
+        if (titleEl && typeof snapshot.title === "string") {
+            titleEl.value = snapshot.title;
+        }
+        if (editor && typeof snapshot.html === "string") {
+            editor.innerHTML = snapshot.html;
+            rebindTheoryEditorImages(editor);
+        }
+        markTheoryDirty();
+        updateTheoryStatsCounter();
+        updateTheoryToolbarActiveStates();
+        updateTheoryUndoButtons();
+    } finally {
+        isRestoringTheoryUndoState = false;
+    }
+}
+
+function rebindTheoryEditorImages(container) {
+    if (!container) return;
+    container.querySelectorAll("img.theory-image").forEach((img) => {
+        img.onmousedown = function (e) { e.preventDefault(); };
+        img.onclick = function (e) { theoryImageClick(this, e); };
+    });
+}
+
+function initTheoryUndoHistory() {
+    theoryUndoManager.clear();
+    pushTheoryUndoState(true);
+    updateTheoryUndoButtons();
+}
+
 function getTheoryEditorOnboardingPreviewTourId() {
     try {
         const params = new URLSearchParams(window.location.search || "");
@@ -1983,13 +2115,19 @@ function cleanTheoryWordHtml(html) {
                 if (val) preservedStyles[prop] = val;
             });
         }
+
+        const preservedAttrs = {};
+        attrsToKeep.forEach(attr => {
+            const val = el.getAttribute(attr);
+            if (val !== null && val !== undefined) preservedAttrs[attr] = val;
+        });
         
         while (el.attributes.length > 0) {
             el.removeAttribute(el.attributes[0].name);
         }
         
-        attrsToKeep.forEach(attr => {
-            if (el.dataset && el.dataset[attr]) el.setAttribute(attr, el.dataset[attr]);
+        Object.entries(preservedAttrs).forEach(([attr, val]) => {
+            el.setAttribute(attr, val);
         });
         
         // Restore whitelisted styles
@@ -2108,13 +2246,59 @@ function editorHtmlToTheoryDelta() {
                     flushInlineBuffer();
                     if (tag === "ol" || tag === "ul") {
                         const listType = tag === "ol" ? "ordered" : "bullet";
-                        const items = Array.from(node.children || []).filter(
-                            (child) => child.tagName && child.tagName.toLowerCase() === "li"
-                        );
-                        for (const li of items) {
-                            const liAttrs = { list: listType };
-                            if (li.style.textAlign) liAttrs.align = li.style.textAlign;
-                            emitBlock(li, liAttrs);
+                        for (const child of Array.from(node.children || [])) {
+                            const childTag = (child.tagName || "").toLowerCase();
+                            if (childTag === "li") {
+                                const liAttrs = { list: listType };
+                                if (child.style && child.style.textAlign) liAttrs.align = child.style.textAlign;
+                                
+                                const hasNestedList = Array.from(child.children || []).some(
+                                    c => (c.tagName || "").toLowerCase() === "ul" || (c.tagName || "").toLowerCase() === "ol"
+                                );
+                                if (!hasNestedList) {
+                                    emitBlock(child, liAttrs);
+                                } else {
+                                    const emitInlineIfNotEmpty = (nodes) => {
+                                        const hasMeaningfulContent = nodes.some(n => {
+                                            if (n.nodeType === Node.TEXT_NODE) {
+                                                return Boolean((n.nodeValue || "").replace(/[\s\r\n\u00a0]+/g, ""));
+                                            }
+                                            if (n.nodeType === Node.ELEMENT_NODE) {
+                                                const childElTag = (n.tagName || "").toLowerCase();
+                                                if (childElTag === "br" && nodes.length === 1) return false;
+                                                return true;
+                                            }
+                                            return false;
+                                        });
+                                        if (hasMeaningfulContent) {
+                                            emitBlock(nodes, liAttrs);
+                                        }
+                                    };
+
+                                    let currentInlineNodes = [];
+                                    for (const childNode of Array.from(child.childNodes || [])) {
+                                        if (
+                                            childNode.nodeType === Node.ELEMENT_NODE &&
+                                            ((childNode.tagName || "").toLowerCase() === "ul" || (childNode.tagName || "").toLowerCase() === "ol")
+                                        ) {
+                                            if (currentInlineNodes.length > 0) {
+                                                emitInlineIfNotEmpty(currentInlineNodes);
+                                                currentInlineNodes = [];
+                                            }
+                                            processNodes([childNode]);
+                                        } else {
+                                            currentInlineNodes.push(childNode);
+                                        }
+                                    }
+                                    if (currentInlineNodes.length > 0) {
+                                        emitInlineIfNotEmpty(currentInlineNodes);
+                                    }
+                                }
+                            } else if (childTag === "ol" || childTag === "ul") {
+                                processNodes([child]);
+                            } else {
+                                emitBlock(child, { list: listType });
+                            }
                         }
                     } else {
                         const lineAttrs = {};
@@ -2195,64 +2379,143 @@ function editorHtmlToTheoryDelta() {
     return normalized.length ? { ops: normalized } : { ops: [{ insert: "\n" }] };
 }
 
+function toggleTheoryHeading(level) {
+    const editor = document.getElementById("theory-editor");
+    if (!editor) return;
+    editor.focus();
+
+    pushTheoryUndoState(true);
+    let currentBlock = "";
+    try {
+        currentBlock = String(document.queryCommandValue("formatBlock") || "").toLowerCase().replace(/[<>]/g, "");
+    } catch (e) {}
+    if (!currentBlock) {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+            const node = sel.getRangeAt(0).startContainer;
+            const el = node.nodeType === 1 ? node : node.parentElement;
+            const heading = el?.closest("h1, h2, h3, h4, h5, h6, p");
+            if (heading) currentBlock = heading.tagName.toLowerCase();
+        }
+    }
+
+    if (currentBlock === `h${level}`) {
+        document.execCommand("formatBlock", false, "<p>");
+    } else {
+        document.execCommand("formatBlock", false, `<h${level}>`);
+    }
+    pushTheoryUndoState(true);
+    markTheoryDirty();
+    updateTheoryToolbarActiveStates();
+}
+
+function executeTheoryListCommand(command) {
+    const editor = document.getElementById("theory-editor");
+    if (!editor) return;
+    editor.focus();
+
+    if (!editor.innerHTML.trim() || editor.innerHTML === "<br>") {
+        editor.innerHTML = "<p><br></p>";
+        const range = document.createRange();
+        range.setStart(editor.firstElementChild, 0);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    document.execCommand(command, false, null);
+    saveTheorySelection();
+}
+
+function toggleTheoryList(type) {
+    pushTheoryUndoState(true);
+    const cmd = type === "ol" ? "insertOrderedList" : "insertUnorderedList";
+    executeTheoryListCommand(cmd);
+    pushTheoryUndoState(true);
+    markTheoryDirty();
+    updateTheoryToolbarActiveStates();
+}
+
 function insertTheoryList(tag) {
+    toggleTheoryList(tag);
+}
+
+function handleTheoryEditorKeydown(event) {
     const editor = document.getElementById("theory-editor");
     if (!editor) return;
 
-    const selection = window.getSelection();
-    const range = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-    const blockTags = new Set(["P", "DIV", "H1", "H2", "H3", "H4", "H5", "H6", "LI", "BLOCKQUOTE", "PRE"]);
-
-    function getBlockAncestor(node) {
-        while (node && node !== editor) {
-            if (node.nodeType === 1 && blockTags.has(node.tagName)) return node;
-            node = node.parentNode;
+    if (event.key === "Tab") {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const li = range.startContainer instanceof Element
+                ? range.startContainer.closest("li")
+                : range.startContainer.parentElement?.closest("li");
+            if (li && editor.contains(li)) {
+                event.preventDefault();
+                pushTheoryUndoState(true);
+                if (event.shiftKey) {
+                    document.execCommand("outdent", false, null);
+                } else {
+                    document.execCommand("indent", false, null);
+                }
+                pushTheoryUndoState(true);
+                markTheoryDirty();
+                updateTheoryToolbarActiveStates();
+                return;
+            }
         }
-        return null;
     }
 
-    if (!range) {
-        editor.focus();
-        document.execCommand("insertHTML", false, tag === "ul" ? "<ul><li><br></li></ul>" : "<ol><li><br></li></ol>");
-        return;
+    if (event.key === "Enter" && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const li = range.startContainer instanceof Element
+                ? range.startContainer.closest("li")
+                : range.startContainer.parentElement?.closest("li");
+            if (li && editor.contains(li)) {
+                const text = (li.textContent || "").replace(/[\s\u00a0\u200b]+/g, "");
+                const hasImage = Boolean(li.querySelector("img"));
+                if (!text && !hasImage) {
+                    event.preventDefault();
+                    pushTheoryUndoState(true);
+                    const list = li.closest("ul, ol");
+                    const listType = list?.tagName.toLowerCase() === "ol" ? "insertOrderedList" : "insertUnorderedList";
+                    document.execCommand(listType, false, null);
+                    pushTheoryUndoState(true);
+                    markTheoryDirty();
+                    updateTheoryToolbarActiveStates();
+                    return;
+                }
+            }
+        }
     }
 
-    const startBlock = getBlockAncestor(range.startContainer) || editor.firstElementChild;
-    const endBlock = getBlockAncestor(range.endContainer) || editor.lastElementChild;
-
-    if (!startBlock) {
-        editor.focus();
-        document.execCommand("insertHTML", false, tag === "ul" ? "<ul><li><br></li></ul>" : "<ol><li><br></li></ol>");
-        return;
-    }
-
-    const blocks = [];
-    let node = startBlock;
-    while (node) {
-        if (blockTags.has(node.tagName)) blocks.push(node);
-        if (node === endBlock) break;
-        node = node.nextElementSibling;
-    }
-    if (!blocks.length) blocks.push(startBlock);
-
-    const list = document.createElement(tag);
-    for (const block of blocks) {
-        const li = document.createElement("li");
-        li.innerHTML = block.innerHTML || "<br>";
-        list.appendChild(li);
-    }
-
-    startBlock.parentNode.insertBefore(list, startBlock);
-    blocks.forEach((block) => block.remove());
-
-    const firstLi = list.firstElementChild;
-    if (firstLi && selection) {
-        editor.focus();
-        const newRange = document.createRange();
-        newRange.setStart(firstLi, 0);
-        newRange.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
+    if (event.key === "Backspace") {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && selection.isCollapsed) {
+            const range = selection.getRangeAt(0);
+            const li = range.startContainer instanceof Element
+                ? range.startContainer.closest("li")
+                : range.startContainer.parentElement?.closest("li");
+            if (li && editor.contains(li)) {
+                const text = (li.textContent || "").replace(/[\s\u00a0\u200b]+/g, "");
+                const hasImage = Boolean(li.querySelector("img"));
+                if (!text && !hasImage) {
+                    event.preventDefault();
+                    pushTheoryUndoState(true);
+                    const list = li.closest("ul, ol");
+                    const listType = list?.tagName.toLowerCase() === "ol" ? "insertOrderedList" : "insertUnorderedList";
+                    document.execCommand(listType, false, null);
+                    pushTheoryUndoState(true);
+                    markTheoryDirty();
+                    updateTheoryToolbarActiveStates();
+                    return;
+                }
+            }
+        }
     }
 }
 
@@ -2265,6 +2528,7 @@ function setTheoryEditorContent(title, delta) {
     renderTheoryDeltaToEditor(delta || EMPTY_THEORY_DELTA);
     updateTheoryStatsCounter();
     updateTheoryToolbarActiveStates();
+    initTheoryUndoHistory();
 }
 
 function resetTheoryEditorState() {
@@ -3468,10 +3732,13 @@ function initColorPicker() {
         const swatch = e.target.closest(".theory-color-swatch");
         if (!swatch) return;
         const color = swatch.getAttribute("data-color");
+        restoreTheorySelection();
         const editor = document.getElementById("theory-editor");
         if (editor) editor.focus();
+        pushTheoryUndoState(true);
         document.execCommand("foreColor", false, color);
         setTheoryColorIndicator(color);
+        pushTheoryUndoState(true);
         palette.classList.add("hidden");
         const selection = window.getSelection();
         const hasSelection = selection && selection.toString().length > 0;
@@ -3483,6 +3750,7 @@ function initColorPicker() {
     const colorBtn = document.getElementById("theory-color-btn");
     colorBtn?.addEventListener("mousedown", (e) => {
         e.preventDefault();
+        saveTheorySelection();
         palette.classList.toggle("hidden");
     });
     document.addEventListener("click", (e) => {
@@ -3504,14 +3772,21 @@ function initImageControls() {
                 applyImageSettings(_selectedImage, { width });
             }
         });
+        widthSlider.addEventListener("change", () => {
+            pushTheoryUndoState(true);
+            markTheoryDirty();
+        });
     }
     
     document.querySelectorAll(".theory-image-align-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
             const align = btn.getAttribute("data-align");
             if (_selectedImage) {
+                pushTheoryUndoState(true);
                 applyImageSettings(_selectedImage, { align });
                 updateImageControls();
+                pushTheoryUndoState(true);
+                markTheoryDirty();
             }
         });
     });
@@ -3520,32 +3795,44 @@ function initImageControls() {
         btn.addEventListener("click", () => {
             const float = btn.getAttribute("data-float");
             if (_selectedImage) {
+                pushTheoryUndoState(true);
                 applyImageSettings(_selectedImage, { float });
                 updateImageControls();
+                pushTheoryUndoState(true);
+                markTheoryDirty();
             }
         });
     });
     
     document.getElementById("theory-image-rotate-left")?.addEventListener("click", () => {
         if (!_selectedImage) return;
+        pushTheoryUndoState(true);
         const currentRotate = parseInt(_selectedImage.getAttribute("data-rotate") || "0");
         const newRotate = ((currentRotate - 90 + 360) % 360).toString();
         applyImageSettings(_selectedImage, { rotate: newRotate });
+        pushTheoryUndoState(true);
+        markTheoryDirty();
     });
     
     document.getElementById("theory-image-rotate-right")?.addEventListener("click", () => {
         if (!_selectedImage) return;
+        pushTheoryUndoState(true);
         const currentRotate = parseInt(_selectedImage.getAttribute("data-rotate") || "0");
         const newRotate = ((currentRotate + 90) % 360).toString();
         applyImageSettings(_selectedImage, { rotate: newRotate });
+        pushTheoryUndoState(true);
+        markTheoryDirty();
     });
     
     document.getElementById("theory-image-flip")?.addEventListener("click", () => {
         if (!_selectedImage) return;
+        pushTheoryUndoState(true);
         const currentFlip = _selectedImage.getAttribute("data-flip") || "none";
         const newFlip = currentFlip === "horizontal" ? "none" : "horizontal";
         applyImageSettings(_selectedImage, { flip: newFlip });
         updateImageControls();
+        pushTheoryUndoState(true);
+        markTheoryDirty();
     });
     
     const editor = document.getElementById("theory-editor");
@@ -3560,6 +3847,21 @@ function initImageControls() {
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && _selectedImage) {
             deselectImage();
+        }
+        if ((e.key === "Delete" || e.key === "Backspace") && _selectedImage) {
+            e.preventDefault();
+            pushTheoryUndoState(true);
+            const wrapper = _selectedImage.closest(".theory-image-wrapper") || _selectedImage;
+            const parentP = wrapper.closest("p");
+            if (parentP && parentP.children.length === 1 && !parentP.textContent.trim()) {
+                parentP.remove();
+            } else {
+                wrapper.remove();
+            }
+            deselectImage();
+            pushTheoryUndoState(true);
+            markTheoryDirty();
+            updateTheoryStatsCounter();
         }
     });
 }
@@ -3647,26 +3949,61 @@ function updateTheoryToolbarActiveStates() {
     checkCommand("theory-align-center", "justifyCenter");
     checkCommand("theory-align-right", "justifyRight");
     checkCommand("theory-align-justify", "justifyFull");
-    checkCommand("theory-ul", "insertUnorderedList");
-    checkCommand("theory-ol", "insertOrderedList");
+
+    const checkListCommand = (btnId, listTag) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        let active = false;
+        const cmd = listTag === "ul" ? "insertUnorderedList" : "insertOrderedList";
+        try {
+            active = Boolean(document.queryCommandState(cmd));
+        } catch (e) {}
+        if (!active) {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const node = sel.getRangeAt(0).startContainer;
+                const el = node.nodeType === 1 ? node : node.parentElement;
+                const list = el?.closest("ul, ol");
+                if (list && list.tagName.toLowerCase() === listTag) {
+                    active = true;
+                }
+            }
+        }
+        btn.setAttribute("aria-pressed", String(active));
+        btn.classList.toggle("active", active);
+    };
+
+    checkListCommand("theory-ul", "ul");
+    checkListCommand("theory-ol", "ol");
 
     let blockFormat = "";
     try {
-        blockFormat = String(document.queryCommandValue("formatBlock") || "").toLowerCase();
+        blockFormat = String(document.queryCommandValue("formatBlock") || "").toLowerCase().replace(/[<>]/g, "");
     } catch (e) {}
 
-    const h1Btn = document.getElementById("theory-h1");
-    if (h1Btn) {
-        const isH1 = blockFormat === "h1";
-        h1Btn.setAttribute("aria-pressed", String(isH1));
-        h1Btn.classList.toggle("active", isH1);
-    }
-    const h2Btn = document.getElementById("theory-h2");
-    if (h2Btn) {
-        const isH2 = blockFormat === "h2";
-        h2Btn.setAttribute("aria-pressed", String(isH2));
-        h2Btn.classList.toggle("active", isH2);
-    }
+    const checkHeadingCommand = (btnId, headingTag) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        let isHeading = blockFormat === headingTag;
+        if (!isHeading) {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const node = sel.getRangeAt(0).startContainer;
+                const el = node.nodeType === 1 ? node : node.parentElement;
+                const heading = el?.closest("h1, h2, h3, h4, h5, h6");
+                if (heading && heading.tagName.toLowerCase() === headingTag) {
+                    isHeading = true;
+                }
+            }
+        }
+        btn.setAttribute("aria-pressed", String(isHeading));
+        btn.classList.toggle("active", isHeading);
+    };
+
+    checkHeadingCommand("theory-h1", "h1");
+    checkHeadingCommand("theory-h2", "h2");
+
+    updateTheoryUndoButtons();
 }
 
 function bindTheoryToolbar() {
@@ -3674,58 +4011,71 @@ function bindTheoryToolbar() {
         document.execCommand("styleWithCSS", false, true);
     } catch (error) {}
 
+    document.getElementById("theory-undo")?.addEventListener("click", () => {
+        performTheoryUndo();
+    });
+    document.getElementById("theory-redo")?.addEventListener("click", () => {
+        performTheoryRedo();
+    });
+
     document.getElementById("theory-bold")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("bold");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-italic")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("italic");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-underline")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("underline");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-h1")?.addEventListener("click", () => {
-        document.execCommand("formatBlock", false, "h1");
-        markTheoryDirty();
-        updateTheoryToolbarActiveStates();
+        toggleTheoryHeading(1);
     });
     document.getElementById("theory-h2")?.addEventListener("click", () => {
-        document.execCommand("formatBlock", false, "h2");
-        markTheoryDirty();
-        updateTheoryToolbarActiveStates();
+        toggleTheoryHeading(2);
     });
     document.getElementById("theory-ul")?.addEventListener("click", () => {
-        insertTheoryList("ul");
-        markTheoryDirty();
-        updateTheoryToolbarActiveStates();
+        toggleTheoryList("ul");
     });
     document.getElementById("theory-ol")?.addEventListener("click", () => {
-        insertTheoryList("ol");
-        markTheoryDirty();
-        updateTheoryToolbarActiveStates();
+        toggleTheoryList("ol");
     });
     document.getElementById("theory-align-left")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("justifyLeft");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-center")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("justifyCenter");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-right")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("justifyRight");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
     document.getElementById("theory-align-justify")?.addEventListener("click", () => {
+        pushTheoryUndoState(true);
         document.execCommand("justifyFull");
+        pushTheoryUndoState(true);
         markTheoryDirty();
         updateTheoryToolbarActiveStates();
     });
@@ -3748,6 +4098,7 @@ function bindTheoryEditorEvents() {
 
     document.getElementById("theory-title")?.addEventListener("input", () => {
         markTheoryDirty();
+        pushTheoryUndoState(false);
     });
 
     document.getElementById("theory-editor")?.addEventListener("input", () => {
@@ -3755,18 +4106,22 @@ function bindTheoryEditorEvents() {
         saveTheorySelection();
         updateTheoryStatsCounter();
         updateTheoryToolbarActiveStates();
+        pushTheoryUndoState(false);
     });
 
     document.getElementById("theory-editor")?.addEventListener("keydown", (event) => {
         guardTheoryImageAdjacentDeletion(event);
+        handleTheoryEditorKeydown(event);
     });
 
     document.getElementById("theory-editor")?.addEventListener("paste", (e) => {
         const html = e.clipboardData?.getData("text/html");
         if (html) {
             e.preventDefault();
+            pushTheoryUndoState(true);
             const cleanHtml = cleanTheoryWordHtml(html);
             document.execCommand("insertHTML", false, cleanHtml);
+            pushTheoryUndoState(true);
             markTheoryDirty();
             updateTheoryStatsCounter();
             updateTheoryToolbarActiveStates();
@@ -3842,8 +4197,32 @@ function bindTheoryEditorEvents() {
 
     document.addEventListener("keydown", async (event) => {
         if (theoryReloadConfirmPending) return;
+        const isCtrl = event.ctrlKey || event.metaKey;
         const lowerKey = String(event.key || "").toLowerCase();
-        if ((event.ctrlKey || event.metaKey) && lowerKey === "s") {
+
+        // Ctrl+Z (Undo)
+        if (isCtrl && lowerKey === "z" && !event.shiftKey) {
+            const active = document.activeElement;
+            const isLibrarySearch = active && (active.id === "theory-library-search" || active.closest?.("#theory-library-panel"));
+            if (!isLibrarySearch) {
+                event.preventDefault();
+                performTheoryUndo();
+                return;
+            }
+        }
+
+        // Ctrl+Y or Ctrl+Shift+Z (Redo)
+        if ((isCtrl && lowerKey === "y") || (isCtrl && event.shiftKey && lowerKey === "z")) {
+            const active = document.activeElement;
+            const isLibrarySearch = active && (active.id === "theory-library-search" || active.closest?.("#theory-library-panel"));
+            if (!isLibrarySearch) {
+                event.preventDefault();
+                performTheoryRedo();
+                return;
+            }
+        }
+
+        if (isCtrl && lowerKey === "s") {
             event.preventDefault();
             try {
                 await persistTheory();
@@ -3851,7 +4230,7 @@ function bindTheoryEditorEvents() {
             return;
         }
 
-        const wantsReload = event.key === "F5" || ((event.ctrlKey || event.metaKey) && lowerKey === "r");
+        const wantsReload = event.key === "F5" || (isCtrl && lowerKey === "r");
         if (!theoryEditorState.dirty || !wantsReload) return;
 
         event.preventDefault();
