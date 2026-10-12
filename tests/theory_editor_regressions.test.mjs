@@ -44,10 +44,20 @@ function setupTheoryEditorDom(url = "http://localhost/editor/Theory_Editor.html"
             <button id="theory-open-complexes-btn"></button>
             <main id="theory-main-grid">
                 <aside id="theory-library-panel">
+                    <button id="theory-drafts-badge-btn" class="hidden">
+                        <span id="theory-drafts-badge-count">0</span>
+                    </button>
                     <div id="theory-library-count"></div>
                     <div id="theory-library-list"></div>
                 </aside>
                 <section class="theory-workspace-panel">
+                    <div id="theory-draft-banner" hidden>
+                        <span id="theory-draft-banner-meta"></span>
+                        <button id="theory-draft-banner-registry-btn" hidden></button>
+                        <button id="theory-draft-banner-preview-btn"></button>
+                        <button id="theory-draft-banner-restore-btn"></button>
+                        <button id="theory-draft-banner-delete-btn"></button>
+                    </div>
                     <div id="theory-color-picker-host">
                         <button id="theory-color-btn" type="button"></button>
                         <div id="theory-color-palette"></div>
@@ -129,6 +139,24 @@ window.__theoryEditorTestExports = {
     handleTheoryEditorKeydown,
     bindTheoryToolbar,
     bindTheoryEditorEvents,
+    readTheoryDraft,
+    saveTheoryDraftNow,
+    clearTheoryDraft,
+    getTheoryDraftKey,
+    getLegacyTheoryDraftKey,
+    openTheoryDraftModal,
+    restoreTheoryDraftIfPresent,
+    showTheoryDraftBanner,
+    hideTheoryDraftBanner,
+    extractTheoryDeltaStats,
+    renderTheoryDeltaToHtmlSnippet,
+    listTheoryDrafts,
+    clearAllTheoryDrafts,
+    cleanupExpiredTheoryDrafts,
+    openTheoryDraftsRegistryModal,
+    updateTheoryDraftsBadge,
+    sanitizeDeltaForDraftStorage,
+    formatTheorySnapshotTime,
 };`);
 
     return dom;
@@ -986,6 +1014,476 @@ describe("Theory editor regressions", () => {
         expect(cleaned).toContain("Справочник");
         expect(cleaned).not.toContain("o:p");
         expect(cleaned).not.toContain("MsoNormal");
+    });
+
+    it("verifies redesigned topbar in Theory_Editor.html conforms to flat studio design without card-elevated", () => {
+        const dom = new JSDOM(theoryEditorHtml);
+        const header = dom.window.document.getElementById("theory-editor-header");
+        expect(header).toBeTruthy();
+        expect(header.classList.contains("theory-topbar")).toBe(true);
+        expect(header.classList.contains("card-elevated")).toBe(false);
+        expect(header.getAttribute("data-onboarding-target")).toBe("theory-editor-header");
+
+        // Essential controls and onboarding elements must remain intact
+        expect(dom.window.document.getElementById("theory-back-btn")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-back-btn-label")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-context-copy")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-sidebar-toggle-btn")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-publish-btn")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-open-center-btn")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-open-complexes-btn")).toBeTruthy();
+        expect(dom.window.document.getElementById("theory-new-btn")).toBeTruthy();
+
+        const saveBtn = dom.window.document.getElementById("theory-save-btn");
+        expect(saveBtn).toBeTruthy();
+        expect(saveBtn.classList.contains("btn-primary")).toBe(true);
+        expect(saveBtn.getAttribute("data-onboarding-target")).toBe("theory-editor-save-action");
+
+        // Banner container must be present in HTML
+        const banner = dom.window.document.getElementById("theory-draft-banner");
+        expect(banner).toBeTruthy();
+        expect(banner.hidden).toBe(true);
+    });
+
+    it("saves draft to localStorage with metadata (words, chars, images, preview)", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            theoryEditorState,
+            saveTheoryDraftNow,
+            readTheoryDraft,
+        } = dom.window.__theoryEditorTestExports;
+
+        const titleEl = dom.window.document.getElementById("theory-title");
+        const editorEl = dom.window.document.getElementById("theory-editor");
+
+        titleEl.value = "Квантовая оптика";
+        editorEl.innerHTML = "<p>Фотон переносит энергию пропорционально частоте излучения.</p>";
+        theoryEditorState.dirty = true;
+
+        saveTheoryDraftNow();
+
+        const draft = readTheoryDraft("");
+        expect(draft).toBeTruthy();
+        expect(draft.title).toBe("Квантовая оптика");
+        expect(draft.delta).toBeTruthy();
+        expect(draft.wordCount).toBeGreaterThan(0);
+        expect(draft.charCount).toBeGreaterThan(0);
+        expect(draft.previewText).toContain("Фотон переносит энергию");
+
+        // Check it exists in localStorage
+        const rawLs = dom.window.localStorage.getItem(draft.key);
+        expect(rawLs).toBeTruthy();
+        expect(rawLs).toContain("Квантовая оптика");
+    });
+
+    it("readTheoryDraft seamlessly migrates legacy draft keys from localStorage or sessionStorage", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            readTheoryDraft,
+            getLegacyTheoryDraftKey,
+        } = dom.window.__theoryEditorTestExports;
+
+        const legacyKey = getLegacyTheoryDraftKey("");
+        const legacyPayload = {
+            title: "Устаревший черновик",
+            delta: { ops: [{ insert: "Текст из старой сессии\n" }] },
+            savedAt: new Date().toISOString(),
+        };
+
+        dom.window.sessionStorage.setItem(legacyKey, JSON.stringify(legacyPayload));
+
+        const draft = readTheoryDraft("");
+        expect(draft).toBeTruthy();
+        expect(draft.title).toBe("Устаревший черновик");
+        expect(draft.previewText).toContain("Текст из старой сессии");
+    });
+
+    it("openTheoryDraftModal renders live content preview and statistics comparison", async () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            openTheoryDraftModal,
+        } = dom.window.__theoryEditorTestExports;
+
+        const draft = {
+            title: "Черновик теории волн",
+            delta: {
+                ops: [
+                    { insert: "Введение в волновую теорию\n", attributes: { header: 1 } },
+                    { insert: "Длина волны связана с частотой.\n" },
+                ],
+            },
+            savedAt: new Date().toISOString(),
+            wordCount: 8,
+            charCount: 56,
+            imageCount: 0,
+            previewText: "Введение в волновую теорию",
+        };
+
+        const modalPromise = openTheoryDraftModal(draft, "");
+        const modalEl = dom.window.document.getElementById("theory-draft-modal");
+        expect(modalEl).toBeTruthy();
+
+        // Check preview content rendered
+        const previewBox = dom.window.document.getElementById("theory-draft-preview-box");
+        expect(previewBox).toBeTruthy();
+        expect(previewBox.innerHTML).toContain("Введение в волновую теорию");
+        expect(previewBox.innerHTML).toContain("Длина волны связана с частотой");
+
+        // Check 3 explicit actions exist
+        const restoreBtn = dom.window.document.getElementById("theory-draft-restore-btn");
+        const deferBtn = dom.window.document.getElementById("theory-draft-defer-btn");
+        const deleteBtn = dom.window.document.getElementById("theory-draft-delete-btn");
+
+        expect(restoreBtn).toBeTruthy();
+        expect(deferBtn).toBeTruthy();
+        expect(deleteBtn).toBeTruthy();
+
+        // Deferring must not delete the draft and must resolve with 'deferred'
+        deferBtn.click();
+        const outcome = await modalPromise;
+        expect(outcome).toBe("deferred");
+        expect(dom.window.document.getElementById("theory-draft-modal")).toBeNull();
+
+        // Banner must be visible
+        const banner = dom.window.document.getElementById("theory-draft-banner");
+        expect(banner.hidden).toBe(false);
+    });
+
+    it("restores draft into editor and updates dirty flag on user confirmation", async () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            theoryEditorState,
+            openTheoryDraftModal,
+        } = dom.window.__theoryEditorTestExports;
+
+        const draft = {
+            title: "Восстановленная теория",
+            delta: {
+                ops: [
+                    { insert: "Содержимое восстановлено успешно!\n" },
+                ],
+            },
+            savedAt: new Date().toISOString(),
+            wordCount: 3,
+            charCount: 34,
+            imageCount: 0,
+            previewText: "Содержимое восстановлено успешно!",
+        };
+
+        const modalPromise = openTheoryDraftModal(draft, "");
+        const restoreBtn = dom.window.document.getElementById("theory-draft-restore-btn");
+        restoreBtn.click();
+
+        const outcome = await modalPromise;
+        expect(outcome).toBe("restored");
+        expect(theoryEditorState.dirty).toBe(true);
+
+        const titleEl = dom.window.document.getElementById("theory-title");
+        expect(titleEl.value).toBe("Восстановленная теория");
+
+        const editorEl = dom.window.document.getElementById("theory-editor");
+        expect(editorEl.innerHTML).toContain("Содержимое восстановлено успешно!");
+    });
+
+    it("maintains up to 5 rolling snapshots and debounces rapid saves within 45 seconds", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            theoryEditorState,
+            saveTheoryDraftNow,
+            readTheoryDraft,
+            getTheoryDraftKey,
+        } = dom.window.__theoryEditorTestExports;
+
+        const titleEl = dom.window.document.getElementById("theory-title");
+        const editorEl = dom.window.document.getElementById("theory-editor");
+        titleEl.value = "Квантовая механика";
+        editorEl.innerHTML = "<p>Уравнение Шрёдингера</p>";
+        theoryEditorState.dirty = true;
+
+        // 1st save
+        saveTheoryDraftNow();
+        let draft = readTheoryDraft("");
+        expect(draft).toBeTruthy();
+        expect(draft.snapshots.length).toBe(1);
+        expect(draft.snapshots[0].title).toBe("Квантовая механика");
+        expect(draft.snapshots[0].previewText).toContain("Уравнение Шрёдингера");
+
+        // 2nd save within same minute (debounce in-place update)
+        editorEl.innerHTML = "<p>Уравнение Шрёдингера и волновая функция</p>";
+        saveTheoryDraftNow();
+        draft = readTheoryDraft("");
+        expect(draft.snapshots.length).toBe(1);
+        expect(draft.snapshots[0].previewText).toContain("волновая функция");
+
+        // Manually simulate checkpoints by pushing snapshots with older timestamps
+        const key = getTheoryDraftKey("");
+        const raw = JSON.parse(dom.window.localStorage.getItem(key));
+        const olderSnapshots = [];
+        for (let i = 1; i <= 6; i++) {
+            olderSnapshots.push({
+                id: `snap_old_${i}`,
+                title: `Старая версия ${i}`,
+                delta: { ops: [{ insert: `Текст версии ${i}\n` }] },
+                savedAt: new Date(Date.now() - (i + 1) * 60000).toISOString(),
+                wordCount: 10 + i,
+                charCount: 50 + i,
+                imageCount: 0,
+                previewText: `Текст версии ${i}`,
+            });
+        }
+        // Place one top snapshot that is older than 45s so next save generates new checkpoint
+        raw.snapshots = [
+            {
+                id: "snap_recent",
+                title: "Предшествующий снимок",
+                delta: { ops: [{ insert: "Предшествующий снимок\n" }] },
+                savedAt: new Date(Date.now() - 50000).toISOString(),
+                wordCount: 5,
+                charCount: 30,
+                imageCount: 0,
+                previewText: "Предшествующий снимок",
+            },
+            ...olderSnapshots,
+        ];
+        dom.window.localStorage.setItem(key, JSON.stringify(raw));
+
+        // Save new content now -> must prepend new snapshot and cap total at 5
+        editorEl.innerHTML = "<p>Финальная редакция квантовой механики</p>";
+        saveTheoryDraftNow();
+        draft = readTheoryDraft("");
+        expect(draft.snapshots.length).toBe(5);
+        expect(draft.snapshots[0].previewText).toContain("Финальная редакция");
+        expect(draft.snapshots[1].previewText).toContain("Предшествующий снимок");
+    });
+
+    it("openTheoryDraftModal allows selecting and restoring a historical snapshot", async () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            theoryEditorState,
+            openTheoryDraftModal,
+        } = dom.window.__theoryEditorTestExports;
+
+        const draft = {
+            title: "Оптика",
+            key: "theory_editor_draft_v2:new:standalone::::",
+            savedAt: new Date().toISOString(),
+            snapshots: [
+                {
+                    id: "snap_1",
+                    title: "Оптика — Черновик 2",
+                    delta: { ops: [{ insert: "Вторая версия: дифракция и интерференция\n" }] },
+                    savedAt: new Date().toISOString(),
+                    wordCount: 5,
+                    charCount: 42,
+                    imageCount: 0,
+                    previewText: "Вторая версия: дифракция и интерференция",
+                },
+                {
+                    id: "snap_0",
+                    title: "Оптика — Черновик 1 (Начальный)",
+                    delta: { ops: [{ insert: "Первая версия: геометрическая оптика\n" }] },
+                    savedAt: new Date(Date.now() - 120000).toISOString(),
+                    wordCount: 4,
+                    charCount: 36,
+                    imageCount: 0,
+                    previewText: "Первая версия: геометрическая оптика",
+                },
+            ],
+        };
+
+        const modalPromise = openTheoryDraftModal(draft, "");
+        const modalEl = dom.window.document.getElementById("theory-draft-modal");
+        expect(modalEl).toBeTruthy();
+
+        // Checkpoint pills rendered
+        const pills = modalEl.querySelectorAll(".theory-snapshot-pill");
+        expect(pills.length).toBe(2);
+        expect(pills[0].classList.contains("is-active")).toBe(true);
+
+        const previewBox = dom.window.document.getElementById("theory-draft-preview-box");
+        expect(previewBox.textContent).toContain("Вторая версия");
+
+        // Switch to checkpoint 1 (the older one)
+        pills[1].click();
+        expect(pills[1].classList.contains("is-active")).toBe(true);
+        expect(pills[0].classList.contains("is-active")).toBe(false);
+        expect(previewBox.textContent).toContain("Первая версия: геометрическая оптика");
+
+        // Restore selected snapshot
+        const restoreBtn = dom.window.document.getElementById("theory-draft-restore-btn");
+        restoreBtn.click();
+        const outcome = await modalPromise;
+
+        expect(outcome).toBe("restored");
+        expect(theoryEditorState.dirty).toBe(true);
+        const editorEl = dom.window.document.getElementById("theory-editor");
+        expect(editorEl.innerHTML).toContain("Первая версия: геометрическая оптика");
+    });
+
+    it("listTheoryDrafts aggregates drafts with accurate scope context and sorting", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            listTheoryDrafts,
+        } = dom.window.__theoryEditorTestExports;
+
+        // Draft 1: Standalone
+        const key1 = "theory_editor_draft_v2:new:standalone::::";
+        dom.window.localStorage.setItem(key1, JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Автономный черновик",
+                delta: { ops: [{ insert: "Текст 1\n" }] },
+                savedAt: new Date(Date.now() - 10000).toISOString(),
+                wordCount: 2,
+                charCount: 8,
+                imageCount: 0,
+                previewText: "Текст 1",
+            }],
+        }));
+
+        // Draft 2: Bound to course topic
+        const key2 = "theory_editor_draft_v2:new:topic:mod_1:top_2:comp_3";
+        dom.window.localStorage.setItem(key2, JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Черновик темы курса",
+                delta: { ops: [{ insert: "Текст темы курса\n" }] },
+                savedAt: new Date(Date.now()).toISOString(),
+                wordCount: 3,
+                charCount: 16,
+                imageCount: 0,
+                previewText: "Текст темы курса",
+            }],
+        }));
+
+        // Draft 3: Bound to existing theory id
+        const key3 = "theory_editor_draft_v2:theory:th_abc123";
+        dom.window.localStorage.setItem(key3, JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Черновик существующей теории",
+                delta: { ops: [{ insert: "Текст правки\n" }] },
+                savedAt: new Date(Date.now() - 30000).toISOString(),
+                wordCount: 2,
+                charCount: 12,
+                imageCount: 0,
+                previewText: "Текст правки",
+            }],
+        }));
+
+        const drafts = listTheoryDrafts();
+        expect(drafts.length).toBe(3);
+
+        // Sorted newest first: Draft 2 (now) -> Draft 1 (-10s) -> Draft 3 (-30s)
+        expect(drafts[0].title).toBe("Черновик темы курса");
+        expect(drafts[0].contextType).toBe("bound_course");
+
+        expect(drafts[1].title).toBe("Автономный черновик");
+        expect(drafts[1].contextType).toBe("standalone");
+
+        expect(drafts[2].title).toBe("Черновик существующей теории");
+        expect(drafts[2].contextType).toBe("bound_theory");
+        expect(drafts[2].theoryId).toBe("th_abc123");
+    });
+
+    it("sanitizes large base64 image data URIs to protect local storage quota", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            sanitizeDeltaForDraftStorage,
+        } = dom.window.__theoryEditorTestExports;
+
+        const hugeBase64 = "data:image/png;base64," + "A".repeat(2048);
+        const normalUrl = "/api/theory/images/img_123.webp";
+
+        const delta = {
+            ops: [
+                { insert: "Изображение 1: " },
+                { insert: { image: hugeBase64 } },
+                { insert: "\nИзображение 2: " },
+                { insert: { image: normalUrl } },
+                { insert: "\n" },
+            ],
+        };
+
+        const sanitized = sanitizeDeltaForDraftStorage(delta);
+        expect(sanitized.ops[1].insert.image).not.toContain("AAAA");
+        expect(sanitized.ops[1].insert.image).toContain("svg");
+        expect(sanitized.ops[3].insert.image).toBe(normalUrl);
+    });
+
+    it("cleanupExpiredTheoryDrafts purges records older than TTL", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            cleanupExpiredTheoryDrafts,
+            listTheoryDrafts,
+        } = dom.window.__theoryEditorTestExports;
+
+        // Fresh draft: 2 days old
+        dom.window.localStorage.setItem("theory_editor_draft_v2:new:fresh::::", JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Свежий черновик",
+                delta: { ops: [{ insert: "Свежий\n" }] },
+                savedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            }],
+        }));
+
+        // Expired draft: 20 days old (> 14 days)
+        dom.window.localStorage.setItem("theory_editor_draft_v2:new:old::::", JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Старый черновик",
+                delta: { ops: [{ insert: "Старый\n" }] },
+                savedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+            }],
+        }));
+
+        expect(listTheoryDrafts().length).toBe(2);
+
+        const cleanedCount = cleanupExpiredTheoryDrafts(14);
+        expect(cleanedCount).toBe(1);
+
+        const remaining = listTheoryDrafts();
+        expect(remaining.length).toBe(1);
+        expect(remaining[0].title).toBe("Свежий черновик");
+    });
+
+    it("updateTheoryDraftsBadge and clearAllTheoryDrafts manage UI indicators and bulk deletion", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            updateTheoryDraftsBadge,
+            clearAllTheoryDrafts,
+            listTheoryDrafts,
+        } = dom.window.__theoryEditorTestExports;
+
+        const badgeBtn = dom.window.document.getElementById("theory-drafts-badge-btn");
+        const badgeCount = dom.window.document.getElementById("theory-drafts-badge-count");
+        const registryBtn = dom.window.document.getElementById("theory-draft-banner-registry-btn");
+
+        // Initially no drafts
+        updateTheoryDraftsBadge();
+        expect(badgeBtn.classList.contains("hidden")).toBe(true);
+
+        // Add 2 drafts
+        dom.window.localStorage.setItem("theory_editor_draft_v2:new:first::::", JSON.stringify({
+            version: 2,
+            snapshots: [{ title: "Черновик 1", savedAt: new Date().toISOString() }],
+        }));
+        dom.window.localStorage.setItem("theory_editor_draft_v2:new:second::::", JSON.stringify({
+            version: 2,
+            snapshots: [{ title: "Черновик 2", savedAt: new Date().toISOString() }],
+        }));
+
+        updateTheoryDraftsBadge();
+        expect(badgeBtn.classList.contains("hidden")).toBe(false);
+        expect(badgeCount.textContent).toBe("2");
+        expect(registryBtn.hidden).toBe(false);
+
+        // Clear all drafts
+        clearAllTheoryDrafts();
+        expect(listTheoryDrafts().length).toBe(0);
+        expect(badgeBtn.classList.contains("hidden")).toBe(true);
+        expect(badgeCount.textContent).toBe("0");
     });
 });
 

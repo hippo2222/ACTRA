@@ -10,7 +10,10 @@ const THEORY_EDITOR_ROUTE = "/editor/Theory_Editor.html";
 const THEORY_CENTER_ROUTE = "/editor/Theory_Center.html";
 const EMPTY_THEORY_DELTA = { ops: [{ insert: "\n" }] };
 const THEORY_DEFAULT_TEXT_COLOR_FALLBACK = "#1A1A1A";
-const THEORY_DRAFT_STORAGE_PREFIX = "theory-editor-draft:";
+const THEORY_DRAFT_STORAGE_PREFIX = "theory_editor_draft_v2:";
+const THEORY_DRAFT_STORAGE_LEGACY_PREFIX = "theory-editor-draft:";
+const MAX_THEORY_SNAPSHOTS = 5;
+const THEORY_SNAPSHOT_DEBOUNCE_INTERVAL_MS = 45000;
 const THEORY_EDITOR_ONBOARDING_TOUR_ID = "theory-editor-authoring";
 
 const theoryEditorState = {
@@ -760,36 +763,264 @@ function getTheoryDraftKey(theoryId = "") {
     return `${THEORY_DRAFT_STORAGE_PREFIX}${getTheoryDraftScopeId(theoryId)}`;
 }
 
+function getLegacyTheoryDraftKey(theoryId = "") {
+    return `${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${getTheoryDraftScopeId(theoryId)}`;
+}
+
+function getTheoryDraftStorage() {
+    try {
+        if (typeof window !== "undefined" && window.localStorage) {
+            const testKey = "__test_ls__";
+            window.localStorage.setItem(testKey, "1");
+            window.localStorage.removeItem(testKey);
+            return window.localStorage;
+        }
+    } catch (e) {}
+    try {
+        if (typeof window !== "undefined" && window.sessionStorage) {
+            return window.sessionStorage;
+        }
+    } catch (e) {}
+    return null;
+}
+
+function sanitizeDeltaForDraftStorage(delta) {
+    if (!delta || !Array.isArray(delta.ops)) {
+        return EMPTY_THEORY_DELTA;
+    }
+    const clonedOps = delta.ops.map(op => {
+        if (!op || typeof op !== "object") return op;
+        if (op.insert && typeof op.insert === "object" && op.insert.image) {
+            const imgSrc = String(op.insert.image || "");
+            if (imgSrc.startsWith("data:image/") && imgSrc.length > 512) {
+                return {
+                    ...op,
+                    insert: {
+                        ...op.insert,
+                        image: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='%23e2e8f0'/><text x='50' y='50' font-size='10' text-anchor='middle' alignment-baseline='middle' fill='%2364748b'>Embedded Image</text></svg>",
+                    }
+                };
+            }
+        }
+        return { ...op };
+    });
+    return { ops: clonedOps };
+}
+
+function formatTheorySnapshotTime(isoString) {
+    if (!isoString) return "";
+    try {
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) return "";
+        const now = new Date();
+        const isToday = date.toDateString() === now.toDateString();
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const timePart = `${hours}:${minutes}`;
+        if (isToday) {
+            return timePart;
+        }
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        return `${day}.${month} ${timePart}`;
+    } catch (e) {
+        return "";
+    }
+}
+
 function clearTheoryDraftByKey(draftKey = "") {
     const normalizedKey = String(draftKey || "").trim();
     if (!normalizedKey) {
         return;
     }
     try {
+        window.localStorage?.removeItem(normalizedKey);
+    } catch (error) {
+        console.warn("[Theory Editor] Failed to clear draft from localStorage", error);
+    }
+    try {
         window.sessionStorage?.removeItem(normalizedKey);
     } catch (error) {
-        console.warn("[Theory Editor] Failed to clear draft", error);
+        console.warn("[Theory Editor] Failed to clear draft from sessionStorage", error);
     }
+    updateTheoryDraftsBadge();
 }
 
 function clearTheoryDraft(theoryId = "") {
     clearTheoryDraftByKey(getTheoryDraftKey(theoryId));
+    clearTheoryDraftByKey(getLegacyTheoryDraftKey(theoryId));
+    hideTheoryDraftBanner();
+    updateTheoryDraftsBadge();
+}
+
+function extractTheoryDeltaStats(delta) {
+    if (!delta || !Array.isArray(delta.ops)) {
+        return { words: 0, chars: 0, images: 0, preview: "" };
+    }
+    let text = "";
+    let images = 0;
+    for (const op of delta.ops) {
+        if (typeof op.insert === "string") {
+            text += op.insert;
+        } else if (op.insert && typeof op.insert === "object" && op.insert.image) {
+            images++;
+        }
+    }
+    const trimmed = text.trim();
+    const words = trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0;
+    const chars = trimmed.length;
+    const preview = trimmed.slice(0, 300);
+    return { words, chars, images, preview };
+}
+
+function extractCurrentTheoryEditorStats() {
+    const editor = document.getElementById("theory-editor");
+    const titleEl = document.getElementById("theory-title");
+    const text = editor ? String(editor.innerText || "").trim() : "";
+    const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+    const chars = text.length;
+    const images = editor ? editor.querySelectorAll("img").length : 0;
+    const title = titleEl ? String(titleEl.value || "").trim() : "";
+    return { title, words, chars, images };
+}
+
+function renderTheoryDeltaToHtmlSnippet(delta) {
+    if (!delta || !Array.isArray(delta.ops) || !delta.ops.length) {
+        return `<p class="text-text-muted italic text-xs">${escapeTheoryHtml(wt('te.k164', 'Черновик пуст'))}</p>`;
+    }
+    const lines = deltaToTheoryLines(delta);
+    if (!lines.length) {
+        return `<p class="text-text-muted italic text-xs">${escapeTheoryHtml(wt('te.k164', 'Черновик пуст'))}</p>`;
+    }
+
+    const blocks = [];
+    let activeListType = null;
+    let activeListItems = [];
+
+    const flushList = () => {
+        if (!activeListType || !activeListItems.length) {
+            activeListType = null;
+            activeListItems = [];
+            return;
+        }
+        const listTag = activeListType === "ordered" ? "ol" : "ul";
+        const listClass = activeListType === "ordered" ? "list-decimal pl-5 space-y-1" : "list-disc pl-5 space-y-1";
+        blocks.push(`<${listTag} class="${listClass}">${activeListItems.join("")}</${listTag}>`);
+        activeListType = null;
+        activeListItems = [];
+    };
+
+    const maxLines = Math.min(lines.length, 12);
+    for (let i = 0; i < maxLines; i++) {
+        const line = lines[i];
+        const attrs = line && typeof line === "object" ? line.attrs || {} : {};
+        const lineHtml = renderTheoryLineContent(line && line.segments);
+        const listType = attrs.list === "ordered" ? "ordered" : (attrs.list === "bullet" || attrs.list === "check" ? "bullet" : null);
+
+        if (listType) {
+            if (activeListType && activeListType !== listType) flushList();
+            activeListType = listType;
+            activeListItems.push(`<li>${lineHtml}</li>`);
+            continue;
+        }
+
+        flushList();
+        const headerLevel = Number(attrs.header);
+        if (Number.isInteger(headerLevel) && headerLevel >= 1 && headerLevel <= 6) {
+            blocks.push(`<h${headerLevel} class="font-bold text-sm mt-1.5 mb-1 text-text-main">${lineHtml}</h${headerLevel}>`);
+        } else if (attrs.blockquote) {
+            blocks.push(`<blockquote class="border-l-2 border-primary/50 pl-2 italic text-xs text-text-secondary my-1">${lineHtml}</blockquote>`);
+        } else {
+            blocks.push(`<p class="text-xs text-text-main my-1">${lineHtml || "&nbsp;"}</p>`);
+        }
+    }
+
+    flushList();
+    if (lines.length > 12) {
+        blocks.push(`<p class="text-[11px] text-text-muted mt-2 pt-1 border-t border-border-subtle">... (+${lines.length - 12})</p>`);
+    }
+    return blocks.join("");
 }
 
 function readTheoryDraft(theoryId = "") {
+    const primaryKey = getTheoryDraftKey(theoryId);
+    const legacyKey = getLegacyTheoryDraftKey(theoryId);
+    let raw = null;
+
     try {
-        const raw = window.sessionStorage?.getItem(getTheoryDraftKey(theoryId));
-        if (!raw) {
-            return null;
-        }
+        raw = window.localStorage?.getItem(primaryKey);
+    } catch (e) {}
+    if (!raw) {
+        try {
+            raw = window.localStorage?.getItem(legacyKey);
+        } catch (e) {}
+    }
+    if (!raw) {
+        try {
+            raw = window.sessionStorage?.getItem(legacyKey);
+        } catch (e) {}
+    }
+    if (!raw) {
+        try {
+            raw = window.sessionStorage?.getItem(primaryKey);
+        } catch (e) {}
+    }
+
+    if (!raw) {
+        return null;
+    }
+
+    try {
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== "object") {
             return null;
         }
+
+        let snapshots = [];
+        if (Array.isArray(parsed.snapshots) && parsed.snapshots.length > 0) {
+            snapshots = parsed.snapshots.map((s, idx) => {
+                const sDelta = s.delta && typeof s.delta === "object" ? s.delta : EMPTY_THEORY_DELTA;
+                const sStats = extractTheoryDeltaStats(sDelta);
+                return {
+                    id: s.id || `snap_${idx}`,
+                    title: String(s.title || "").trim(),
+                    delta: sDelta,
+                    savedAt: String(s.savedAt || "").trim(),
+                    wordCount: typeof s.wordCount === "number" ? s.wordCount : sStats.words,
+                    charCount: typeof s.charCount === "number" ? s.charCount : sStats.chars,
+                    imageCount: typeof s.imageCount === "number" ? s.imageCount : sStats.images,
+                    previewText: String(s.previewText || sStats.preview || "").trim(),
+                };
+            });
+        } else {
+            const delta = parsed.delta && typeof parsed.delta === "object" ? parsed.delta : EMPTY_THEORY_DELTA;
+            const stats = extractTheoryDeltaStats(delta);
+            snapshots = [{
+                id: "snap_legacy",
+                title: String(parsed.title || "").trim(),
+                delta,
+                savedAt: String(parsed.savedAt || "").trim(),
+                wordCount: typeof parsed.wordCount === "number" ? parsed.wordCount : stats.words,
+                charCount: typeof parsed.charCount === "number" ? parsed.charCount : stats.chars,
+                imageCount: typeof parsed.imageCount === "number" ? parsed.imageCount : stats.images,
+                previewText: String(parsed.previewText || stats.preview || "").trim(),
+            }];
+        }
+
+        const top = snapshots[0] || {};
         return {
-            title: String(parsed.title || "").trim(),
-            delta: parsed.delta && typeof parsed.delta === "object" ? parsed.delta : EMPTY_THEORY_DELTA,
-            savedAt: String(parsed.savedAt || "").trim(),
+            key: primaryKey,
+            version: parsed.version || 1,
+            theoryId: theoryId || parsed.theoryId || theoryEditorState.activeTheoryId || "",
+            context: parsed.context || {},
+            snapshots,
+            title: top.title || "",
+            delta: top.delta || EMPTY_THEORY_DELTA,
+            savedAt: top.savedAt || "",
+            wordCount: top.wordCount || 0,
+            charCount: top.charCount || 0,
+            imageCount: top.imageCount || 0,
+            previewText: top.previewText || "",
         };
     } catch (error) {
         console.warn("[Theory Editor] Failed to read draft", error);
@@ -808,12 +1039,75 @@ function saveTheoryDraftNow() {
         return;
     }
 
+    const title = String(titleEl.value || "").trim();
+    const rawDelta = editorHtmlToTheoryDelta();
+    const delta = sanitizeDeltaForDraftStorage(rawDelta);
+    const stats = extractTheoryDeltaStats(delta);
+    const storage = getTheoryDraftStorage();
+    if (!storage) return;
+
     try {
-        window.sessionStorage?.setItem(draftKey, JSON.stringify({
-            title: String(titleEl.value || "").trim(),
-            delta: editorHtmlToTheoryDelta(),
-            savedAt: new Date().toISOString(),
-        }));
+        const existingDraft = readTheoryDraft();
+        let snapshots = [];
+        if (existingDraft && Array.isArray(existingDraft.snapshots) && existingDraft.snapshots.length > 0) {
+            snapshots = existingDraft.snapshots.map(s => ({ ...s }));
+        }
+
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const nowMs = now.getTime();
+
+        if (snapshots.length > 0) {
+            const topSnapshot = snapshots[0];
+            const topSavedAtMs = topSnapshot?.savedAt ? new Date(topSnapshot.savedAt).getTime() : 0;
+            const isRecent = topSavedAtMs > 0 && (nowMs - topSavedAtMs) < THEORY_SNAPSHOT_DEBOUNCE_INTERVAL_MS;
+
+            if (isRecent) {
+                topSnapshot.title = title;
+                topSnapshot.delta = delta;
+                topSnapshot.savedAt = nowIso;
+                topSnapshot.wordCount = stats.words;
+                topSnapshot.charCount = stats.chars;
+                topSnapshot.imageCount = stats.images;
+                topSnapshot.previewText = stats.preview;
+            } else {
+                const newSnapshot = {
+                    id: `snap_${nowMs}_${Math.random().toString(36).slice(2, 6)}`,
+                    title,
+                    delta,
+                    savedAt: nowIso,
+                    wordCount: stats.words,
+                    charCount: stats.chars,
+                    imageCount: stats.images,
+                    previewText: stats.preview,
+                };
+                snapshots.unshift(newSnapshot);
+                if (snapshots.length > MAX_THEORY_SNAPSHOTS) {
+                    snapshots.length = MAX_THEORY_SNAPSHOTS;
+                }
+            }
+        } else {
+            snapshots = [{
+                id: `snap_${nowMs}_${Math.random().toString(36).slice(2, 6)}`,
+                title,
+                delta,
+                savedAt: nowIso,
+                wordCount: stats.words,
+                charCount: stats.chars,
+                imageCount: stats.images,
+                previewText: stats.preview,
+            }];
+        }
+
+        const payload = {
+            version: 2,
+            theoryId: theoryEditorState.activeTheoryId || "",
+            context: theoryEditorState.context || {},
+            snapshots,
+        };
+
+        storage.setItem(draftKey, JSON.stringify(payload));
+        updateTheoryDraftsBadge();
     } catch (error) {
         console.warn("[Theory Editor] Failed to save draft", error);
     }
@@ -835,9 +1129,699 @@ function isTheoryDraftEqualToCurrent(draft) {
     }
     const titleEl = document.getElementById("theory-title");
     const currentTitle = titleEl ? String(titleEl.value || "").trim() : "";
-    const currentDelta = editorHtmlToTheoryDelta();
+    const currentDelta = sanitizeDeltaForDraftStorage(editorHtmlToTheoryDelta());
     return draft.title === currentTitle
         && JSON.stringify(draft.delta || EMPTY_THEORY_DELTA) === JSON.stringify(currentDelta);
+}
+
+function listTheoryDrafts() {
+    const drafts = [];
+    const seenKeys = new Set();
+    const storages = [];
+    try {
+        if (typeof window !== "undefined" && window.localStorage) storages.push(window.localStorage);
+    } catch (e) {}
+    try {
+        if (typeof window !== "undefined" && window.sessionStorage) storages.push(window.sessionStorage);
+    } catch (e) {}
+
+    const currentKey = getTheoryDraftKey();
+    const currentLegacyKey = getLegacyTheoryDraftKey();
+
+    for (const storage of storages) {
+        let keys = [];
+        try {
+            keys = Object.keys(storage);
+        } catch (e) {
+            continue;
+        }
+
+        for (const k of keys) {
+            if (!k.startsWith(THEORY_DRAFT_STORAGE_PREFIX) && !k.startsWith(THEORY_DRAFT_STORAGE_LEGACY_PREFIX)) {
+                continue;
+            }
+            if (seenKeys.has(k)) {
+                continue;
+            }
+            seenKeys.add(k);
+
+            let raw = null;
+            try {
+                raw = storage.getItem(k);
+            } catch (e) {
+                continue;
+            }
+            if (!raw) continue;
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== "object") continue;
+
+                let snapshots = [];
+                if (Array.isArray(parsed.snapshots) && parsed.snapshots.length > 0) {
+                    snapshots = parsed.snapshots;
+                } else if (parsed.delta) {
+                    const stats = extractTheoryDeltaStats(parsed.delta);
+                    snapshots = [{
+                        id: "snap_legacy",
+                        title: String(parsed.title || "").trim(),
+                        delta: parsed.delta,
+                        savedAt: String(parsed.savedAt || "").trim(),
+                        wordCount: typeof parsed.wordCount === "number" ? parsed.wordCount : stats.words,
+                        charCount: typeof parsed.charCount === "number" ? parsed.charCount : stats.chars,
+                        imageCount: typeof parsed.imageCount === "number" ? parsed.imageCount : stats.images,
+                        previewText: String(parsed.previewText || stats.preview || "").trim(),
+                    }];
+                }
+
+                if (!snapshots.length) continue;
+
+                const top = snapshots[0];
+                const scope = k.startsWith(THEORY_DRAFT_STORAGE_PREFIX)
+                    ? k.slice(THEORY_DRAFT_STORAGE_PREFIX.length)
+                    : k.slice(THEORY_DRAFT_STORAGE_LEGACY_PREFIX.length);
+
+                const isBoundTheory = scope.startsWith("theory:");
+                const itemTheoryId = isBoundTheory ? scope.slice("theory:".length) : (parsed.theoryId || "");
+                const isBoundCourse = !isBoundTheory && (scope.includes(":course:") || scope.includes(":module:") || (scope.split(":").length > 2 && scope.split(":")[2] !== ""));
+                const isCurrent = k === currentKey || k === currentLegacyKey;
+
+                const normalizedDraft = {
+                    key: k,
+                    version: parsed.version || 2,
+                    theoryId: itemTheoryId,
+                    scopeId: scope,
+                    title: top.title,
+                    delta: top.delta,
+                    savedAt: top.savedAt,
+                    wordCount: top.wordCount,
+                    charCount: top.charCount,
+                    imageCount: top.imageCount,
+                    previewText: top.previewText,
+                    snapshots,
+                };
+
+                drafts.push({
+                    key: k,
+                    theoryId: itemTheoryId,
+                    scopeId: scope,
+                    title: top.title,
+                    savedAt: top.savedAt,
+                    snapshotsCount: snapshots.length,
+                    wordCount: top.wordCount,
+                    imageCount: top.imageCount,
+                    previewText: top.previewText,
+                    contextType: isBoundTheory ? "bound_theory" : (isBoundCourse ? "bound_course" : "standalone"),
+                    isCurrent,
+                    draft: normalizedDraft,
+                });
+            } catch (e) {}
+        }
+    }
+
+    drafts.sort((a, b) => {
+        const timeA = a.savedAt ? new Date(a.savedAt).getTime() : 0;
+        const timeB = b.savedAt ? new Date(b.savedAt).getTime() : 0;
+        return timeB - timeA;
+    });
+
+    return drafts;
+}
+
+function cleanupExpiredTheoryDrafts(days = 14) {
+    const drafts = listTheoryDrafts();
+    const thresholdMs = days * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let cleanedCount = 0;
+    for (const d of drafts) {
+        if (!d.savedAt) continue;
+        const savedTime = new Date(d.savedAt).getTime();
+        if (Number.isFinite(savedTime) && (now - savedTime) > thresholdMs) {
+            clearTheoryDraftByKey(d.key);
+            cleanedCount++;
+        }
+    }
+    if (cleanedCount > 0) {
+        updateTheoryDraftsBadge();
+    }
+    return cleanedCount;
+}
+
+function clearAllTheoryDrafts() {
+    const drafts = listTheoryDrafts();
+    for (const d of drafts) {
+        clearTheoryDraftByKey(d.key);
+    }
+    hideTheoryDraftBanner();
+    updateTheoryDraftsBadge();
+}
+
+function updateTheoryDraftsBadge() {
+    const drafts = listTheoryDrafts();
+    const count = drafts.length;
+
+    const badgeBtn = document.getElementById("theory-drafts-badge-btn");
+    const countEl = document.getElementById("theory-drafts-badge-count");
+    if (badgeBtn) {
+        if (count > 0) {
+            badgeBtn.classList.remove("hidden");
+            badgeBtn.classList.add("inline-flex");
+            if (countEl) {
+                countEl.textContent = String(count);
+            }
+        } else {
+            badgeBtn.classList.add("hidden");
+            badgeBtn.classList.remove("inline-flex");
+            if (countEl) {
+                countEl.textContent = "0";
+            }
+        }
+    }
+
+    const registryBtn = document.getElementById("theory-draft-banner-registry-btn");
+    if (registryBtn) {
+        registryBtn.hidden = count <= 1;
+    }
+}
+
+function hideTheoryDraftBanner() {
+    const banner = document.getElementById("theory-draft-banner");
+    if (banner) {
+        banner.hidden = true;
+    }
+}
+
+function showTheoryDraftBanner(draft, theoryId = "") {
+    const banner = document.getElementById("theory-draft-banner");
+    if (!banner || !draft) return;
+
+    const timeEl = document.getElementById("theory-draft-banner-meta");
+    if (timeEl) {
+        const timeStr = draft.savedAt ? formatTheoryListDate(draft.savedAt) : "";
+        const titleStr = draft.title ? `«${draft.title}»` : wt('te.k163', 'Без названия');
+        const wordsStr = `${draft.wordCount || 0} ${wt('te.k161', 'слов')}`;
+        timeEl.textContent = `· ${titleStr} (${wordsStr}${timeStr ? `, ${timeStr}` : ""})`;
+    }
+
+    const registryBtn = document.getElementById("theory-draft-banner-registry-btn");
+    const previewBtn = document.getElementById("theory-draft-banner-preview-btn");
+    const restoreBtn = document.getElementById("theory-draft-banner-restore-btn");
+    const deleteBtn = document.getElementById("theory-draft-banner-delete-btn");
+
+    if (registryBtn) {
+        registryBtn.onclick = () => {
+            openTheoryDraftsRegistryModal();
+        };
+    }
+    if (previewBtn) {
+        previewBtn.onclick = () => {
+            openTheoryDraftModal(draft, theoryId);
+        };
+    }
+    if (restoreBtn) {
+        restoreBtn.onclick = () => {
+            applyRestoredTheoryDraft(draft);
+        };
+    }
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            const confirmed = await theoryEditorConfirm({
+                title: wt('te.k155', 'Удалить черновик'),
+                message: wt('te.k165', 'Вы действительно хотите удалить сохранённый черновик этой теории? Это действие нельзя отменить.'),
+                confirmText: wt('te.k155', 'Удалить черновик'),
+                cancelText: wt('te.k122', 'Остаться'),
+                variant: 'error',
+            });
+            if (confirmed) {
+                clearTheoryDraft(theoryId);
+                theoryEditorToast(wt('te.k158', 'Черновик удалён'), 'info');
+            }
+        };
+    }
+
+    banner.hidden = false;
+    updateTheoryDraftsBadge();
+}
+
+function applyRestoredTheoryDraft(draft) {
+    if (!draft) return;
+    setTheoryEditorContent(draft.title, draft.delta || EMPTY_THEORY_DELTA);
+    theoryEditorState.dirty = true;
+    updateTheoryEditorActions();
+    setTheoryStatus(wt('te.k012', 'Черновик восстановлен'), "warning", "history");
+    theoryEditorToast(wt('te.k013', 'Черновик восстановлен'), "info", 2400);
+    hideTheoryDraftBanner();
+    scheduleTheoryDraftSave();
+}
+
+function openTheoryDraftModal(draft, theoryId = "") {
+    return new Promise((resolve) => {
+        let modalEl = document.getElementById("theory-draft-modal");
+        if (modalEl) {
+            modalEl.remove();
+        }
+
+        const snapshots = (draft.snapshots && Array.isArray(draft.snapshots) && draft.snapshots.length > 0)
+            ? draft.snapshots
+            : [draft];
+        let activeSnapshotIndex = 0;
+
+        const currentTitleEl = document.getElementById("theory-title");
+        const currentTitle = currentTitleEl ? String(currentTitleEl.value || "").trim() || wt('te.k163', 'Без названия') : wt('te.k163', 'Без названия');
+        const currentStats = extractCurrentTheoryEditorStats();
+
+        const initialSnapshot = snapshots[0];
+        const draftTitle = initialSnapshot.title || wt('te.k163', 'Без названия');
+        const draftTime = initialSnapshot.savedAt ? formatTheoryListDate(initialSnapshot.savedAt) : "";
+        const draftWords = initialSnapshot.wordCount ?? 0;
+        const draftImages = initialSnapshot.imageCount ?? 0;
+        const previewHtml = renderTheoryDeltaToHtmlSnippet(initialSnapshot.delta);
+
+        const snapshotsSelectorHtml = snapshots.length > 1 ? `
+        <div class="space-y-1.5 pt-1" id="theory-draft-snapshots-container">
+            <div class="flex items-center justify-between text-xs font-semibold text-text-secondary">
+                <span class="uppercase tracking-wider text-[11px]">${escapeTheoryHtml(wt('te.k167', 'Контрольные точки'))}</span>
+                <span class="text-[11px] font-normal text-text-muted">${snapshots.length} ${snapshots.length === 1 ? escapeTheoryHtml(wt('te.k174', 'точка')) : escapeTheoryHtml(wt('te.k175', 'точек'))}</span>
+            </div>
+            <div id="theory-draft-snapshots-selector" class="flex items-center gap-1.5 overflow-x-auto py-1 theory-scroll">
+                ${snapshots.map((snap, idx) => {
+                    const timeStr = formatTheorySnapshotTime(snap.savedAt);
+                    const wordsStr = `${snap.wordCount || 0} ${escapeTheoryHtml(wt('te.k161', 'слов'))}`;
+                    const activeCls = idx === 0 ? "is-active" : "";
+                    return `<button type="button" class="theory-snapshot-pill ${activeCls}" data-snapshot-index="${idx}">
+                        <span>${escapeTheoryHtml(timeStr || `#${idx + 1}`)}</span>
+                        <span class="opacity-75 text-[10px]">· ${wordsStr}</span>
+                    </button>`;
+                }).join("")}
+            </div>
+        </div>` : "";
+
+        const modalHtml = `
+<div id="theory-draft-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="theory-draft-modal-title">
+    <div class="w-full max-w-2xl bg-surface-1 border border-border-subtle rounded-2xl shadow-xl flex flex-col max-h-[88vh] overflow-hidden animate-slide-up">
+        <!-- Header -->
+        <div class="px-5 py-3.5 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface-2/40">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="material-symbols-outlined text-primary text-[22px] shrink-0">history_edu</span>
+                <div class="min-w-0">
+                    <h3 id="theory-draft-modal-title" class="text-sm sm:text-base font-bold text-text-main leading-tight truncate">${escapeTheoryHtml(wt('te.k150', 'Обнаружен несохранённый черновик'))}</h3>
+                    <p id="theory-draft-modal-subtitle" class="text-xs text-text-secondary leading-tight mt-0.5">${escapeTheoryHtml(wt('te.k159', 'Сохранён:'))} <span id="theory-draft-modal-saved-time">${escapeTheoryHtml(draftTime || wt('te.k008', 'несколько минут назад'))}</span></p>
+                </div>
+            </div>
+            <button id="theory-draft-modal-close-btn" type="button" class="p-1 rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors shrink-0" aria-label="Close">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <!-- Body: Comparison & Preview -->
+        <div class="p-5 overflow-y-auto space-y-4 flex-1 theory-scroll">
+            ${snapshotsSelectorHtml}
+
+            <!-- Version Comparison Matrix -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <!-- Draft Card -->
+                <div class="p-3.5 rounded-xl border border-primary/30 bg-primary/5 flex flex-col gap-1" id="theory-draft-modal-draft-card">
+                    <div class="flex items-center justify-between font-bold text-primary">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                            <span>${escapeTheoryHtml(wt('te.k152', 'В черновике'))}</span>
+                        </span>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-semibold">${escapeTheoryHtml(wt('the.k061', 'Черновик'))}</span>
+                    </div>
+                    <div id="theory-draft-modal-draft-title" class="font-semibold text-text-main truncate text-sm mt-1">${escapeTheoryHtml(draftTitle)}</div>
+                    <div id="theory-draft-modal-draft-stats" class="text-text-secondary text-[11px] flex items-center gap-2.5 mt-0.5">
+                        <span>${draftWords} ${escapeTheoryHtml(wt('te.k161', 'слов'))}</span>
+                        <span>•</span>
+                        <span>${draftImages} ${escapeTheoryHtml(wt('te.k162', 'изображений'))}</span>
+                    </div>
+                </div>
+
+                <!-- Current Opened Card -->
+                <div class="p-3.5 rounded-xl border border-border-subtle bg-surface-2/30 flex flex-col gap-1">
+                    <div class="flex items-center justify-between font-bold text-text-secondary">
+                        <span class="inline-flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">draft</span>
+                            <span>${escapeTheoryHtml(wt('te.k153', 'Открытая версия'))}</span>
+                        </span>
+                    </div>
+                    <div class="font-semibold text-text-main truncate text-sm mt-1">${escapeTheoryHtml(currentTitle)}</div>
+                    <div class="text-text-secondary text-[11px] flex items-center gap-2.5 mt-0.5">
+                        <span>${currentStats.words} ${escapeTheoryHtml(wt('te.k161', 'слов'))}</span>
+                        <span>•</span>
+                        <span>${currentStats.images} ${escapeTheoryHtml(wt('te.k162', 'изображений'))}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Preview Container -->
+            <div>
+                <div class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">${escapeTheoryHtml(wt('te.k154', 'Предпросмотр содержимого черновика'))}</div>
+                <div id="theory-draft-preview-box" class="p-4 rounded-xl border border-border-subtle bg-surface-2/20 max-h-56 overflow-y-auto text-sm theory-scroll leading-relaxed">
+                    ${previewHtml}
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer: 3 Clear Actions -->
+        <div class="px-5 py-3 border-t border-border-subtle bg-surface-2/30 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <!-- Delete Draft button -->
+            <button id="theory-draft-delete-btn" type="button" class="btn-secondary inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-error hover:bg-error/10 hover:border-error/30 transition-all">
+                <span class="material-symbols-outlined text-[16px]">delete</span>
+                <span>${escapeTheoryHtml(wt('te.k155', 'Удалить черновик'))}</span>
+            </button>
+
+            <!-- Right action pair: Defer and Restore -->
+            <div class="flex items-center gap-2">
+                <button id="theory-draft-defer-btn" type="button" class="btn-secondary inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold hover:bg-surface-2 transition-all">
+                    <span>${escapeTheoryHtml(wt('te.k156', 'Отложить'))}</span>
+                </button>
+                <button id="theory-draft-restore-btn" type="button" class="btn-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-sm hover:shadow-md transition-all">
+                    <span class="material-symbols-outlined text-[16px]">restore</span>
+                    <span>${escapeTheoryHtml(wt('te.k157', 'Восстановить черновик'))}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+        `.trim();
+
+        const template = document.createElement("div");
+        template.innerHTML = modalHtml;
+        modalEl = template.firstElementChild;
+        document.body.appendChild(modalEl);
+
+        const updateActiveSnapshotView = (index) => {
+            activeSnapshotIndex = index;
+            const snap = snapshots[index];
+            if (!snap) return;
+
+            modalEl.querySelectorAll(".theory-snapshot-pill").forEach((pill, idx) => {
+                if (idx === index) {
+                    pill.classList.add("is-active");
+                } else {
+                    pill.classList.remove("is-active");
+                }
+            });
+
+            const draftCardTitle = modalEl.querySelector("#theory-draft-modal-draft-title");
+            if (draftCardTitle) {
+                draftCardTitle.textContent = snap.title || wt('te.k163', 'Без названия');
+            }
+
+            const draftCardStats = modalEl.querySelector("#theory-draft-modal-draft-stats");
+            if (draftCardStats) {
+                draftCardStats.innerHTML = `<span>${snap.wordCount ?? 0} ${escapeTheoryHtml(wt('te.k161', 'слов'))}</span><span>•</span><span>${snap.imageCount ?? 0} ${escapeTheoryHtml(wt('te.k162', 'изображений'))}</span>`;
+            }
+
+            const savedTimeEl = modalEl.querySelector("#theory-draft-modal-saved-time");
+            if (savedTimeEl) {
+                savedTimeEl.textContent = snap.savedAt ? formatTheoryListDate(snap.savedAt) : wt('te.k008', 'несколько минут назад');
+            }
+
+            const previewBox = modalEl.querySelector("#theory-draft-preview-box");
+            if (previewBox) {
+                previewBox.innerHTML = renderTheoryDeltaToHtmlSnippet(snap.delta);
+            }
+        };
+
+        modalEl.querySelectorAll(".theory-snapshot-pill").forEach((pill) => {
+            pill.onclick = () => {
+                updateActiveSnapshotView(Number(pill.dataset.snapshotIndex));
+            };
+        });
+
+        const cleanup = () => {
+            if (modalEl && modalEl.parentNode) {
+                modalEl.parentNode.removeChild(modalEl);
+            }
+            document.removeEventListener("keydown", onKeyDown);
+        };
+
+        const onRestore = () => {
+            cleanup();
+            const selectedSnapshot = snapshots[activeSnapshotIndex] || snapshots[0];
+            applyRestoredTheoryDraft(selectedSnapshot);
+            resolve("restored");
+        };
+
+        const onDefer = () => {
+            cleanup();
+            showTheoryDraftBanner(draft, theoryId);
+            theoryEditorToast(wt('te.k149', 'Черновик отложен'), "info", 2400);
+            resolve("deferred");
+        };
+
+        const onDelete = async () => {
+            const confirmed = await theoryEditorConfirm({
+                title: wt('te.k155', 'Удалить черновик'),
+                message: wt('te.k165', 'Вы действительно хотите удалить сохранённый черновик этой теории? Это действие нельзя отменить.'),
+                confirmText: wt('te.k155', 'Удалить черновик'),
+                cancelText: wt('te.k122', 'Остаться'),
+                variant: 'error',
+            });
+            if (confirmed) {
+                cleanup();
+                clearTheoryDraft(theoryId);
+                theoryEditorToast(wt('te.k158', 'Черновик удалён'), "info");
+                resolve("deleted");
+            }
+        };
+
+        const onKeyDown = (event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                onDefer();
+            }
+        };
+
+        document.addEventListener("keydown", onKeyDown);
+
+        const restoreBtn = document.getElementById("theory-draft-restore-btn");
+        const deferBtn = document.getElementById("theory-draft-defer-btn");
+        const deleteBtn = document.getElementById("theory-draft-delete-btn");
+        const closeBtn = document.getElementById("theory-draft-modal-close-btn");
+
+        if (restoreBtn) restoreBtn.onclick = onRestore;
+        if (deferBtn) deferBtn.onclick = onDefer;
+        if (deleteBtn) deleteBtn.onclick = onDelete;
+        if (closeBtn) closeBtn.onclick = onDefer;
+
+        modalEl.onclick = (event) => {
+            if (event.target === modalEl) {
+                onDefer();
+            }
+        };
+    });
+}
+
+function openTheoryDraftsRegistryModal() {
+    return new Promise((resolve) => {
+        let modalEl = document.getElementById("theory-drafts-registry-modal");
+        if (modalEl) {
+            modalEl.remove();
+        }
+
+        const renderModalContent = () => {
+            const drafts = listTheoryDrafts();
+            const count = drafts.length;
+
+            const modalHtml = `
+<div id="theory-drafts-registry-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="theory-drafts-registry-modal-title">
+    <div class="w-full max-w-3xl bg-surface-1 border border-border-subtle rounded-2xl shadow-xl flex flex-col max-h-[88vh] overflow-hidden animate-slide-up">
+        <!-- Header -->
+        <div class="px-5 py-3.5 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface-2/40">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="material-symbols-outlined text-primary text-[22px] shrink-0">history_edu</span>
+                <div class="min-w-0 flex items-center gap-2">
+                    <h3 id="theory-drafts-registry-modal-title" class="text-sm sm:text-base font-bold text-text-main leading-tight truncate">${escapeTheoryHtml(wt('te.k176', 'Реестр черновиков'))}</h3>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">${count}</span>
+                </div>
+            </div>
+            <button id="theory-drafts-registry-close-btn" type="button" class="p-1 rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors shrink-0" aria-label="Close">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <!-- Subheader / Action Bar -->
+        <div class="px-5 py-2.5 border-b border-border-subtle bg-surface-2/20 flex items-center justify-between gap-3 text-xs">
+            <div class="text-text-secondary font-medium">
+                <span>${escapeTheoryHtml(wt('the.k062', 'Все черновики'))}: ${count}</span>
+            </div>
+            ${count > 0 ? `
+            <button id="theory-drafts-clear-all-btn" type="button" class="btn-secondary inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-error hover:bg-error/10 hover:border-error/30 transition-all">
+                <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
+                <span>${escapeTheoryHtml(wt('te.k169', 'Очистить все черновики'))}</span>
+            </button>` : ''}
+        </div>
+
+        <!-- Body / Drafts List -->
+        <div class="p-5 overflow-y-auto space-y-3 flex-1 theory-scroll" id="theory-drafts-registry-list">
+            ${count === 0 ? `
+            <div class="text-center py-12 flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-text-muted text-[42px] mb-2">draft</span>
+                <p class="text-text-muted text-sm font-medium">${escapeTheoryHtml(wt('te.k172', 'Нет сохранённых черновиков'))}</p>
+            </div>` : drafts.map((d, index) => {
+                const titleStr = d.title || wt('te.k163', 'Без названия');
+                const timeStr = formatTheorySnapshotTime(d.savedAt);
+                const pointsCountStr = `${d.snapshotsCount} ${d.snapshotsCount === 1 ? escapeTheoryHtml(wt('te.k174', 'точка')) : escapeTheoryHtml(wt('te.k175', 'точек'))}`;
+                const contextBadge = d.contextType === 'bound_course'
+                    ? `<span class="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">${escapeTheoryHtml(wt('te.k178', 'Привязан к курсу/теме'))}</span>`
+                    : `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escapeTheoryHtml(wt('te.k177', 'Автономный материал'))}</span>`;
+                const currentBadge = d.isCurrent
+                    ? `<span class="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning">${escapeTheoryHtml(wt('the.k061', 'Черновик'))}</span>`
+                    : '';
+                const previewSnippet = d.previewText ? escapeTheoryHtml(d.previewText.slice(0, 160)) : escapeTheoryHtml(wt('te.k164', 'Черновик пуст'));
+
+                return `
+            <div class="p-3.5 rounded-xl border border-border-subtle bg-surface-2/15 hover:border-border-normal hover:bg-surface-2/30 transition-all flex flex-col gap-2" data-draft-key="${escapeTheoryHtml(d.key)}">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                            ${currentBadge}
+                            ${contextBadge}
+                            <span class="text-[11px] text-text-muted font-normal">${escapeTheoryHtml(timeStr)}</span>
+                        </div>
+                        <h4 class="font-bold text-sm text-text-main truncate">${escapeTheoryHtml(titleStr)}</h4>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" class="theory-registry-open-btn btn-secondary inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold hover:bg-surface-2 transition-all" data-draft-index="${index}">
+                            <span class="material-symbols-outlined text-[15px]">open_in_new</span>
+                            <span>${escapeTheoryHtml(wt('te.k173', 'Открыть в редакторе'))}</span>
+                        </button>
+                        <button type="button" class="theory-registry-delete-btn p-1.5 rounded-lg text-text-secondary hover:text-error hover:bg-error/10 transition-colors" data-draft-key="${escapeTheoryHtml(d.key)}" title="${escapeTheoryHtml(wt('te.k155', 'Удалить черновик'))}">
+                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-xs text-text-secondary line-clamp-2 bg-surface-1/50 p-2 rounded-lg border border-border-subtle/50">
+                    ${previewSnippet}
+                </div>
+                <div class="flex items-center gap-3 text-[11px] text-text-muted font-medium">
+                    <span>${pointsCountStr}</span>
+                    <span>•</span>
+                    <span>${d.wordCount} ${escapeTheoryHtml(wt('te.k161', 'слов'))}</span>
+                    <span>•</span>
+                    <span>${d.imageCount} ${escapeTheoryHtml(wt('te.k162', 'изображений'))}</span>
+                </div>
+            </div>`;
+            }).join("")}
+        </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-3 border-t border-border-subtle bg-surface-2/30 flex items-center justify-end gap-2 shrink-0">
+            <button id="theory-drafts-registry-cancel-btn" type="button" class="btn-secondary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold hover:bg-surface-2 transition-all">
+                <span>${escapeTheoryHtml(wt('te.k122', 'Остаться'))}</span>
+            </button>
+        </div>
+    </div>
+</div>
+            `.trim();
+
+            const template = document.createElement("div");
+            template.innerHTML = modalHtml;
+            const newModal = template.firstElementChild;
+            if (modalEl && modalEl.parentNode) {
+                modalEl.replaceWith(newModal);
+            } else {
+                document.body.appendChild(newModal);
+            }
+            modalEl = newModal;
+
+            const close = () => {
+                if (modalEl && modalEl.parentNode) {
+                    modalEl.parentNode.removeChild(modalEl);
+                }
+                document.removeEventListener("keydown", onKeyDown);
+                resolve();
+            };
+
+            const onKeyDown = (event) => {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    close();
+                }
+            };
+            document.addEventListener("keydown", onKeyDown);
+
+            modalEl.querySelector("#theory-drafts-registry-close-btn")?.addEventListener("click", close);
+            modalEl.querySelector("#theory-drafts-registry-cancel-btn")?.addEventListener("click", close);
+
+            modalEl.onclick = (event) => {
+                if (event.target === modalEl) {
+                    close();
+                }
+            };
+
+            const clearAllBtn = modalEl.querySelector("#theory-drafts-clear-all-btn");
+            if (clearAllBtn) {
+                clearAllBtn.onclick = async () => {
+                    const confirmed = await theoryEditorConfirm({
+                        title: wt('te.k169', 'Очистить все черновики'),
+                        message: wt('te.k170', 'Вы действительно хотите удалить все сохранённые черновики теорий? Это действие нельзя отменить.'),
+                        confirmText: wt('te.k169', 'Очистить все черновики'),
+                        cancelText: wt('te.k122', 'Остаться'),
+                        variant: 'error',
+                    });
+                    if (confirmed) {
+                        clearAllTheoryDrafts();
+                        theoryEditorToast(wt('te.k171', 'Все черновики удалены'), 'info');
+                        renderModalContent();
+                    }
+                };
+            }
+
+            modalEl.querySelectorAll(".theory-registry-delete-btn").forEach((btn) => {
+                btn.onclick = async () => {
+                    const draftKey = btn.dataset.draftKey;
+                    const confirmed = await theoryEditorConfirm({
+                        title: wt('te.k155', 'Удалить черновик'),
+                        message: wt('te.k165', 'Вы действительно хотите удалить сохранённый черновик этой теории? Это действие нельзя отменить.'),
+                        confirmText: wt('te.k155', 'Удалить черновик'),
+                        cancelText: wt('te.k122', 'Остаться'),
+                        variant: 'error',
+                    });
+                    if (confirmed) {
+                        clearTheoryDraftByKey(draftKey);
+                        theoryEditorToast(wt('te.k158', 'Черновик удалён'), 'info');
+                        updateTheoryDraftsBadge();
+                        renderModalContent();
+                    }
+                };
+            });
+
+            modalEl.querySelectorAll(".theory-registry-open-btn").forEach((btn) => {
+                btn.onclick = async () => {
+                    const index = Number(btn.dataset.draftIndex);
+                    const item = drafts[index];
+                    if (!item) return;
+
+                    if (item.isCurrent) {
+                        close();
+                        openTheoryDraftModal(item.draft, item.theoryId);
+                        return;
+                    }
+
+                    const canLeave = await confirmDiscardUnsavedChanges();
+                    if (!canLeave) return;
+
+                    close();
+                    if (item.theoryId) {
+                        theoryEditorNavigate(`/editor/Theory_Editor.html?theory_id=${encodeURIComponent(item.theoryId)}`);
+                    } else {
+                        const scopeParts = String(item.scopeId || "").split(":");
+                        const url = new URL("/editor/Theory_Editor.html", window.location.origin);
+                        if (scopeParts[1] && scopeParts[1] !== "standalone") url.searchParams.set("context", scopeParts[1]);
+                        if (scopeParts[2]) url.searchParams.set("module_id", scopeParts[2]);
+                        if (scopeParts[3]) url.searchParams.set("topic_id", scopeParts[3]);
+                        if (scopeParts[4]) url.searchParams.set("complex_id", scopeParts[4]);
+                        theoryEditorNavigate(`${url.pathname}${url.search}`);
+                    }
+                };
+            });
+        };
+
+        renderModalContent();
+    });
 }
 
 async function restoreTheoryDraftIfPresent(theoryId = "") {
@@ -851,27 +1835,8 @@ async function restoreTheoryDraftIfPresent(theoryId = "") {
         return false;
     }
 
-    const savedAtLabel = draft.savedAt ? formatTheoryListDate(draft.savedAt) : wt('te.k008', 'несколько минут назад');
-    const shouldRestore = await theoryEditorConfirm({
-        title: wt('te.k009', 'Найден несохранённый черновик'),
-        message: `${wt('te.k048a', 'На этой странице остался черновик от ')}${savedAtLabel}${wt('te.k048b', '. Восстановить его вместо текущего содержимого?')}`,
-        confirmText: wt('te.k010', 'Восстановить'),
-        cancelText: wt('te.k011', 'Оставить текущее'),
-        variant: "info",
-    });
-
-    if (!shouldRestore) {
-        clearTheoryDraft(theoryId);
-        return false;
-    }
-
-    setTheoryEditorContent(draft.title, draft.delta || EMPTY_THEORY_DELTA);
-    theoryEditorState.dirty = true;
-    updateTheoryEditorActions();
-    setTheoryStatus(wt('te.k012', 'Черновик восстановлен'), "warning", "history");
-    theoryEditorToast(wt('te.k013', 'Черновик восстановлен'), "info", 2400);
-    scheduleTheoryDraftSave();
-    return true;
+    const outcome = await openTheoryDraftModal(draft, theoryId);
+    return outcome === "restored";
 }
 
 function getTheoryDefaultTextColor() {
@@ -4193,6 +5158,14 @@ function bindTheoryEditorEvents() {
     });
     document.getElementById("theory-image-input")?.addEventListener("change", uploadTheoryImage);
 
+    document.getElementById("theory-drafts-badge-btn")?.addEventListener("click", () => {
+        openTheoryDraftsRegistryModal();
+    });
+
+    document.getElementById("theory-draft-banner-registry-btn")?.addEventListener("click", () => {
+        openTheoryDraftsRegistryModal();
+    });
+
     bindTheoryToolbar();
 
     document.addEventListener("keydown", async (event) => {
@@ -4276,6 +5249,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindTheoryEditorEvents();
     bindTheoryEditorOnboardingDemoObserver();
     updateTheoryEditorActions();
+    cleanupExpiredTheoryDrafts(14);
+    updateTheoryDraftsBadge();
     if (isTheoryEditorOnboardingDemoRequested()) {
         applyTheoryEditorOnboardingDemoState();
         return;
