@@ -157,6 +157,8 @@ window.__theoryEditorTestExports = {
     updateTheoryDraftsBadge,
     sanitizeDeltaForDraftStorage,
     formatTheorySnapshotTime,
+    clearTheoryDraftByKey,
+    applyRestoredTheoryDraft,
 };`);
 
     return dom;
@@ -1485,5 +1487,192 @@ describe("Theory editor regressions", () => {
         expect(badgeBtn.classList.contains("hidden")).toBe(true);
         expect(badgeCount.textContent).toBe("0");
     });
+
+    it("clicking 'Открыть в редакторе' in registry restores draft directly into editor with no intermediate modal", async () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            openTheoryDraftsRegistryModal,
+            listTheoryDrafts,
+            getTheoryDraftKey,
+        } = dom.window.__theoryEditorTestExports;
+
+        const currentKey = getTheoryDraftKey();
+        dom.window.localStorage.setItem(currentKey, JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Черновик из реестра",
+                delta: { ops: [{ insert: "Восстановленный текст\n" }] },
+                savedAt: new Date().toISOString(),
+                wordCount: 2,
+                charCount: 20,
+                imageCount: 0,
+            }],
+        }));
+
+        expect(listTheoryDrafts().length).toBe(1);
+
+        openTheoryDraftsRegistryModal();
+        const registryModal = dom.window.document.getElementById("theory-drafts-registry-modal");
+        expect(registryModal).toBeTruthy();
+
+        const openBtn = registryModal.querySelector(".theory-registry-open-btn");
+        expect(openBtn).toBeTruthy();
+
+        await openBtn.click();
+
+        // Registry modal should be closed
+        expect(dom.window.document.getElementById("theory-drafts-registry-modal")).toBeNull();
+        // Intermediate prompt modal should NOT have been opened
+        expect(dom.window.document.getElementById("theory-draft-modal")).toBeNull();
+
+        // Content must be restored directly into the editor
+        const titleInput = dom.window.document.getElementById("theory-title");
+        const editorDiv = dom.window.document.getElementById("theory-editor");
+        expect(titleInput.value).toBe("Черновик из реестра");
+        expect(editorDiv.textContent).toContain("Восстановленный текст");
+    });
+
+    it("legacy key theory-editor-draft: is pruned and migrated to v2 without duplicate cards in listTheoryDrafts()", () => {
+        const dom = setupTheoryEditorDom();
+        const { listTheoryDrafts } = dom.window.__theoryEditorTestExports;
+
+        // Populate both legacy key and v2 key for the same theory scope
+        dom.window.localStorage.setItem("theory-editor-draft:theory:42", JSON.stringify({
+            title: "Устаревший ключ",
+            delta: { ops: [{ insert: "Старый текст\n" }] },
+            savedAt: "2026-03-01T10:00:00.000Z",
+        }));
+        dom.window.localStorage.setItem("theory_editor_draft_v2:theory:42", JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Новый ключ v2",
+                delta: { ops: [{ insert: "Новый текст v2\n" }] },
+                savedAt: "2026-03-02T10:00:00.000Z",
+            }],
+        }));
+        dom.window.sessionStorage.setItem("theory-editor-draft:theory:42", JSON.stringify({
+            title: "Копия в сессии",
+            delta: { ops: [{ insert: "Сессионный текст\n" }] },
+            savedAt: "2026-03-01T10:00:00.000Z",
+        }));
+
+        const drafts = listTheoryDrafts();
+
+        // Must strictly deduplicate by scope -> exactly 1 draft returned!
+        expect(drafts.length).toBe(1);
+        expect(drafts[0].scopeId).toBe("theory:42");
+        expect(drafts[0].title).toBe("Новый ключ v2");
+
+        // Legacy keys must be pruned from both localStorage and sessionStorage
+        expect(dom.window.localStorage.getItem("theory-editor-draft:theory:42")).toBeNull();
+        expect(dom.window.sessionStorage.getItem("theory-editor-draft:theory:42")).toBeNull();
+
+        // v2 key remains in localStorage
+        expect(dom.window.localStorage.getItem("theory_editor_draft_v2:theory:42")).toBeTruthy();
+    });
+
+    it("cross-theory navigation with auto-restore flag bypasses prompt modal and directly applies draft", async () => {
+        const dom = setupTheoryEditorDom("http://localhost/editor/Theory_Editor.html?theory_id=99&restore_draft=1");
+        dom.window.fetch = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true, item: { id: "99", title: "Теория 99", delta: { ops: [{ insert: "Старое\n" }] } } }),
+        });
+        const {
+            restoreTheoryDraftIfPresent,
+            theoryEditorState,
+        } = dom.window.__theoryEditorTestExports;
+
+        theoryEditorState.activeTheoryId = "99";
+        dom.window.localStorage.setItem("theory_editor_draft_v2:theory:99", JSON.stringify({
+            version: 2,
+            snapshots: [{
+                title: "Авто-восстановленная теория 99",
+                delta: { ops: [{ insert: "Тело теории 99\n" }] },
+                savedAt: new Date().toISOString(),
+            }],
+        }));
+
+        const restored = await restoreTheoryDraftIfPresent("99");
+        expect(restored).toBe(true);
+
+        // Prompt modal must NOT be created
+        expect(dom.window.document.getElementById("theory-draft-modal")).toBeNull();
+
+        // Editor must have draft content
+        const titleInput = dom.window.document.getElementById("theory-title");
+        expect(titleInput.value).toBe("Авто-восстановленная теория 99");
+
+        // Flag in URL should be stripped
+        expect(dom.window.location.search).not.toContain("restore_draft=1");
+    });
+
+    it("closing or deferring openTheoryDraftModal does not spawn duplicate drafts in storage or registry", async () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            openTheoryDraftModal,
+            listTheoryDrafts,
+        } = dom.window.__theoryEditorTestExports;
+
+        const draft = {
+            key: "theory_editor_draft_v2:new:standalone::::",
+            version: 2,
+            theoryId: "",
+            scopeId: "new:standalone::::",
+            title: "Единый черновик",
+            delta: { ops: [{ insert: "Единое тело\n" }] },
+            savedAt: new Date().toISOString(),
+            snapshots: [{
+                title: "Единый черновик",
+                delta: { ops: [{ insert: "Единое тело\n" }] },
+                savedAt: new Date().toISOString(),
+            }],
+        };
+        dom.window.localStorage.setItem("theory_editor_draft_v2:new:standalone::::", JSON.stringify(draft));
+
+        expect(listTheoryDrafts().length).toBe(1);
+
+        // Open recovery modal
+        const modalPromise = openTheoryDraftModal(draft, "");
+        const modalEl = dom.window.document.getElementById("theory-draft-modal");
+        expect(modalEl).toBeTruthy();
+
+        // User closes modal via [X]
+        const closeBtn = dom.window.document.getElementById("theory-draft-modal-close-btn");
+        expect(closeBtn).toBeTruthy();
+        closeBtn.click();
+
+        const outcome = await modalPromise;
+        expect(outcome).toBe("deferred");
+
+        // Modal closed
+        expect(dom.window.document.getElementById("theory-draft-modal")).toBeNull();
+
+        // Drafts registry must STILL contain exactly 1 draft, NO duplicate card!
+        const draftsAfter = listTheoryDrafts();
+        expect(draftsAfter.length).toBe(1);
+        expect(draftsAfter[0].title).toBe("Единый черновик");
+    });
+
+    it("clearTheoryDraftByKey purges both v2 and legacy keys across localStorage and sessionStorage", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            clearTheoryDraftByKey,
+            listTheoryDrafts,
+        } = dom.window.__theoryEditorTestExports;
+
+        dom.window.localStorage.setItem("theory_editor_draft_v2:theory:50", JSON.stringify({ version: 2, snapshots: [{ title: "T50" }] }));
+        dom.window.localStorage.setItem("theory-editor-draft:theory:50", JSON.stringify({ title: "T50-legacy" }));
+        dom.window.sessionStorage.setItem("theory_editor_draft_v2:theory:50", JSON.stringify({ version: 2, snapshots: [{ title: "T50-session" }] }));
+        dom.window.sessionStorage.setItem("theory-editor-draft:theory:50", JSON.stringify({ title: "T50-legacy-session" }));
+
+        clearTheoryDraftByKey("theory_editor_draft_v2:theory:50");
+
+        expect(dom.window.localStorage.getItem("theory_editor_draft_v2:theory:50")).toBeNull();
+        expect(dom.window.localStorage.getItem("theory-editor-draft:theory:50")).toBeNull();
+        expect(dom.window.sessionStorage.getItem("theory_editor_draft_v2:theory:50")).toBeNull();
+        expect(dom.window.sessionStorage.getItem("theory-editor-draft:theory:50")).toBeNull();
+        expect(listTheoryDrafts().length).toBe(0);
+    });
 });
+
 

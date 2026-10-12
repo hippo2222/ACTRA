@@ -828,20 +828,62 @@ function formatTheorySnapshotTime(isoString) {
     }
 }
 
+function normalizeTheoryDraftScope(rawScope = "") {
+    const scope = String(rawScope || "").trim();
+    if (!scope) return "";
+    if (scope.startsWith("theory:")) return scope;
+    if (/^\d+$/.test(scope)) return `theory:${scope}`;
+    return scope;
+}
+
+function extractTheoryDraftScopeFromKey(draftKey = "") {
+    const rawKey = String(draftKey || "").trim();
+    if (!rawKey) return "";
+    let rawScope = rawKey;
+    if (rawKey.startsWith(THEORY_DRAFT_STORAGE_PREFIX)) {
+        rawScope = rawKey.slice(THEORY_DRAFT_STORAGE_PREFIX.length);
+    } else if (rawKey.startsWith(THEORY_DRAFT_STORAGE_LEGACY_PREFIX)) {
+        rawScope = rawKey.slice(THEORY_DRAFT_STORAGE_LEGACY_PREFIX.length);
+    }
+    return normalizeTheoryDraftScope(rawScope);
+}
+
 function clearTheoryDraftByKey(draftKey = "") {
     const normalizedKey = String(draftKey || "").trim();
     if (!normalizedKey) {
         return;
     }
-    try {
-        window.localStorage?.removeItem(normalizedKey);
-    } catch (error) {
-        console.warn("[Theory Editor] Failed to clear draft from localStorage", error);
+    const scope = extractTheoryDraftScopeFromKey(normalizedKey);
+    const keysToRemove = new Set([normalizedKey]);
+    if (scope) {
+        keysToRemove.add(`${THEORY_DRAFT_STORAGE_PREFIX}${scope}`);
+        keysToRemove.add(`${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${scope}`);
+        if (scope.startsWith("theory:")) {
+            const rawId = scope.slice("theory:".length);
+            keysToRemove.add(`${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${rawId}`);
+            keysToRemove.add(`${THEORY_DRAFT_STORAGE_PREFIX}${rawId}`);
+        }
     }
+
+    const storages = [];
     try {
-        window.sessionStorage?.removeItem(normalizedKey);
-    } catch (error) {
-        console.warn("[Theory Editor] Failed to clear draft from sessionStorage", error);
+        if (typeof window !== "undefined" && window.localStorage) storages.push(window.localStorage);
+    } catch (e) {}
+    try {
+        if (typeof window !== "undefined" && window.sessionStorage) storages.push(window.sessionStorage);
+    } catch (e) {}
+
+    for (const storage of storages) {
+        for (const k of keysToRemove) {
+            try {
+                storage.removeItem(k);
+            } catch (error) {
+                console.warn("[Theory Editor] Failed to clear draft key", k, error);
+            }
+        }
+    }
+    if (scope && scope === getTheoryDraftScopeId()) {
+        hideTheoryDraftBanner();
     }
     updateTheoryDraftsBadge();
 }
@@ -945,7 +987,9 @@ function renderTheoryDeltaToHtmlSnippet(delta) {
 function readTheoryDraft(theoryId = "") {
     const primaryKey = getTheoryDraftKey(theoryId);
     const legacyKey = getLegacyTheoryDraftKey(theoryId);
+    const scope = getTheoryDraftScopeId(theoryId);
     let raw = null;
+    let foundInLegacyOrSession = false;
 
     try {
         raw = window.localStorage?.getItem(primaryKey);
@@ -953,16 +997,26 @@ function readTheoryDraft(theoryId = "") {
     if (!raw) {
         try {
             raw = window.localStorage?.getItem(legacyKey);
+            if (raw) foundInLegacyOrSession = true;
+        } catch (e) {}
+    }
+    if (!raw && scope.startsWith("theory:")) {
+        try {
+            const bareLegacyKey = `${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${scope.slice("theory:".length)}`;
+            raw = window.localStorage?.getItem(bareLegacyKey);
+            if (raw) foundInLegacyOrSession = true;
         } catch (e) {}
     }
     if (!raw) {
         try {
             raw = window.sessionStorage?.getItem(legacyKey);
+            if (raw) foundInLegacyOrSession = true;
         } catch (e) {}
     }
     if (!raw) {
         try {
             raw = window.sessionStorage?.getItem(primaryKey);
+            if (raw) foundInLegacyOrSession = true;
         } catch (e) {}
     }
 
@@ -1008,9 +1062,9 @@ function readTheoryDraft(theoryId = "") {
         }
 
         const top = snapshots[0] || {};
-        return {
+        const normalized = {
             key: primaryKey,
-            version: parsed.version || 1,
+            version: parsed.version || 2,
             theoryId: theoryId || parsed.theoryId || theoryEditorState.activeTheoryId || "",
             context: parsed.context || {},
             snapshots,
@@ -1022,6 +1076,29 @@ function readTheoryDraft(theoryId = "") {
             imageCount: top.imageCount || 0,
             previewText: top.previewText || "",
         };
+
+        if (foundInLegacyOrSession) {
+            try {
+                if (window.localStorage) {
+                    window.localStorage.setItem(primaryKey, JSON.stringify({
+                        version: 2,
+                        theoryId: normalized.theoryId,
+                        context: normalized.context,
+                        snapshots,
+                    }));
+                }
+                window.localStorage?.removeItem(legacyKey);
+                window.sessionStorage?.removeItem(legacyKey);
+                window.sessionStorage?.removeItem(primaryKey);
+                if (scope.startsWith("theory:")) {
+                    const bareLegacyKey = `${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${scope.slice("theory:".length)}`;
+                    window.localStorage?.removeItem(bareLegacyKey);
+                    window.sessionStorage?.removeItem(bareLegacyKey);
+                }
+            } catch (e) {}
+        }
+
+        return normalized;
     } catch (error) {
         console.warn("[Theory Editor] Failed to read draft", error);
         return null;
@@ -1107,6 +1184,17 @@ function saveTheoryDraftNow() {
         };
 
         storage.setItem(draftKey, JSON.stringify(payload));
+        try {
+            const scope = getTheoryDraftScopeId();
+            const legacyKey = getLegacyTheoryDraftKey();
+            window.localStorage?.removeItem(legacyKey);
+            window.sessionStorage?.removeItem(legacyKey);
+            if (scope.startsWith("theory:")) {
+                const bare = `${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${scope.slice("theory:".length)}`;
+                window.localStorage?.removeItem(bare);
+                window.sessionStorage?.removeItem(bare);
+            }
+        } catch (e) {}
         updateTheoryDraftsBadge();
     } catch (error) {
         console.warn("[Theory Editor] Failed to save draft", error);
@@ -1135,8 +1223,7 @@ function isTheoryDraftEqualToCurrent(draft) {
 }
 
 function listTheoryDrafts() {
-    const drafts = [];
-    const seenKeys = new Set();
+    const draftsByScope = new Map();
     const storages = [];
     try {
         if (typeof window !== "undefined" && window.localStorage) storages.push(window.localStorage);
@@ -1145,8 +1232,7 @@ function listTheoryDrafts() {
         if (typeof window !== "undefined" && window.sessionStorage) storages.push(window.sessionStorage);
     } catch (e) {}
 
-    const currentKey = getTheoryDraftKey();
-    const currentLegacyKey = getLegacyTheoryDraftKey();
+    const currentScope = getTheoryDraftScopeId();
 
     for (const storage of storages) {
         let keys = [];
@@ -1160,10 +1246,6 @@ function listTheoryDrafts() {
             if (!k.startsWith(THEORY_DRAFT_STORAGE_PREFIX) && !k.startsWith(THEORY_DRAFT_STORAGE_LEGACY_PREFIX)) {
                 continue;
             }
-            if (seenKeys.has(k)) {
-                continue;
-            }
-            seenKeys.add(k);
 
             let raw = null;
             try {
@@ -1197,17 +1279,21 @@ function listTheoryDrafts() {
                 if (!snapshots.length) continue;
 
                 const top = snapshots[0];
-                const scope = k.startsWith(THEORY_DRAFT_STORAGE_PREFIX)
+                const rawScope = k.startsWith(THEORY_DRAFT_STORAGE_PREFIX)
                     ? k.slice(THEORY_DRAFT_STORAGE_PREFIX.length)
                     : k.slice(THEORY_DRAFT_STORAGE_LEGACY_PREFIX.length);
+
+                const scope = normalizeTheoryDraftScope(rawScope);
+                if (!scope) continue;
 
                 const isBoundTheory = scope.startsWith("theory:");
                 const itemTheoryId = isBoundTheory ? scope.slice("theory:".length) : (parsed.theoryId || "");
                 const isBoundCourse = !isBoundTheory && (scope.includes(":course:") || scope.includes(":module:") || (scope.split(":").length > 2 && scope.split(":")[2] !== ""));
-                const isCurrent = k === currentKey || k === currentLegacyKey;
+                const isCurrent = (scope === currentScope);
+                const primaryKeyForScope = `${THEORY_DRAFT_STORAGE_PREFIX}${scope}`;
 
                 const normalizedDraft = {
-                    key: k,
+                    key: primaryKeyForScope,
                     version: parsed.version || 2,
                     theoryId: itemTheoryId,
                     scopeId: scope,
@@ -1221,8 +1307,8 @@ function listTheoryDrafts() {
                     snapshots,
                 };
 
-                drafts.push({
-                    key: k,
+                const item = {
+                    key: primaryKeyForScope,
                     theoryId: itemTheoryId,
                     scopeId: scope,
                     title: top.title,
@@ -1234,11 +1320,48 @@ function listTheoryDrafts() {
                     contextType: isBoundTheory ? "bound_theory" : (isBoundCourse ? "bound_course" : "standalone"),
                     isCurrent,
                     draft: normalizedDraft,
-                });
+                };
+
+                if (draftsByScope.has(scope)) {
+                    const existing = draftsByScope.get(scope);
+                    const existingTime = existing.savedAt ? new Date(existing.savedAt).getTime() : 0;
+                    const thisTime = top.savedAt ? new Date(top.savedAt).getTime() : 0;
+                    if (thisTime > existingTime || (thisTime === existingTime && (parsed.version === 2 || snapshots.length > 1))) {
+                        draftsByScope.set(scope, item);
+                    }
+                } else {
+                    draftsByScope.set(scope, item);
+                }
+
+                if (k.startsWith(THEORY_DRAFT_STORAGE_LEGACY_PREFIX)) {
+                    try { storage.removeItem(k); } catch (e) {}
+                    try {
+                        if (window.localStorage && !window.localStorage.getItem(primaryKeyForScope)) {
+                            window.localStorage.setItem(primaryKeyForScope, JSON.stringify({
+                                version: 2,
+                                theoryId: itemTheoryId,
+                                context: parsed.context || {},
+                                snapshots,
+                            }));
+                        }
+                    } catch (e) {}
+                }
             } catch (e) {}
         }
     }
 
+    for (const scope of draftsByScope.keys()) {
+        const legacyKey = `${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${scope}`;
+        try { window.localStorage?.removeItem(legacyKey); } catch (e) {}
+        try { window.sessionStorage?.removeItem(legacyKey); } catch (e) {}
+        if (scope.startsWith("theory:")) {
+            const bare = `${THEORY_DRAFT_STORAGE_LEGACY_PREFIX}${scope.slice("theory:".length)}`;
+            try { window.localStorage?.removeItem(bare); } catch (e) {}
+            try { window.sessionStorage?.removeItem(bare); } catch (e) {}
+        }
+    }
+
+    const drafts = Array.from(draftsByScope.values());
     drafts.sort((a, b) => {
         const timeA = a.savedAt ? new Date(a.savedAt).getTime() : 0;
         const timeB = b.savedAt ? new Date(b.savedAt).getTime() : 0;
@@ -1271,6 +1394,19 @@ function clearAllTheoryDrafts() {
     const drafts = listTheoryDrafts();
     for (const d of drafts) {
         clearTheoryDraftByKey(d.key);
+    }
+    const storages = [];
+    try { if (typeof window !== "undefined" && window.localStorage) storages.push(window.localStorage); } catch (e) {}
+    try { if (typeof window !== "undefined" && window.sessionStorage) storages.push(window.sessionStorage); } catch (e) {}
+    for (const storage of storages) {
+        try {
+            const keys = Object.keys(storage);
+            for (const k of keys) {
+                if (k.startsWith(THEORY_DRAFT_STORAGE_PREFIX) || k.startsWith(THEORY_DRAFT_STORAGE_LEGACY_PREFIX)) {
+                    storage.removeItem(k);
+                }
+            }
+        } catch (e) {}
     }
     hideTheoryDraftBanner();
     updateTheoryDraftsBadge();
@@ -1797,7 +1933,7 @@ function openTheoryDraftsRegistryModal() {
 
                     if (item.isCurrent) {
                         close();
-                        openTheoryDraftModal(item.draft, item.theoryId);
+                        applyRestoredTheoryDraft(item.draft);
                         return;
                     }
 
@@ -1805,8 +1941,12 @@ function openTheoryDraftsRegistryModal() {
                     if (!canLeave) return;
 
                     close();
+                    try {
+                        window.sessionStorage?.setItem("__theory_auto_restore_scope__", item.scopeId);
+                    } catch (e) {}
+
                     if (item.theoryId) {
-                        theoryEditorNavigate(`/editor/Theory_Editor.html?theory_id=${encodeURIComponent(item.theoryId)}`);
+                        theoryEditorNavigate(`/editor/Theory_Editor.html?theory_id=${encodeURIComponent(item.theoryId)}&restore_draft=1`);
                     } else {
                         const scopeParts = String(item.scopeId || "").split(":");
                         const url = new URL("/editor/Theory_Editor.html", window.location.origin);
@@ -1814,6 +1954,7 @@ function openTheoryDraftsRegistryModal() {
                         if (scopeParts[2]) url.searchParams.set("module_id", scopeParts[2]);
                         if (scopeParts[3]) url.searchParams.set("topic_id", scopeParts[3]);
                         if (scopeParts[4]) url.searchParams.set("complex_id", scopeParts[4]);
+                        url.searchParams.set("restore_draft", "1");
                         theoryEditorNavigate(`${url.pathname}${url.search}`);
                     }
                 };
@@ -1833,6 +1974,33 @@ async function restoreTheoryDraftIfPresent(theoryId = "") {
     if (isTheoryDraftEqualToCurrent(draft)) {
         clearTheoryDraft(theoryId);
         return false;
+    }
+
+    const currentScope = getTheoryDraftScopeId(theoryId);
+    let autoRestore = false;
+
+    try {
+        const handoffScope = window.sessionStorage?.getItem("__theory_auto_restore_scope__");
+        if (handoffScope && handoffScope === currentScope) {
+            autoRestore = true;
+            window.sessionStorage?.removeItem("__theory_auto_restore_scope__");
+        }
+    } catch (e) {}
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("restore_draft") === "1") {
+            autoRestore = true;
+            params.delete("restore_draft");
+            const newSearch = params.toString() ? `?${params.toString()}` : "";
+            const cleanUrl = `${window.location.pathname}${newSearch}${window.location.hash}`;
+            window.history.replaceState({}, document.title, cleanUrl);
+        }
+    } catch (e) {}
+
+    if (autoRestore) {
+        applyRestoredTheoryDraft(draft);
+        return true;
     }
 
     const outcome = await openTheoryDraftModal(draft, theoryId);
