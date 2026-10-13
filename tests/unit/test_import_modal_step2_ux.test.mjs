@@ -103,11 +103,12 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         expect(dom.window.document.getElementById('cheat-sheet-tag').textContent).toBe('@SEQUENCE');
         expect(dom.window.document.getElementById('cheat-example-code').textContent).toContain('@SEQUENCE');
 
-        // Active class shifted on buttons
+        // Active class shifted on buttons: active is primary pill, inactive is tactile surface-1 button
         const seqBtn = dom.window.document.querySelector('button[data-tab-key="sequence"]');
         const testBtn = dom.window.document.querySelector('button[data-tab-key="test"]');
-        expect(seqBtn.className).toContain('text-primary font-bold');
-        expect(testBtn.className).not.toContain('text-primary font-bold');
+        expect(seqBtn.className).toContain('bg-primary text-white font-semibold');
+        expect(testBtn.className).toContain('bg-surface-1 text-text-main');
+        expect(testBtn.className).not.toContain('bg-primary');
     });
 
     it('updateHeaderStats keeps char & line stats reactive and toggles clear button', () => {

@@ -3342,7 +3342,7 @@ ${remaining}
                     </div>
 
                     <!-- Right: Interactive Syntax Reference Assistant (40%) -->
-                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-2/40 p-3 overflow-hidden" data-role="import-cheatsheet-tabs">
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="import-cheatsheet-tabs">
                         <div class="flex items-center justify-between mb-2 shrink-0">
                             <div class="flex items-center gap-1.5 min-w-0">
                                 <span class="material-symbols-outlined text-text-secondary text-[17px] shrink-0">menu_book</span>
@@ -3351,23 +3351,23 @@ ${remaining}
                                     <p class="text-[10px] text-text-secondary truncate">${wt('im.cheat_reference_hint', 'Кликните тип для образца:')}</p>
                                 </div>
                             </div>
-                            <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
+                            <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2/60 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
                         </div>
 
-                        <!-- Tabs Bar: 2 balanced rows, zero clipping, 100% width fill -->
-                        <div class="flex flex-col gap-1 p-1 bg-surface-2 rounded-lg mb-2.5 shrink-0" data-role="cheat-tabs-bar">
-                            <div class="grid grid-cols-3 gap-1">
+                        <!-- Type Switcher Chips: Discrete tactile buttons, zero gray soup -->
+                        <div class="flex flex-col gap-1.5 mb-2.5 shrink-0" data-role="cheat-tabs-bar">
+                            <div class="grid grid-cols-3 gap-1.5">
                                 ${tabsRow1.map(t => `
                                     <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
-                                        class="py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs border border-border-subtle' : 'text-text-secondary hover:text-text-main hover:bg-surface-1/50'}">
+                                        class="py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-primary text-white font-semibold shadow-xs border border-primary' : 'bg-surface-1 text-text-main border border-border-subtle hover:border-primary/60 hover:text-primary hover:bg-surface-2/20 shadow-2xs'}">
                                         ${t.label}
                                     </button>
                                 `).join('')}
                             </div>
-                            <div class="grid grid-cols-2 gap-1">
+                            <div class="grid grid-cols-2 gap-1.5">
                                 ${tabsRow2.map(t => `
                                     <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
-                                        class="py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs border border-border-subtle' : 'text-text-secondary hover:text-text-main hover:bg-surface-1/50'}">
+                                        class="py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-primary text-white font-semibold shadow-xs border border-primary' : 'bg-surface-1 text-text-main border border-border-subtle hover:border-primary/60 hover:text-primary hover:bg-surface-2/20 shadow-2xs'}">
                                         ${t.label}
                                     </button>
                                 `).join('')}
@@ -3604,9 +3604,9 @@ ${remaining}
             buttons.forEach(btn => {
                 const isSelected = btn.getAttribute('data-tab-key') === tabKey;
                 if (isSelected) {
-                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer bg-surface-1 text-primary font-bold shadow-xs border border-border-subtle';
+                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer bg-primary text-white font-semibold shadow-xs border border-primary';
                 } else {
-                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer text-text-secondary hover:text-text-main hover:bg-surface-1/50';
+                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer bg-surface-1 text-text-main border border-border-subtle hover:border-primary/60 hover:text-primary hover:bg-surface-2/20 shadow-2xs';
                 }
             });
         }
