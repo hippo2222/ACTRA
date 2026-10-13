@@ -4638,7 +4638,7 @@
     "cheat_copy_fallback": "Не вдалося скопіювати. Виділіть текст прикладу вручну.",
     "cheat_insert_short": "У поле",
     "cheat_insert_tooltip": "Вставити шаблон у кінець поля",
-    "auto_detect_badge": "Автовизначення за @тегами",
+    "auto_detect_badge": "Авто-типи",
     "auto_detect_tooltip": "Типи завдань (@TEST, @SEQUENCE тощо) визначаються автоматично з тексту. Можна поєднувати різні типи в одному імпорті.",
     "status_recognized": "Розпізнано:",
     "status_total_tasks": "Всього:",

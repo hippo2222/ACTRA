@@ -4638,7 +4638,7 @@
     "cheat_copy_fallback": "Copy failed. Please select example text manually.",
     "cheat_insert_short": "Insert",
     "cheat_insert_tooltip": "Insert template at the end of the field",
-    "auto_detect_badge": "Auto-detection by @tags",
+    "auto_detect_badge": "Auto-types",
     "auto_detect_tooltip": "Task types (@TEST, @SEQUENCE, etc.) are detected automatically from text. Multiple types can be combined in a single import.",
     "status_recognized": "Recognized:",
     "status_total_tasks": "Total:",

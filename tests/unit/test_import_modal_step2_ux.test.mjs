@@ -50,7 +50,7 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         manager.importMode = 'text';
     });
 
-    it('renders hero editor on left (68%), syntax reference on right (32%), auto-detect banner, and primary paste CTA', () => {
+    it('renders hero editor on left (60%), syntax reference on right (40%), auto-detect banner, and primary paste CTA', () => {
         const html = manager.renderStep2Text();
         expect(html).toContain('import-split-grid-text');
         expect(html).toContain('data-role="editor-panel"');

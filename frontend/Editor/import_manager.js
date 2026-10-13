@@ -3261,12 +3261,14 @@ ${remaining}
         const hasErrors = this.parsedResult?.parsing_errors?.length > 0;
         const errorsList = this.parsedResult?.parsing_errors || [];
         const cheatData = this.getCheatSheetData(this.cheatSheetTab || 'test');
-        const tabs = [
+        const tabsRow1 = [
             { key: 'test', label: wt('im.cheat_tab_test', 'Тест') },
-            { key: 'open_answer', label: wt('im.cheat_tab_open', 'Открытый ответ') },
-            { key: 'sequence', label: wt('im.cheat_tab_seq', 'Последовательность') },
             { key: 'click_text', label: wt('im.cheat_tab_click_text', 'Выбор') },
             { key: 'click_words', label: wt('im.cheat_tab_click_words', 'Ошибки') },
+        ];
+        const tabsRow2 = [
+            { key: 'sequence', label: wt('im.cheat_tab_seq', 'Последовательность') },
+            { key: 'open_answer', label: wt('im.cheat_tab_open', 'Открытый ответ') },
         ];
         const lineCount = (this.sourceText || '').length > 0 ? (this.sourceText || '').split('\n').length : 0;
         const charCount = (this.sourceText || '').length;
@@ -3290,19 +3292,19 @@ ${remaining}
                     </div>
                 ` : ''}
 
-                <!-- Split Grid: 68% hero editor on left, 32% syntax reference on right -->
+                <!-- Split Grid: 60% hero editor on left, 40% syntax reference on right -->
                 <div class="import-split-grid-text gap-4 flex-1 min-h-0">
-                    <!-- Left: Hero Editor Workspace (68%) -->
+                    <!-- Left: Hero Editor Workspace (60%) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="editor-panel">
                         <div class="flex items-center justify-between mb-2 shrink-0">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="material-symbols-outlined text-primary text-[18px] shrink-0">edit_note</span>
                                 <span class="text-xs font-bold text-text-main shrink-0">${wt('im.editor_title_text', 'Текст заданий')}</span>
-                                <span id="import-text-stats" class="text-[11px] text-text-secondary truncate">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/25 shrink-0" data-role="auto-detect-badge"
+                                <span id="import-text-stats" class="text-[11px] text-text-secondary shrink-0">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/25 shrink-0" data-role="auto-detect-badge"
                                     title="${this.escapeHtml(wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.'))}">
-                                    <span class="material-symbols-outlined text-[13px]">magic_button</span>
-                                    <span>${wt('im.auto_detect_badge', 'Автоопределение по @тегам')}</span>
+                                    <span class="material-symbols-outlined text-[12px]">magic_button</span>
+                                    <span>${wt('im.auto_detect_badge', 'Авто-типы')}</span>
                                 </span>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
@@ -3339,7 +3341,7 @@ ${remaining}
                         </div>
                     </div>
 
-                    <!-- Right: Interactive Syntax Reference Assistant (32%) -->
+                    <!-- Right: Interactive Syntax Reference Assistant (40%) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-2/40 p-3 overflow-hidden" data-role="import-cheatsheet-tabs">
                         <div class="flex items-center justify-between mb-2 shrink-0">
                             <div class="flex items-center gap-1.5 min-w-0">
@@ -3352,18 +3354,28 @@ ${remaining}
                             <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
                         </div>
 
-                        <!-- Segmented Tabs -->
-                        <div class="grid grid-cols-5 gap-1 p-1 bg-surface-2 rounded-lg mb-2 shrink-0" data-role="cheat-tabs-bar">
-                            ${tabs.map(t => `
-                                <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
-                                    class="py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs' : 'text-text-secondary hover:text-text-main'}">
-                                    ${t.label}
-                                </button>
-                            `).join('')}
+                        <!-- Tabs Bar: 2 balanced rows, zero clipping, 100% width fill -->
+                        <div class="flex flex-col gap-1 p-1 bg-surface-2 rounded-lg mb-2.5 shrink-0" data-role="cheat-tabs-bar">
+                            <div class="grid grid-cols-3 gap-1">
+                                ${tabsRow1.map(t => `
+                                    <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
+                                        class="py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs border border-border-subtle' : 'text-text-secondary hover:text-text-main hover:bg-surface-1/50'}">
+                                        ${t.label}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <div class="grid grid-cols-2 gap-1">
+                                ${tabsRow2.map(t => `
+                                    <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
+                                        class="py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs border border-border-subtle' : 'text-text-secondary hover:text-text-main hover:bg-surface-1/50'}">
+                                        ${t.label}
+                                    </button>
+                                `).join('')}
+                            </div>
                         </div>
 
                         <!-- Syntax badges -->
-                        <div id="cheat-syntax-badges" class="flex flex-wrap gap-1 mb-2 shrink-0">
+                        <div id="cheat-syntax-badges" class="flex flex-wrap gap-1 mb-2.5 shrink-0">
                             ${cheatData.badges.map(b => `
                                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
                                     <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
@@ -3374,7 +3386,7 @@ ${remaining}
 
                         <!-- Example Code Container with discreet header copy icon -->
                         <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle overflow-hidden">
-                            <div class="flex items-center justify-between px-2.5 py-1.5 bg-surface-2 border-b border-border-subtle text-[11px] shrink-0">
+                            <div class="flex items-center justify-between px-3 py-1.5 bg-surface-2 border-b border-border-subtle text-[11px] shrink-0">
                                 <span id="cheat-sheet-tag" class="font-mono font-bold text-primary">${cheatData.typeTag}</span>
                                 <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
                                     class="inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary hover:text-primary transition-colors cursor-pointer"
@@ -3592,9 +3604,9 @@ ${remaining}
             buttons.forEach(btn => {
                 const isSelected = btn.getAttribute('data-tab-key') === tabKey;
                 if (isSelected) {
-                    btn.className = 'py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer bg-surface-1 text-primary font-bold shadow-xs';
+                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer bg-surface-1 text-primary font-bold shadow-xs border border-border-subtle';
                 } else {
-                    btn.className = 'py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer text-text-secondary hover:text-text-main';
+                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-md text-center truncate transition-all cursor-pointer text-text-secondary hover:text-text-main hover:bg-surface-1/50';
                 }
             });
         }
