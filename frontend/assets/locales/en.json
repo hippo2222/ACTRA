@@ -4655,7 +4655,7 @@
     "cheat_tag_criterion": "Criterion",
     "cheat_tag_element": "Step in sequence",
     "cheat_tag_level": "Level/Phase",
-    "cheat_tag_level_token": "level_N [Name]:",
+    "cheat_tag_level_token": "level_N:",
     "cheat_tag_word_ok": "Correct word",
     "cheat_tag_word_err": "Error & fix",
     "cheat_example_inserted": "Example inserted into editor",

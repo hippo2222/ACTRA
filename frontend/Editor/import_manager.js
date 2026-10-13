@@ -39,6 +39,7 @@ class ImportManager {
         this.perTaskConflictRes = new Map(); // index -> 'skip'|'overwrite'|'new_id'
         this.aiTemplateType = 'open_answer';
         this.cheatSheetTab = 'test';
+        this._userSelectedCheatSheetTab = false;
         this.aiPromptTab = 'prompt';
         this.previewFilterStatus = 'all';
         this.previewFilterType = 'all';
@@ -2487,19 +2488,19 @@ ${remaining}
                     // Current step - primary color with number
                     circle.className = 'w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-bold text-sm shadow-sm transition-all duration-300';
                     circle.innerHTML = stepNum;
-                    if (label) label.className = 'editor-import-step-label text-xs font-semibold text-text-main text-center truncate max-w-full px-1 transition-colors duration-300';
+                    if (label) label.className = 'editor-import-step-label text-xs font-semibold text-text-main text-center whitespace-nowrap px-1 transition-colors duration-300';
                     stepEl.classList.remove('completed');
                 } else if (stepNum < this.currentStep) {
                     // Completed step - green with checkmark
                     circle.className = 'w-9 h-9 rounded-full bg-success flex items-center justify-center text-primary-contrast font-bold text-sm cursor-pointer hover:ring-2 hover:ring-success hover:ring-offset-2 transition-all duration-300';
                     circle.innerHTML = '<span class="material-symbols-outlined text-[18px]">check</span>';
-                    if (label) label.className = 'editor-import-step-label text-xs font-medium text-success-text text-center truncate max-w-full px-1 transition-colors duration-300';
+                    if (label) label.className = 'editor-import-step-label text-xs font-medium text-success-text text-center whitespace-nowrap px-1 transition-colors duration-300';
                     stepEl.classList.add('completed');
                 } else {
                     // Future step - disabled
                     circle.className = 'w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-300';
                     circle.innerHTML = stepNum;
-                    if (label) label.className = 'editor-import-step-label text-xs font-medium text-text-disabled text-center truncate max-w-full px-1 transition-colors duration-300';
+                    if (label) label.className = 'editor-import-step-label text-xs font-medium text-text-disabled text-center whitespace-nowrap px-1 transition-colors duration-300';
                     stepEl.classList.remove('completed');
                 }
             }
@@ -3287,20 +3288,15 @@ ${remaining}
                 <div class="import-split-grid-text gap-4 flex-1 min-h-0">
                     <!-- Left: Hero Editor Workspace (60%) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="editor-panel">
-                        <div class="flex items-center justify-between mb-2 shrink-0">
+                        <div class="flex items-center justify-between gap-3 mb-2 shrink-0">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="material-symbols-outlined text-primary text-[18px] shrink-0">edit_note</span>
-                                <span class="text-xs font-bold text-text-main shrink-0">${wt('im.editor_title_text', 'Текст заданий')}</span>
+                                <h3 class="text-xs font-bold text-text-main shrink-0">${wt('im.editor_title_text', 'Текст заданий')}</h3>
                                 <span id="import-text-stats" class="text-[11px] text-text-secondary shrink-0">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/25 shrink-0" data-role="auto-detect-badge"
-                                    title="${this.escapeHtml(wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.'))}">
-                                    <span class="material-symbols-outlined text-[12px]">magic_button</span>
-                                    <span>${wt('im.auto_detect_badge', 'Авто-типы')}</span>
-                                </span>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
                                 <button type="button" id="import-clear-btn" onclick="dashboard.importManager.clearImportText()"
-                                    class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer ${charCount > 0 ? '' : 'hidden'}"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded-lg border border-border-subtle hover:border-error/40 transition-colors cursor-pointer ${charCount > 0 ? '' : 'hidden'}"
                                     title="${wt('im.editor_clear_btn', 'Очистить')}">
                                     <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
                                     <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
@@ -3313,22 +3309,29 @@ ${remaining}
                             </div>
                         </div>
 
-                        <!-- Auto-detection Explanation Banner -->
-                        <div class="mb-2 px-3 py-2 rounded-lg bg-primary/8 border border-primary/20 flex items-center gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
-                            <span class="material-symbols-outlined text-primary text-[18px] shrink-0">auto_awesome</span>
-                            <div class="flex-1 min-w-0 leading-tight">
-                                <span class="font-bold text-primary">${wt('im.auto_detect_banner_title', 'Автоопределение типов:')}</span>
-                                <span class="text-text-secondary">${wt('im.auto_detect_banner_desc', 'парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.')}</span>
+                        <!-- Auto-detection Explanation Banner with integrated status badge -->
+                        <div class="mb-2.5 px-3 py-2 rounded-lg bg-primary/8 border border-primary/20 flex items-center justify-between gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
+                            <div class="flex items-center gap-2 min-w-0 leading-tight">
+                                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">auto_awesome</span>
+                                <div class="min-w-0">
+                                    <span class="font-bold text-primary">${wt('im.auto_detect_banner_title', 'Автоопределение типов:')}</span>
+                                    <span class="text-text-secondary">${wt('im.auto_detect_banner_desc', 'парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.')}</span>
+                                </div>
                             </div>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-1 text-primary border border-primary/25 shrink-0 shadow-2xs" data-role="auto-detect-badge"
+                                title="${this.escapeHtml(wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.'))}">
+                                <span class="material-symbols-outlined text-[12px]">magic_button</span>
+                                <span>${wt('im.auto_detect_badge', 'Авто-типы')}</span>
+                            </span>
                         </div>
 
-                        <!-- Full Height Textarea with integrated status bar -->
-                        <div class="flex-1 min-h-0 relative flex flex-col">
+                        <!-- Unified Single-Card Editor (No split borders, no clipping) -->
+                        <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle bg-surface-1 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary overflow-hidden transition-all shadow-2xs">
                             <textarea id="import-text-area" data-role="import-source-text"
-                                class="w-full flex-1 min-h-[160px] rounded-t-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
+                                class="w-full flex-1 min-h-[160px] bg-transparent p-3 text-text-main font-mono text-xs outline-none border-0 resize-none placeholder:text-text-disabled leading-relaxed"
                                 placeholder="${this.escapeHtml(wt('im.editor_text_placeholder', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n\n@SEQUENCE\n# Порядок действий\nelement_1: Шаг 1\nelement_2: Шаг 2\nlevel_1 [Этап 1]: element_1, element_2'))}">${this.escapeHtml(this.sourceText)}</textarea>
                             <!-- Integrated Parser Status Footer -->
-                            <div id="import-live-counter" class="rounded-b-lg border-x border-b border-border-subtle bg-surface-2/90 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
+                            <div id="import-live-counter" class="border-t border-border-subtle/80 bg-surface-2/30 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
                         </div>
                     </div>
 
@@ -3345,7 +3348,7 @@ ${remaining}
 
                         <!-- Full Width Dedicated Type Selector (zero truncation risk) -->
                         <div class="mb-2.5 shrink-0">
-                            <select id="cheat-type-select" data-role="cheat-type-select" onchange="dashboard.importManager.setCheatSheetTab(this.value)"
+                            <select id="cheat-type-select" data-role="cheat-type-select" onchange="dashboard.importManager.setCheatSheetTab(this.value, { fromUser: true })"
                                 class="w-full text-xs font-semibold bg-surface-1 text-text-main border border-border-subtle rounded-lg py-1.5 px-3 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer shadow-2xs">
                                 <option value="test" ${this.cheatSheetTab === 'test' ? 'selected' : ''}>@TEST · ${wt('im.cheat_tab_test', 'Тест')}</option>
                                 <option value="click_text" ${this.cheatSheetTab === 'click_text' ? 'selected' : ''}>@CLICK_TEXT · ${wt('im.cheat_tab_click_text', 'Выбор')}</option>
@@ -3480,12 +3483,12 @@ ${remaining}
                             </div>
                         </div>
 
-                        <!-- Textarea with integrated status footer -->
-                        <div class="flex-1 min-h-0 relative flex flex-col">
+                        <!-- Unified Single-Card Editor (No split borders, no clipping) -->
+                        <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle bg-surface-1 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary overflow-hidden transition-all shadow-2xs">
                             <textarea id="import-text-area" data-role="import-source-text"
-                                class="w-full flex-1 min-h-[160px] rounded-t-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
+                                class="w-full flex-1 min-h-[160px] bg-transparent p-3 text-text-main font-mono text-xs outline-none border-0 resize-none placeholder:text-text-disabled leading-relaxed"
                                 placeholder="${wt('im.k499', 'Вставьте ответ ИИ сюда...')}">${this.escapeHtml(this.sourceText)}</textarea>
-                            <div id="import-live-counter" class="rounded-b-lg border-x border-b border-border-subtle bg-surface-2/90 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
+                            <div id="import-live-counter" class="border-t border-border-subtle/80 bg-surface-2/30 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
                         </div>
 
                         ${manualAnalysisPreview}
@@ -3534,7 +3537,7 @@ ${remaining}
                     { tag: '@SEQUENCE', desc: wt('im.k008', 'Тип задания') },
                     { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
                     { tag: 'element_N:', desc: wt('im.cheat_tag_element', 'Шаг цепи') },
-                    { tag: wt('im.cheat_tag_level_token', 'level_N [Имя]:'), desc: wt('im.cheat_tag_level', 'Уровень/фаза') },
+                    { tag: wt('im.cheat_tag_level_token', 'level_N:'), desc: wt('im.cheat_tag_level', 'Уровень/фаза') },
                 ],
                 example: wt('im.cheat_example_seq', '@SEQUENCE\n# Базовая сердечно-легочная реанимация\nelement_1: Оценить безопасность места происшествия\nelement_2: Проверить реакцию на голос и прикосновение\nelement_3: Запрокинуть голову и оценить дыхание за 10 секунд\nelement_4: Вызвать 112 и запросить дефибриллятор (АНД)\nelement_5: Выполнить 30 компрессий грудной клетки\nelement_6: Сделать 2 искусственных вдоха\nlevel_1 [Оценка безопасности]: element_1, element_2\nlevel_2 [Дыхание и вызов]: element_3, element_4\nlevel_3 [СЛР]: element_5, element_6'),
             },
@@ -3584,7 +3587,10 @@ ${remaining}
         }).join('');
     }
 
-    setCheatSheetTab(tabKey) {
+    setCheatSheetTab(tabKey, options = {}) {
+        if (options && options.fromUser) {
+            this._userSelectedCheatSheetTab = true;
+        }
         this.cheatSheetTab = tabKey;
         this.updateCheatSheetPanel(tabKey);
     }
@@ -3710,6 +3716,7 @@ ${remaining}
         this.sourceText = '';
         if (textArea) textArea.value = '';
         this.parsedResult = null;
+        this._userSelectedCheatSheetTab = false;
         this._updateLiveCounter('');
         this.updateHeaderStats('');
         this.updateFooterStatus();
@@ -5794,21 +5801,34 @@ ${remaining}
         }
 
         const markers = [
-            { marker: '@OPEN_ANSWER', label: wt('im.k200', 'Открытый ответ'), color: 'bg-blue-100 text-blue-700' },
-            { marker: '@SEQUENCE', label: wt('im.k201', 'Последовательность'), color: 'bg-purple-100 text-purple-700' },
-            { marker: '@CLICK_TEXT', label: wt('im.k202', 'Клик / Ошибки (выбор)'), color: 'bg-amber-100 text-amber-700' },
-            { marker: '@CLICK_WORDS', label: wt('im.k203', 'Клик / Ошибки (текст)'), color: 'bg-rose-100 text-rose-700' },
-            { marker: '@TEST', label: wt('im.k204', 'Тест'), color: 'bg-orange-100 text-orange-700' }
+            { marker: '@OPEN_ANSWER', key: 'open_answer', label: wt('im.k200', 'Открытый ответ'), color: 'bg-blue-100 text-blue-700' },
+            { marker: '@SEQUENCE', key: 'sequence', label: wt('im.k201', 'Последовательность'), color: 'bg-purple-100 text-purple-700' },
+            { marker: '@CLICK_TEXT', key: 'click_text', label: wt('im.k202', 'Клик / Ошибки (выбор)'), color: 'bg-amber-100 text-amber-700' },
+            { marker: '@CLICK_WORDS', key: 'click_words', label: wt('im.k203', 'Клик / Ошибки (текст)'), color: 'bg-rose-100 text-rose-700' },
+            { marker: '@TEST', key: 'test', label: wt('im.k204', 'Тест'), color: 'bg-orange-100 text-orange-700' }
         ];
 
         const badges = [];
         let total = 0;
-        for (const { marker, label, color } of markers) {
+        let earliestMarkerIndex = Infinity;
+        let firstDetectedKey = null;
+
+        for (const { marker, key, label, color } of markers) {
             const count = (text.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
             if (count > 0) {
                 total += count;
                 badges.push(`<span class="px-2 py-0.5 rounded-full ${color} font-medium text-[11px]">${label}: ${count}</span>`);
+                const firstIdx = text.indexOf(marker);
+                if (firstIdx !== -1 && firstIdx < earliestMarkerIndex) {
+                    earliestMarkerIndex = firstIdx;
+                    firstDetectedKey = key;
+                }
             }
+        }
+
+        // Auto-synchronize cheatsheet dropdown and panel if marker found and user hasn't explicitly locked choice
+        if (firstDetectedKey && !this._userSelectedCheatSheetTab && this.cheatSheetTab !== firstDetectedKey) {
+            this.setCheatSheetTab(firstDetectedKey);
         }
 
         if (total > 0) {
@@ -6329,6 +6349,7 @@ text: Сердце человека состоит из [трёх] камер. �
             }
             textArea.value = text;
             this.sourceText = text;
+            this._userSelectedCheatSheetTab = false;
             if (this.aiTemplateType === 'material_analysis') {
                 this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
             }

@@ -155,6 +155,41 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         expect(counterEl.innerHTML).toContain('3');
     });
 
+    it('auto-synchronizes cheatsheet to first detected marker when user has not locked choice', () => {
+        const contentArea = dom.window.document.querySelector('[data-role="import-content"]');
+        contentArea.innerHTML = manager.renderStep2Text();
+
+        // Initially 'test'
+        expect(manager.cheatSheetTab).toBe('test');
+        expect(dom.window.document.getElementById('cheat-sheet-tag').textContent).toBe('@TEST');
+
+        // Pasting sequence text
+        const seqText = '@SEQUENCE\n# Steps\nelement_1: First\nelement_2: Second';
+        manager._updateLiveCounter(seqText);
+
+        expect(manager.cheatSheetTab).toBe('sequence');
+        expect(dom.window.document.getElementById('cheat-sheet-tag').textContent).toBe('@SEQUENCE');
+        const selectEl = dom.window.document.getElementById('cheat-type-select');
+        expect(selectEl.value).toBe('sequence');
+
+        // If user explicitly changes the tab, lock is engaged
+        manager.setCheatSheetTab('open_answer', { fromUser: true });
+        expect(manager.cheatSheetTab).toBe('open_answer');
+        expect(manager._userSelectedCheatSheetTab).toBe(true);
+
+        // Subsequent update with sequence text does NOT override user's manual choice
+        manager._updateLiveCounter(seqText);
+        expect(manager.cheatSheetTab).toBe('open_answer');
+
+        // Clearing text resets lock
+        manager.clearImportText();
+        expect(manager._userSelectedCheatSheetTab).toBe(false);
+
+        // Next input auto-syncs again
+        manager._updateLiveCounter(seqText);
+        expect(manager.cheatSheetTab).toBe('sequence');
+    });
+
     it('copyCheatSheetExample writes text to clipboard via writeToClipboard', async () => {
         const writeSpy = vi.spyOn(manager, 'writeToClipboard').mockResolvedValue(true);
         const toastSpy = vi.spyOn(manager, 'showToast').mockImplementation(() => {});

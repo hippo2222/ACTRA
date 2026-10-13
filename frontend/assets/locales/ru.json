@@ -4655,7 +4655,7 @@
     "cheat_tag_criterion": "Критерий",
     "cheat_tag_element": "Шаг цепи",
     "cheat_tag_level": "Уровень/фаза",
-    "cheat_tag_level_token": "level_N [Имя]:",
+    "cheat_tag_level_token": "level_N:",
     "cheat_tag_word_ok": "Верное слово",
     "cheat_tag_word_err": "Ошибка и правка",
     "cheat_example_inserted": "Пример успешно вставлен в поле редактора",
