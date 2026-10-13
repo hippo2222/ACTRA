@@ -50,16 +50,36 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         manager.importMode = 'text';
     });
 
-    it('renders format reference, auto-detect badge, copy CTA, and unified status bar in Step 2', () => {
+    it('renders hero editor on left (68%), syntax reference on right (32%), auto-detect banner, and primary paste CTA', () => {
         const html = manager.renderStep2Text();
+        expect(html).toContain('import-split-grid-text');
+        expect(html).toContain('data-role="editor-panel"');
         expect(html).toContain('data-role="import-cheatsheet-tabs"');
-        expect(html).toContain('data-role="cheat-tabs-bar"');
-        expect(html).toContain('id="cheat-copy-example-btn"');
-        expect(html).toContain('data-role="cheat-copy-example"');
+
+        // Verify column order: editor-panel comes FIRST in the markup (left column)
+        const editorIndex = html.indexOf('data-role="editor-panel"');
+        const cheatIndex = html.indexOf('data-role="import-cheatsheet-tabs"');
+        expect(editorIndex).toBeGreaterThan(-1);
+        expect(cheatIndex).toBeGreaterThan(-1);
+        expect(editorIndex).toBeLessThan(cheatIndex);
+
+        // Auto-detection highlights
+        expect(html).toContain('data-role="auto-detect-banner"');
+        expect(html).toContain('data-role="auto-detect-badge"');
+        // Badge must NOT have broken 'hidden sm:inline-flex'
+        expect(html).not.toMatch(/class="[^"]*hidden sm:inline-flex/);
+
+        // Editor hero affordances
+        expect(html).toContain('data-role="import-paste-btn"');
+        expect(html).toContain('bg-primary text-primary-contrast');
         expect(html).toContain('id="import-text-stats"');
         expect(html).toContain('id="import-live-counter"');
         expect(html).toContain('min-h-[160px]');
-        expect(html).toContain('auto_awesome');
+
+        // Cheatsheet assistant affordances
+        expect(html).toContain('data-role="cheat-tabs-bar"');
+        expect(html).toContain('id="cheat-copy-example-btn"');
+        expect(html).toContain('data-role="cheat-copy-example"');
     });
 
     it('setCheatSheetTab performs instant localized DOM update without calling renderCurrentStep', () => {

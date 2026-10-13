@@ -3290,76 +3290,22 @@ ${remaining}
                     </div>
                 ` : ''}
 
-                <!-- Split Grid: 5 cols cheat sheet, 7 cols editor -->
-                <div class="import-split-grid gap-4 flex-1 min-h-0">
-                    <!-- Left: Interactive Cheat Sheet (5 cols) -->
-                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="import-cheatsheet-tabs">
-                        <div class="flex items-center justify-between mb-2 shrink-0">
-                            <div class="flex items-center gap-1.5 min-w-0">
-                                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">menu_book</span>
-                                <div class="min-w-0">
-                                    <h4 class="text-xs font-bold text-text-main truncate">${wt('im.cheat_sheet_title', 'Справочник форматов')}</h4>
-                                    <p class="text-[10px] text-text-secondary truncate">${wt('im.cheat_sheet_subtitle', 'Образцы тегов для разметки')}</p>
-                                </div>
-                            </div>
-                            <span id="cheat-sheet-tag" class="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-2 text-primary shrink-0">${cheatData.typeTag}</span>
-                        </div>
-
-                        <!-- Segmented Tabs -->
-                        <div class="grid grid-cols-5 gap-1 p-1 bg-surface-2 rounded-lg mb-2.5 shrink-0" data-role="cheat-tabs-bar">
-                            ${tabs.map(t => `
-                                <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
-                                    class="py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs' : 'text-text-secondary hover:text-text-main'}">
-                                    ${t.label}
-                                </button>
-                            `).join('')}
-                        </div>
-
-                        <!-- Syntax badges -->
-                        <div id="cheat-syntax-badges" class="flex flex-wrap gap-1.5 mb-2.5 shrink-0">
-                            ${cheatData.badges.map(b => `
-                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
-                                    <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
-                                    <span>${this.escapeHtml(b.desc)}</span>
-                                </span>
-                            `).join('')}
-                        </div>
-
-                        <!-- Example Code Container -->
-                        <div class="flex-1 min-h-0 flex flex-col bg-surface-2 rounded-lg border border-border-subtle p-2.5 overflow-hidden">
-                            <div class="flex-1 min-h-0 overflow-y-auto">
-                                <pre id="cheat-example-code" class="font-mono text-[11px] text-text-main whitespace-pre-wrap leading-relaxed select-all">${this.escapeHtml(cheatData.example)}</pre>
-                            </div>
-                            <div class="mt-2 pt-2 border-t border-border-subtle flex items-center gap-2 shrink-0">
-                                <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
-                                    class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-surface-1 hover:bg-surface-3 border border-border-subtle text-text-main hover:text-primary transition-colors cursor-pointer">
-                                    <span class="material-symbols-outlined text-[16px] text-primary" id="cheat-copy-example-icon">content_copy</span>
-                                    <span id="cheat-copy-example-text">${wt('im.cheat_copy_example', 'Скопировать образец')}</span>
-                                </button>
-                                <button type="button" id="cheat-insert-example-btn" data-role="cheat-insert-example" onclick="dashboard.importManager.insertCheatSheetExample('${cheatData.key}')"
-                                    class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-3 border border-border-subtle transition-colors cursor-pointer"
-                                    title="${wt('im.cheat_insert_tooltip', 'Вставить шаблон в конец поля')}">
-                                    <span class="material-symbols-outlined text-[15px]">input</span>
-                                    <span class="hidden sm:inline">${wt('im.cheat_insert_short', 'В поле')}</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right: Editor Textarea (7 cols) -->
+                <!-- Split Grid: 68% hero editor on left, 32% syntax reference on right -->
+                <div class="import-split-grid-text gap-4 flex-1 min-h-0">
+                    <!-- Left: Hero Editor Workspace (68%) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="editor-panel">
                         <div class="flex items-center justify-between mb-2 shrink-0">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="material-symbols-outlined text-primary text-[18px] shrink-0">edit_note</span>
                                 <span class="text-xs font-bold text-text-main shrink-0">${wt('im.editor_title_text', 'Текст заданий')}</span>
                                 <span id="import-text-stats" class="text-[11px] text-text-secondary truncate">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
-                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 shrink-0"
-                                    title="${wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.')}">
-                                    <span class="material-symbols-outlined text-[12px]">auto_awesome</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/25 shrink-0" data-role="auto-detect-badge"
+                                    title="${this.escapeHtml(wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.'))}">
+                                    <span class="material-symbols-outlined text-[13px]">magic_button</span>
                                     <span>${wt('im.auto_detect_badge', 'Автоопределение по @тегам')}</span>
                                 </span>
                             </div>
-                            <div class="flex items-center gap-1.5 shrink-0">
+                            <div class="flex items-center gap-2 shrink-0">
                                 <button type="button" id="import-clear-btn" onclick="dashboard.importManager.clearImportText()"
                                     class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer ${charCount > 0 ? '' : 'hidden'}"
                                     title="${wt('im.editor_clear_btn', 'Очистить')}">
@@ -3367,10 +3313,19 @@ ${remaining}
                                     <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
                                 </button>
                                 <button type="button" id="import-paste-clipboard-btn" data-role="import-paste-btn" onclick="dashboard.importManager.pasteImportTextFromClipboard()"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 hover:bg-surface-3 text-text-main transition-colors cursor-pointer">
-                                    <span class="material-symbols-outlined text-[16px] text-primary">content_paste</span>
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-all shadow-xs cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px]">content_paste</span>
                                     <span>${wt('im.editor_paste_btn', 'Вставить из буфера')}</span>
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Auto-detection Explanation Banner -->
+                        <div class="mb-2 px-3 py-2 rounded-lg bg-primary/8 border border-primary/20 flex items-center gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
+                            <span class="material-symbols-outlined text-primary text-[18px] shrink-0">auto_awesome</span>
+                            <div class="flex-1 min-w-0 leading-tight">
+                                <span class="font-bold text-primary">${wt('im.auto_detect_banner_title', 'Автоопределение типов:')}</span>
+                                <span class="text-text-secondary">${wt('im.auto_detect_banner_desc', 'парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.')}</span>
                             </div>
                         </div>
 
@@ -3381,6 +3336,56 @@ ${remaining}
                                 placeholder="${this.escapeHtml(wt('im.editor_text_placeholder', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n\n@SEQUENCE\n# Порядок действий\nelement_1: Шаг 1\nelement_2: Шаг 2\nlevel_1 [Этап 1]: element_1, element_2'))}">${this.escapeHtml(this.sourceText)}</textarea>
                             <!-- Integrated Parser Status Footer -->
                             <div id="import-live-counter" class="rounded-b-lg border-x border-b border-border-subtle bg-surface-2/90 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Interactive Syntax Reference Assistant (32%) -->
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-2/40 p-3 overflow-hidden" data-role="import-cheatsheet-tabs">
+                        <div class="flex items-center justify-between mb-2 shrink-0">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="material-symbols-outlined text-text-secondary text-[17px] shrink-0">menu_book</span>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-text-main truncate">${wt('im.cheat_reference_title', 'Справка по тегам')}</h4>
+                                    <p class="text-[10px] text-text-secondary truncate">${wt('im.cheat_reference_hint', 'Кликните тип для образца:')}</p>
+                                </div>
+                            </div>
+                            <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
+                        </div>
+
+                        <!-- Segmented Tabs -->
+                        <div class="grid grid-cols-5 gap-1 p-1 bg-surface-2 rounded-lg mb-2 shrink-0" data-role="cheat-tabs-bar">
+                            ${tabs.map(t => `
+                                <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
+                                    class="py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs' : 'text-text-secondary hover:text-text-main'}">
+                                    ${t.label}
+                                </button>
+                            `).join('')}
+                        </div>
+
+                        <!-- Syntax badges -->
+                        <div id="cheat-syntax-badges" class="flex flex-wrap gap-1 mb-2 shrink-0">
+                            ${cheatData.badges.map(b => `
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
+                                    <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
+                                    <span>${this.escapeHtml(b.desc)}</span>
+                                </span>
+                            `).join('')}
+                        </div>
+
+                        <!-- Example Code Container with discreet header copy icon -->
+                        <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle overflow-hidden">
+                            <div class="flex items-center justify-between px-2.5 py-1.5 bg-surface-2 border-b border-border-subtle text-[11px] shrink-0">
+                                <span id="cheat-sheet-tag" class="font-mono font-bold text-primary">${cheatData.typeTag}</span>
+                                <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
+                                    class="inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary hover:text-primary transition-colors cursor-pointer"
+                                    title="${this.escapeHtml(wt('im.cheat_copy_tooltip', 'Скопировать образец разметки'))}">
+                                    <span class="material-symbols-outlined text-[14px]" id="cheat-copy-example-icon">content_copy</span>
+                                    <span id="cheat-copy-example-text">${wt('im.cheat_copy_btn', 'Копировать')}</span>
+                                </button>
+                            </div>
+                            <div class="flex-1 min-h-0 bg-surface-1 p-2.5 overflow-y-auto">
+                                <pre id="cheat-example-code" class="font-mono text-[11px] text-text-main whitespace-pre-wrap leading-relaxed select-all">${this.escapeHtml(cheatData.example)}</pre>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3629,11 +3634,11 @@ ${remaining}
                 icon.classList.add('text-primary');
             }
             if (text) {
-                text.textContent = wt('im.cheat_copy_example', 'Скопировать образец');
+                text.textContent = wt('im.cheat_copy_btn', 'Копировать');
             }
         }
 
-        // 6. Update insert button
+        // 6. Update insert button (if present)
         const insertBtn = document.getElementById('cheat-insert-example-btn');
         if (insertBtn) {
             insertBtn.setAttribute('onclick', `dashboard.importManager.insertCheatSheetExample('${cheatData.key}')`);
@@ -3657,7 +3662,7 @@ ${remaining}
                         icon.textContent = 'content_copy';
                         icon.classList.remove('text-success');
                         icon.classList.add('text-primary');
-                        text.textContent = wt('im.cheat_copy_example', 'Скопировать образец');
+                        text.textContent = wt('im.cheat_copy_btn', 'Копировать');
                     }
                 }, 2000);
             }

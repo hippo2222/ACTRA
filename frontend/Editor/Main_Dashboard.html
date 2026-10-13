@@ -1383,9 +1383,20 @@
                 min-height: 0;
                 height: 100%;
             }
+            #import-modal .import-split-grid-text {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                flex: 1;
+                min-height: 0;
+                height: 100%;
+            }
             @media (min-width: 900px) {
                 #import-modal .import-split-grid {
                     grid-template-columns: 5fr 7fr;
+                }
+                #import-modal .import-split-grid-text {
+                    grid-template-columns: 68fr 32fr;
                 }
             }
             #import-modal .task-card-excluded {
