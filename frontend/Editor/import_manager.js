@@ -3294,18 +3294,21 @@ ${remaining}
                 <div class="import-split-grid gap-4 flex-1 min-h-0">
                     <!-- Left: Interactive Cheat Sheet (5 cols) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="import-cheatsheet-tabs">
-                        <div class="flex items-center justify-between mb-2.5 shrink-0">
-                            <div class="flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-primary text-[18px]">menu_book</span>
-                                <h4 class="text-xs font-bold text-text-main">${wt('im.cheat_sheet_title', 'Шпаргалка форматов')}</h4>
+                        <div class="flex items-center justify-between mb-2 shrink-0">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">menu_book</span>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-bold text-text-main truncate">${wt('im.cheat_sheet_title', 'Справочник форматов')}</h4>
+                                    <p class="text-[10px] text-text-secondary truncate">${wt('im.cheat_sheet_subtitle', 'Образцы тегов для разметки')}</p>
+                                </div>
                             </div>
-                            <span class="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-2 text-primary">${cheatData.typeTag}</span>
+                            <span id="cheat-sheet-tag" class="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-2 text-primary shrink-0">${cheatData.typeTag}</span>
                         </div>
 
                         <!-- Segmented Tabs -->
-                        <div class="grid grid-cols-5 gap-1 p-1 bg-surface-2 rounded-lg mb-2.5 shrink-0">
+                        <div class="grid grid-cols-5 gap-1 p-1 bg-surface-2 rounded-lg mb-2.5 shrink-0" data-role="cheat-tabs-bar">
                             ${tabs.map(t => `
-                                <button type="button" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
+                                <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
                                     class="py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-surface-1 text-primary font-bold shadow-xs' : 'text-text-secondary hover:text-text-main'}">
                                     ${t.label}
                                 </button>
@@ -3313,7 +3316,7 @@ ${remaining}
                         </div>
 
                         <!-- Syntax badges -->
-                        <div class="flex flex-wrap gap-1.5 mb-2.5 shrink-0">
+                        <div id="cheat-syntax-badges" class="flex flex-wrap gap-1.5 mb-2.5 shrink-0">
                             ${cheatData.badges.map(b => `
                                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
                                     <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
@@ -3325,33 +3328,44 @@ ${remaining}
                         <!-- Example Code Container -->
                         <div class="flex-1 min-h-0 flex flex-col bg-surface-2 rounded-lg border border-border-subtle p-2.5 overflow-hidden">
                             <div class="flex-1 min-h-0 overflow-y-auto">
-                                <pre class="font-mono text-[11px] text-text-main whitespace-pre-wrap leading-relaxed select-all">${this.escapeHtml(cheatData.example)}</pre>
+                                <pre id="cheat-example-code" class="font-mono text-[11px] text-text-main whitespace-pre-wrap leading-relaxed select-all">${this.escapeHtml(cheatData.example)}</pre>
                             </div>
-                            <button type="button" data-role="cheat-insert-example" onclick="dashboard.importManager.insertCheatSheetExample('${cheatData.key}')"
-                                class="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-surface-1 hover:bg-surface-3 border border-border-subtle text-text-main hover:text-primary transition-colors cursor-pointer shrink-0">
-                                <span class="material-symbols-outlined text-[16px]">add_circle</span>
-                                <span>${wt('im.cheat_insert_example', 'Вставить пример в поле')}</span>
-                            </button>
+                            <div class="mt-2 pt-2 border-t border-border-subtle flex items-center gap-2 shrink-0">
+                                <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
+                                    class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-surface-1 hover:bg-surface-3 border border-border-subtle text-text-main hover:text-primary transition-colors cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px] text-primary" id="cheat-copy-example-icon">content_copy</span>
+                                    <span id="cheat-copy-example-text">${wt('im.cheat_copy_example', 'Скопировать образец')}</span>
+                                </button>
+                                <button type="button" id="cheat-insert-example-btn" data-role="cheat-insert-example" onclick="dashboard.importManager.insertCheatSheetExample('${cheatData.key}')"
+                                    class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-3 border border-border-subtle transition-colors cursor-pointer"
+                                    title="${wt('im.cheat_insert_tooltip', 'Вставить шаблон в конец поля')}">
+                                    <span class="material-symbols-outlined text-[15px]">input</span>
+                                    <span class="hidden sm:inline">${wt('im.cheat_insert_short', 'В поле')}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Right: Editor Textarea (7 cols) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="editor-panel">
-                        <div class="flex items-center justify-between mb-2.5 shrink-0">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-[18px]">edit_note</span>
-                                <span class="text-xs font-bold text-text-main">${wt('im.editor_title_text', 'Текст заданий')}</span>
-                                <span class="text-[11px] text-text-secondary">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
+                        <div class="flex items-center justify-between mb-2 shrink-0">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">edit_note</span>
+                                <span class="text-xs font-bold text-text-main shrink-0">${wt('im.editor_title_text', 'Текст заданий')}</span>
+                                <span id="import-text-stats" class="text-[11px] text-text-secondary truncate">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
+                                <span class="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 shrink-0"
+                                    title="${wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.')}">
+                                    <span class="material-symbols-outlined text-[12px]">auto_awesome</span>
+                                    <span>${wt('im.auto_detect_badge', 'Автоопределение по @тегам')}</span>
+                                </span>
                             </div>
-                            <div class="flex items-center gap-1.5">
-                                ${charCount > 0 ? `
-                                    <button type="button" onclick="dashboard.importManager.clearImportText()"
-                                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer"
-                                        title="${wt('im.editor_clear_btn', 'Очистить')}">
-                                        <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
-                                        <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
-                                    </button>
-                                ` : ''}
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button type="button" id="import-clear-btn" onclick="dashboard.importManager.clearImportText()"
+                                    class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer ${charCount > 0 ? '' : 'hidden'}"
+                                    title="${wt('im.editor_clear_btn', 'Очистить')}">
+                                    <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
+                                    <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
+                                </button>
                                 <button type="button" id="import-paste-clipboard-btn" data-role="import-paste-btn" onclick="dashboard.importManager.pasteImportTextFromClipboard()"
                                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 hover:bg-surface-3 text-text-main transition-colors cursor-pointer">
                                     <span class="material-symbols-outlined text-[16px] text-primary">content_paste</span>
@@ -3360,15 +3374,14 @@ ${remaining}
                             </div>
                         </div>
 
-                        <!-- Full Height Textarea -->
+                        <!-- Full Height Textarea with integrated status bar -->
                         <div class="flex-1 min-h-0 relative flex flex-col">
                             <textarea id="import-text-area" data-role="import-source-text"
-                                class="w-full flex-1 min-h-[280px] rounded-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
-                                placeholder="${this.escapeHtml(wt('im.editor_text_placeholder', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n...'))}">${this.escapeHtml(this.sourceText)}</textarea>
+                                class="w-full flex-1 min-h-[160px] rounded-t-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
+                                placeholder="${this.escapeHtml(wt('im.editor_text_placeholder', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n\n@SEQUENCE\n# Порядок действий\nelement_1: Шаг 1\nelement_2: Шаг 2\nlevel_1 [Этап 1]: element_1, element_2'))}">${this.escapeHtml(this.sourceText)}</textarea>
+                            <!-- Integrated Parser Status Footer -->
+                            <div id="import-live-counter" class="rounded-b-lg border-x border-b border-border-subtle bg-surface-2/90 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
                         </div>
-
-                        <!-- Live Marker Badges -->
-                        <div id="import-live-counter" class="mt-2 flex flex-wrap gap-1.5 text-xs min-h-[22px] shrink-0"></div>
                     </div>
                 </div>
             </div>
@@ -3447,21 +3460,19 @@ ${remaining}
 
                     <!-- Right: AI Response Terminal (7 cols) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="ai-terminal-column">
-                        <div class="flex items-center justify-between mb-2.5 shrink-0">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-[18px]">terminal</span>
-                                <span class="text-xs font-bold text-text-main">${wt('im.editor_title_ai', 'Ответ внешнего ИИ')}</span>
-                                <span class="text-[11px] text-text-secondary">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
+                        <div class="flex items-center justify-between mb-2 shrink-0">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">terminal</span>
+                                <span class="text-xs font-bold text-text-main shrink-0">${wt('im.editor_title_ai', 'Ответ внешнего ИИ')}</span>
+                                <span id="import-text-stats" class="text-[11px] text-text-secondary truncate">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
                             </div>
-                            <div class="flex items-center gap-1.5">
-                                ${charCount > 0 ? `
-                                    <button type="button" onclick="dashboard.importManager.clearImportText()"
-                                        class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer"
-                                        title="${wt('im.editor_clear_btn', 'Очистить')}">
-                                        <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
-                                        <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
-                                    </button>
-                                ` : ''}
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button type="button" id="import-clear-btn" onclick="dashboard.importManager.clearImportText()"
+                                    class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded transition-colors cursor-pointer ${charCount > 0 ? '' : 'hidden'}"
+                                    title="${wt('im.editor_clear_btn', 'Очистить')}">
+                                    <span class="material-symbols-outlined text-[15px]">delete_sweep</span>
+                                    <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
+                                </button>
                                 <button type="button" id="import-paste-clipboard-btn" data-role="import-paste-btn" onclick="dashboard.importManager.pasteImportTextFromClipboard()"
                                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 hover:bg-surface-3 text-text-main transition-colors cursor-pointer">
                                     <span class="material-symbols-outlined text-[16px] text-primary">content_paste</span>
@@ -3470,15 +3481,13 @@ ${remaining}
                             </div>
                         </div>
 
-                        <!-- Textarea on 100% height -->
+                        <!-- Textarea with integrated status footer -->
                         <div class="flex-1 min-h-0 relative flex flex-col">
                             <textarea id="import-text-area" data-role="import-source-text"
-                                class="w-full flex-1 min-h-[280px] rounded-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
+                                class="w-full flex-1 min-h-[160px] rounded-t-lg border border-border-subtle bg-surface-2 p-3 text-text-main font-mono text-xs focus:ring-2 focus:ring-primary focus:border-primary resize-none placeholder:text-text-disabled leading-relaxed"
                                 placeholder="${wt('im.k499', 'Вставьте ответ ИИ сюда...')}">${this.escapeHtml(this.sourceText)}</textarea>
+                            <div id="import-live-counter" class="rounded-b-lg border-x border-b border-border-subtle bg-surface-2/90 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
                         </div>
-
-                        <!-- Live Marker Badges -->
-                        <div id="import-live-counter" class="mt-2 flex flex-wrap gap-1.5 text-xs min-h-[22px] shrink-0"></div>
 
                         ${manualAnalysisPreview}
                     </div>
@@ -3526,7 +3535,7 @@ ${remaining}
                     { tag: '@SEQUENCE', desc: wt('im.k008', 'Тип задания') },
                     { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
                     { tag: 'element_N:', desc: wt('im.cheat_tag_element', 'Шаг цепи') },
-                    { tag: 'level_N [Имя]:', desc: wt('im.cheat_tag_level', 'Уровень/фаза') },
+                    { tag: wt('im.cheat_tag_level_token', 'level_N [Имя]:'), desc: wt('im.cheat_tag_level', 'Уровень/фаза') },
                 ],
                 example: wt('im.cheat_example_seq', '@SEQUENCE\n# Базовая сердечно-легочная реанимация\nelement_1: Оценить безопасность места происшествия\nelement_2: Проверить реакцию на голос и прикосновение\nelement_3: Запрокинуть голову и оценить дыхание за 10 секунд\nelement_4: Вызвать 112 и запросить дефибриллятор (АНД)\nelement_5: Выполнить 30 компрессий грудной клетки\nelement_6: Сделать 2 искусственных вдоха\nlevel_1 [Оценка безопасности]: element_1, element_2\nlevel_2 [Дыхание и вызов]: element_3, element_4\nlevel_3 [СЛР]: element_5, element_6'),
             },
@@ -3564,7 +3573,99 @@ ${remaining}
 
     setCheatSheetTab(tabKey) {
         this.cheatSheetTab = tabKey;
-        this.renderCurrentStep();
+        this.updateCheatSheetPanel(tabKey);
+    }
+
+    updateCheatSheetPanel(tabKey) {
+        const cheatData = this.getCheatSheetData(tabKey);
+        if (!cheatData) return;
+
+        // 1. Update tab button active states
+        const tabsBar = document.querySelector('[data-role="cheat-tabs-bar"]');
+        if (tabsBar) {
+            const buttons = tabsBar.querySelectorAll('button[data-tab-key]');
+            buttons.forEach(btn => {
+                const isSelected = btn.getAttribute('data-tab-key') === tabKey;
+                if (isSelected) {
+                    btn.className = 'py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer bg-surface-1 text-primary font-bold shadow-xs';
+                } else {
+                    btn.className = 'py-1 px-1 text-[11px] font-medium rounded text-center truncate transition-all cursor-pointer text-text-secondary hover:text-text-main';
+                }
+            });
+        }
+
+        // 2. Update type tag badge
+        const tagEl = document.getElementById('cheat-sheet-tag');
+        if (tagEl) {
+            tagEl.textContent = cheatData.typeTag || '';
+        }
+
+        // 3. Update syntax badges
+        const badgesContainer = document.getElementById('cheat-syntax-badges');
+        if (badgesContainer) {
+            badgesContainer.innerHTML = (cheatData.badges || []).map(b => `
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
+                    <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
+                    <span>${this.escapeHtml(b.desc)}</span>
+                </span>
+            `).join('');
+        }
+
+        // 4. Update example code in <pre>
+        const preEl = document.getElementById('cheat-example-code');
+        if (preEl) {
+            preEl.textContent = cheatData.example || '';
+        }
+
+        // 5. Update copy button
+        const copyBtn = document.getElementById('cheat-copy-example-btn');
+        if (copyBtn) {
+            copyBtn.setAttribute('onclick', `dashboard.importManager.copyCheatSheetExample('${cheatData.key}')`);
+            const icon = document.getElementById('cheat-copy-example-icon');
+            const text = document.getElementById('cheat-copy-example-text');
+            if (icon) {
+                icon.textContent = 'content_copy';
+                icon.classList.remove('text-success');
+                icon.classList.add('text-primary');
+            }
+            if (text) {
+                text.textContent = wt('im.cheat_copy_example', 'Скопировать образец');
+            }
+        }
+
+        // 6. Update insert button
+        const insertBtn = document.getElementById('cheat-insert-example-btn');
+        if (insertBtn) {
+            insertBtn.setAttribute('onclick', `dashboard.importManager.insertCheatSheetExample('${cheatData.key}')`);
+        }
+    }
+
+    async copyCheatSheetExample(tabKey) {
+        const data = this.getCheatSheetData(tabKey);
+        if (!data?.example) return;
+        try {
+            await this.writeToClipboard(data.example);
+            const icon = document.getElementById('cheat-copy-example-icon');
+            const text = document.getElementById('cheat-copy-example-text');
+            if (icon && text) {
+                icon.textContent = 'check';
+                icon.classList.remove('text-primary');
+                icon.classList.add('text-success');
+                text.textContent = wt('im.cheat_copied', 'Скопировано! ✓');
+                setTimeout(() => {
+                    if (document.getElementById('cheat-copy-example-icon') === icon) {
+                        icon.textContent = 'content_copy';
+                        icon.classList.remove('text-success');
+                        icon.classList.add('text-primary');
+                        text.textContent = wt('im.cheat_copy_example', 'Скопировать образец');
+                    }
+                }, 2000);
+            }
+            this.showToast(wt('im.cheat_copy_toast', 'Шаблон скопирован в буфер обмена'), 'success');
+        } catch (err) {
+            console.warn('[ImportManager] copy example failed:', err);
+            this.showToast(wt('im.cheat_copy_fallback', 'Не удалось скопировать. Выделите текст примера вручную.'), 'warning');
+        }
     }
 
     insertCheatSheetExample(tabKey) {
@@ -3577,9 +3678,27 @@ ${remaining}
             textArea.value = this.sourceText;
         }
         this._updateLiveCounter(this.sourceText);
+        this.updateHeaderStats(this.sourceText);
         this.updateFooterStatus();
-        this.renderCurrentStep();
         this.showToast(wt('im.cheat_example_inserted', 'Пример успешно вставлен в поле редактора'), 'success');
+    }
+
+    updateHeaderStats(text) {
+        const statsEl = document.getElementById('import-text-stats');
+        const clearBtn = document.getElementById('import-clear-btn');
+        const raw = text || '';
+        const charCount = raw.length;
+        const lineCount = raw.length > 0 ? raw.split('\n').length : 0;
+        if (statsEl) {
+            statsEl.textContent = `(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})`;
+        }
+        if (clearBtn) {
+            if (charCount > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+        }
     }
 
     clearImportText() {
@@ -3588,8 +3707,8 @@ ${remaining}
         if (textArea) textArea.value = '';
         this.parsedResult = null;
         this._updateLiveCounter('');
+        this.updateHeaderStats('');
         this.updateFooterStatus();
-        this.renderCurrentStep();
     }
 
     getAIAgentTemplateKeyForTaskType(taskType) {
@@ -5556,14 +5675,16 @@ ${remaining}
                 textArea.addEventListener('input', (e) => {
                     this.sourceText = e.target.value;
                     this.parsedResult = null;
+                    this.updateHeaderStats(e.target.value);
                     if (this.aiTemplateType === 'material_analysis') {
                         this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
                     }
                     clearTimeout(liveCounterTimer);
-                    liveCounterTimer = setTimeout(() => this._updateLiveCounter(e.target.value), 300);
+                    liveCounterTimer = setTimeout(() => this._updateLiveCounter(e.target.value), 200);
                 });
-                // Initial counter update
+                // Initial counter update and stats
                 this._updateLiveCounter(this.sourceText);
+                this.updateHeaderStats(this.sourceText);
             }
             this.updateAIAgentPromptTextarea();
         }
@@ -5646,13 +5767,24 @@ ${remaining}
             for (const { marker, label, color } of markers) {
                 if (String(text || '').includes(marker)) {
                     total += 1;
-                    badges.push(`<span class="px-2 py-0.5 rounded-full ${color} font-medium">${label}</span>`);
+                    badges.push(`<span class="px-2 py-0.5 rounded-full ${color} font-medium text-[11px]">${label}</span>`);
                 }
             }
             if (total > 0) {
-                container.innerHTML = `<span class="text-text-muted py-0.5">${wt('im.k750', 'Найдено:')}</span>${badges.join('')}`;
+                container.innerHTML = `
+                    <div class="flex items-center gap-2 flex-wrap min-w-0">
+                        <span class="text-text-secondary text-[11px] font-semibold flex items-center gap-1 shrink-0">
+                            <span class="material-symbols-outlined text-[15px] text-primary">auto_awesome</span>
+                            <span>${wt('im.status_recognized', 'Распознано:')}</span>
+                        </span>
+                        <div class="flex items-center gap-1.5 flex-wrap">${badges.join('')}</div>
+                    </div>
+                    <div class="text-[11px] font-bold text-text-main shrink-0">${wt('im.status_total_tasks', 'Всего:')} <span class="text-primary font-bold">${total}</span></div>
+                `;
             } else {
-                container.innerHTML = text.trim() ? wt('im.k199', '<span class="text-text-disabled py-0.5">Маркеры анализа не найдены</span>') : '';
+                container.innerHTML = text.trim()
+                    ? `<div class="flex items-center gap-1.5 text-warning-text text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">info</span><span class="truncate">${wt('im.k199', 'Маркеры анализа (<human_summary>, <analysis_json>) пока не найдены')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_check_syntax', 'Проверьте образец в справочнике')}</span>`
+                    : `<div class="flex items-center gap-1.5 text-text-disabled text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">code</span><span class="truncate">${wt('im.status_waiting_input', 'Вставьте ответ внешнего ИИ')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_auto_parse_ready', 'Парсер готов')}</span>`;
             }
             return;
         }
@@ -5671,14 +5803,25 @@ ${remaining}
             const count = (text.match(new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
             if (count > 0) {
                 total += count;
-                badges.push(`<span class="px-2 py-0.5 rounded-full ${color} font-medium">${label}: ${count}</span>`);
+                badges.push(`<span class="px-2 py-0.5 rounded-full ${color} font-medium text-[11px]">${label}: ${count}</span>`);
             }
         }
 
         if (total > 0) {
-            container.innerHTML = `<span class="text-text-muted py-0.5">${wt('im.k750', 'Найдено:')}</span>${badges.join('')}<span class="text-text-muted py-0.5 ml-1">${wt('im.k751', 'Всего:')} ${total}</span>`;
+            container.innerHTML = `
+                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                    <span class="text-text-secondary text-[11px] font-semibold flex items-center gap-1 shrink-0">
+                        <span class="material-symbols-outlined text-[15px] text-primary">auto_awesome</span>
+                        <span>${wt('im.status_recognized', 'Распознано:')}</span>
+                    </span>
+                    <div class="flex items-center gap-1.5 flex-wrap">${badges.join('')}</div>
+                </div>
+                <div class="text-[11px] font-bold text-text-main shrink-0">${wt('im.status_total_tasks', 'Всего:')} <span class="text-primary font-bold">${total}</span></div>
+            `;
         } else {
-            container.innerHTML = text.trim() ? wt('im.k205', '<span class="text-text-disabled py-0.5">Маркеры не найдены</span>') : '';
+            container.innerHTML = text.trim()
+                ? `<div class="flex items-center gap-1.5 text-warning-text text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">info</span><span class="truncate">${wt('im.status_no_tags_found', 'Маркеры заданий (@TEST, @SEQUENCE...) пока не найдены в тексте')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_check_syntax', 'Проверьте образец в справочнике')}</span>`
+                : `<div class="flex items-center gap-1.5 text-text-disabled text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">code</span><span class="truncate">${wt('im.status_waiting_input', 'Вставьте текст с маркерами заданий (@TEST, @SEQUENCE и др.)')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_auto_parse_ready', 'Парсер готов')}</span>`;
         }
     }
 
@@ -6186,6 +6329,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
             }
             this._updateLiveCounter(text);
+            this.updateHeaderStats(text);
             this.showToast(wt('im.k222', 'Текст из буфера обмена вставлен.'), 'success');
         } catch (error) {
             this.showToast(wt('im.k223', 'Не удалось прочитать буфер обмена. Используйте Ctrl+V.'), 'warning');
