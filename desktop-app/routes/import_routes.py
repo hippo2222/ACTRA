@@ -46,6 +46,7 @@ _WORKSPACE_IMPORT_MARKER_KEYS = (
 # Helper accessor
 # ---------------------------------------------------------------------------
 
+
 def _ih() -> Dict[str, Any]:
     """Return the import helpers dict registered by server.py."""
     return get_extra("import_helpers")
@@ -143,8 +144,10 @@ def _infer_imported_sequence_flags(
             level_order = False
 
     if sequence_inside is None:
-        if has_multi_block_level and any(marker in prompt_low for marker in ordering_markers) and not any(
-            marker in prompt_low for marker in grouping_markers
+        if (
+            has_multi_block_level
+            and any(marker in prompt_low for marker in ordering_markers)
+            and not any(marker in prompt_low for marker in grouping_markers)
         ):
             sequence_inside = True
         else:
@@ -261,14 +264,17 @@ _IMPORT_EXECUTE_IDEMPOTENCY_TTL_SECONDS = 15 * 60
 def _cleanup_import_idempotency_cache() -> None:
     now = time.time()
     stale_keys = [
-        key for key, item in _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.items()
+        key
+        for key, item in _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.items()
         if now - float(item.get("created_ts", 0)) > _IMPORT_EXECUTE_IDEMPOTENCY_TTL_SECONDS
     ]
     for key in stale_keys:
         _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.pop(key, None)
 
 
-def _import_idempotency_get(idempotency_key: str, request_fingerprint: str) -> Optional[Dict[str, Any]]:
+def _import_idempotency_get(
+    idempotency_key: str, request_fingerprint: str
+) -> Optional[Dict[str, Any]]:
     if not idempotency_key:
         return None
     with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
@@ -285,7 +291,9 @@ def _import_idempotency_get(idempotency_key: str, request_fingerprint: str) -> O
         return cached_response
 
 
-def _import_idempotency_reserve(idempotency_key: str, request_fingerprint: str) -> Optional[Dict[str, Any]]:
+def _import_idempotency_reserve(
+    idempotency_key: str, request_fingerprint: str
+) -> Optional[Dict[str, Any]]:
     if not idempotency_key:
         return None
     with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
@@ -308,7 +316,9 @@ def _import_idempotency_reserve(idempotency_key: str, request_fingerprint: str) 
         return None
 
 
-def _import_idempotency_store(idempotency_key: str, request_fingerprint: str, response: Dict[str, Any]) -> None:
+def _import_idempotency_store(
+    idempotency_key: str, request_fingerprint: str, response: Dict[str, Any]
+) -> None:
     if not idempotency_key:
         return
     with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
@@ -335,6 +345,7 @@ def _import_idempotency_release(idempotency_key: str, request_fingerprint: str) 
 # ---------------------------------------------------------------------------
 # Import-local helpers
 # ---------------------------------------------------------------------------
+
 
 def _word_ranges(text: str) -> List[Tuple[int, int]]:
     if not isinstance(text, str) or not text:
@@ -607,7 +618,9 @@ def _build_imported_task_payload(
     analysis_session_id = str(import_context.get("analysis_session_id") or "").strip()
     if analysis_session_id:
         task_json_data["meta"]["analysis_session_id"] = analysis_session_id
-    analysis_selected_task_type = str(import_context.get("analysis_selected_task_type") or "").strip().upper()
+    analysis_selected_task_type = (
+        str(import_context.get("analysis_selected_task_type") or "").strip().upper()
+    )
     if analysis_selected_task_type:
         task_json_data["meta"]["analysis_selected_task_type"] = analysis_selected_task_type
     analysis_selected_units = import_context.get("analysis_selected_units")
@@ -642,9 +655,13 @@ def _build_imported_task_payload(
             if isinstance(source_grounding.get("score"), (int, float)):
                 grounded_meta["score"] = float(source_grounding.get("score"))
             if isinstance(source_grounding.get("shared_token_count"), int):
-                grounded_meta["shared_token_count"] = int(source_grounding.get("shared_token_count"))
+                grounded_meta["shared_token_count"] = int(
+                    source_grounding.get("shared_token_count")
+                )
             if isinstance(source_grounding.get("shared_number_count"), int):
-                grounded_meta["shared_number_count"] = int(source_grounding.get("shared_number_count"))
+                grounded_meta["shared_number_count"] = int(
+                    source_grounding.get("shared_number_count")
+                )
             if isinstance(source_grounding.get("weak"), bool):
                 grounded_meta["weak"] = bool(source_grounding.get("weak"))
             if grounded_meta:
@@ -656,136 +673,142 @@ def _build_imported_task_payload(
 
     # Add type-specific data
     if canonical_task_type == "open_answer":
-            oa_data = task.get("data", {})
-            oa_content = {
-                "question": oa_data.get("question", task.get("prompt", "")),
-                "prompt": oa_data.get("question", task.get("prompt", "")),
-            }
-            if oa_data.get("keywords"):
-                oa_content["keywords"] = oa_data["keywords"]
-            if oa_data.get("reference_answer"):
-                oa_content["reference_answer"] = oa_data["reference_answer"]
-            if oa_data.get("max_length"):
-                oa_content["max_length"] = oa_data["max_length"]
-            if isinstance(oa_data.get("min_keywords"), int):
-                oa_content["min_keywords"] = oa_data["min_keywords"]
-            if isinstance(oa_data.get("require_all_keywords"), bool):
-                oa_content["require_all_keywords"] = oa_data["require_all_keywords"]
-            task_json_data["content"] = oa_content
+        oa_data = task.get("data", {})
+        oa_content = {
+            "question": oa_data.get("question", task.get("prompt", "")),
+            "prompt": oa_data.get("question", task.get("prompt", "")),
+        }
+        if oa_data.get("keywords"):
+            oa_content["keywords"] = oa_data["keywords"]
+        if oa_data.get("reference_answer"):
+            oa_content["reference_answer"] = oa_data["reference_answer"]
+        if oa_data.get("max_length"):
+            oa_content["max_length"] = oa_data["max_length"]
+        if isinstance(oa_data.get("min_keywords"), int):
+            oa_content["min_keywords"] = oa_data["min_keywords"]
+        if isinstance(oa_data.get("require_all_keywords"), bool):
+            oa_content["require_all_keywords"] = oa_data["require_all_keywords"]
+        task_json_data["content"] = oa_content
     elif canonical_task_type == "sequence_assembly":
-            data = task.get("data", {})
-            elements_map = data.get("elements", {}) if isinstance(data.get("elements"), dict) else {}
-            raw_levels = data.get("levels", {}) if isinstance(data.get("levels"), dict) else {}
-            raw_level_names = data.get("level_names", {}) if isinstance(data.get("level_names"), dict) else {}
-            sorted_level_keys = sorted(raw_levels.keys(), key=lambda k: int(k))
+        data = task.get("data", {})
+        elements_map = data.get("elements", {}) if isinstance(data.get("elements"), dict) else {}
+        raw_levels = data.get("levels", {}) if isinstance(data.get("levels"), dict) else {}
+        raw_level_names = (
+            data.get("level_names", {}) if isinstance(data.get("level_names"), dict) else {}
+        )
+        sorted_level_keys = sorted(raw_levels.keys(), key=lambda k: int(k))
 
-            canonical_elements = [
-                {
-                    "id": str(element_id),
-                    "text": str(element_text or ""),
-                }
-                for element_id, element_text in elements_map.items()
+        canonical_elements = [
+            {
+                "id": str(element_id),
+                "text": str(element_text or ""),
+            }
+            for element_id, element_text in elements_map.items()
+        ]
+
+        canonical_levels = []
+        legacy_sequence = []
+        level_blocks_for_flags: List[List[str]] = []
+        for level_num in sorted_level_keys:
+            level_id = f"level_{level_num}"
+            level_elements = [
+                str(element_id) for element_id in raw_levels.get(level_num, []) if element_id
             ]
-
-            canonical_levels = []
-            legacy_sequence = []
-            level_blocks_for_flags: List[List[str]] = []
-            for level_num in sorted_level_keys:
-                level_id = f"level_{level_num}"
-                level_elements = [str(element_id) for element_id in raw_levels.get(level_num, []) if element_id]
-                level_title = (
-                    str(raw_level_names.get(level_num) or raw_level_names.get(str(level_num)) or "").strip()
-                    or f"Level {level_num}"
-                )
-                level_items = []
-                for element_id in level_elements:
-                    element_text = elements_map.get(element_id, element_id)
-                    level_items.append({"id": element_id, "label": str(element_text or "")})
-                canonical_levels.append(
-                    {
-                        "level_id": level_id,
-                        "blocks": level_elements,
-                        "level_name": level_title,
-                        "label": level_title,
-                    }
-                )
-                legacy_sequence.append(
-                    {
-                        "level_id": level_id,
-                        "title": level_title,
-                        "items": level_items,
-                    }
-                )
-                level_blocks_for_flags.append(level_elements)
-
-            sequence_within_level_matters, level_order_matters = _infer_imported_sequence_flags(
-                task.get("prompt", ""),
-                level_blocks_for_flags,
-                task_metadata,
+            level_title = (
+                str(
+                    raw_level_names.get(level_num) or raw_level_names.get(str(level_num)) or ""
+                ).strip()
+                or f"Level {level_num}"
             )
+            level_items = []
+            for element_id in level_elements:
+                element_text = elements_map.get(element_id, element_id)
+                level_items.append({"id": element_id, "label": str(element_text or "")})
+            canonical_levels.append(
+                {
+                    "level_id": level_id,
+                    "blocks": level_elements,
+                    "level_name": level_title,
+                }
+            )
+            legacy_sequence.append(
+                {
+                    "level_id": level_id,
+                    "title": level_title,
+                    "items": level_items,
+                }
+            )
+            level_blocks_for_flags.append(level_elements)
 
+        sequence_within_level_matters, level_order_matters = _infer_imported_sequence_flags(
+            task.get("prompt", ""),
+            level_blocks_for_flags,
+            task_metadata,
+        )
+
+        task_json_data["content"] = {
+            "prompt": task.get("prompt", ""),
+            "elements": canonical_elements,
+            "levels": canonical_levels,
+            "sequence": legacy_sequence,
+            "sequence_within_level_matters": sequence_within_level_matters,
+            "level_order_matters": level_order_matters,
+            "order_inside_matters": sequence_within_level_matters,
+        }
+    elif canonical_task_type == "click":
+        data = _normalize_click_import_data(task.get("data", {}))
+        task_json_data["subtype"] = data.get("subtype", "error_detection")
+
+        if data.get("mode") == "text_choice":
             task_json_data["content"] = {
                 "prompt": task.get("prompt", ""),
-                "elements": canonical_elements,
-                "levels": canonical_levels,
-                "sequence": legacy_sequence,
-                "sequence_within_level_matters": sequence_within_level_matters,
-                "level_order_matters": level_order_matters,
-                "order_inside_matters": sequence_within_level_matters,
+                "mode": "text_choice",
+                "subtype": "error_detection",
+                "options": data.get("options", []),
             }
-    elif canonical_task_type == "click":
-            data = _normalize_click_import_data(task.get("data", {}))
-            task_json_data["subtype"] = data.get("subtype", "error_detection")
-
-            if data.get("mode") == "text_choice":
-                task_json_data["content"] = {
-                    "prompt": task.get("prompt", ""),
-                    "mode": "text_choice",
-                    "subtype": "error_detection",
-                    "options": data.get("options", []),
-                }
-            elif data.get("mode") == "text_errors":
-                content = {
-                    "prompt": task.get("prompt", ""),
-                    "mode": "text_errors",
-                    "subtype": "error_detection",
-                    "text": data.get("text", ""),
-                    "error_spans": data.get("error_spans", []),
-                }
-                if isinstance(data.get("required_correct"), int):
-                    content["required_correct"] = data.get("required_correct")
-                if isinstance(data.get("reference_text"), str):
-                    content["reference_text"] = data.get("reference_text")
-                if isinstance(data.get("reference_spans"), list):
-                    content["reference_spans"] = data.get("reference_spans")
-                task_json_data["content"] = content
-            else:
-                raise ValueError(f"Unsupported click import mode: {data.get('mode')}")
+        elif data.get("mode") == "text_errors":
+            content = {
+                "prompt": task.get("prompt", ""),
+                "mode": "text_errors",
+                "subtype": "error_detection",
+                "text": data.get("text", ""),
+                "error_spans": data.get("error_spans", []),
+            }
+            if isinstance(data.get("required_correct"), int):
+                content["required_correct"] = data.get("required_correct")
+            if isinstance(data.get("reference_text"), str):
+                content["reference_text"] = data.get("reference_text")
+            if isinstance(data.get("reference_spans"), list):
+                content["reference_spans"] = data.get("reference_spans")
+            task_json_data["content"] = content
+        else:
+            raise ValueError(f"Unsupported click import mode: {data.get('mode')}")
     elif canonical_task_type == "test":
-            data = task.get("data", {})
-            questions, inferred_test_type = _canonicalize_test_questions(data.get("questions", []))
-            requested_test_type = str(data.get("test_type") or "").strip()
-            if requested_test_type in {"single_choice", "multiple_choice"}:
-                test_type = (
-                    "multiple_choice"
-                    if inferred_test_type == "multiple_choice" or requested_test_type == "multiple_choice"
-                    else "single_choice"
-                )
-            else:
-                test_type = inferred_test_type
-            task_json_data["content"] = {
-                "test_type": test_type,
-                "questions": questions,
-                "settings": data.get(
-                    "settings",
-                    {
-                        "shuffle_questions": True,
-                        "shuffle_answers": True,
-                        "time_limit": None,
-                        "passing_score": 70,
-                    },
-                ),
-            }
+        data = task.get("data", {})
+        questions, inferred_test_type = _canonicalize_test_questions(data.get("questions", []))
+        requested_test_type = str(data.get("test_type") or "").strip()
+        if requested_test_type in {"single_choice", "multiple_choice"}:
+            test_type = (
+                "multiple_choice"
+                if inferred_test_type == "multiple_choice"
+                or requested_test_type == "multiple_choice"
+                else "single_choice"
+            )
+        else:
+            test_type = inferred_test_type
+        task_json_data["content"] = {
+            "test_type": test_type,
+            "questions": questions,
+            "settings": data.get(
+                "settings",
+                {
+                    "shuffle_questions": True,
+                    "shuffle_answers": True,
+                    "time_limit": None,
+                    "passing_score": 70,
+                },
+            ),
+        }
     else:
         # Fallback preservation of content
         if isinstance(task.get("content"), dict) and task.get("content"):
@@ -822,7 +845,9 @@ def _save_task_to_storage(
         validate=False,
     )
     if success:
-        logger.info(f"[HTTP] Saved imported task: {module_id}/{topic_id}/{task_id} (owner={user_id})")
+        logger.info(
+            f"[HTTP] Saved imported task: {module_id}/{topic_id}/{task_id} (owner={user_id})"
+        )
     return bool(success)
 
 
@@ -1392,17 +1417,20 @@ def import_parse_analysis() -> Any:
         )
     except Exception as exc:
         logger.warning("[HTTP] Failed to parse imported analysis response: %s", exc)
-        return jsonify(
-            _with_public_import_route_contract(
-                {
-                    "ok": False,
-                    "error": "analysis_parse_failed",
-                    "message": str(exc) or "analysis_parse_failed",
-                },
-                mode="parse",
-                import_family="manual_material_analysis",
-            )
-        ), 400
+        return (
+            jsonify(
+                _with_public_import_route_contract(
+                    {
+                        "ok": False,
+                        "error": "analysis_parse_failed",
+                        "message": str(exc) or "analysis_parse_failed",
+                    },
+                    mode="parse",
+                    import_family="manual_material_analysis",
+                )
+            ),
+            400,
+        )
 
 
 @import_bp.route("/api/editor/import/execute", methods=["POST"])

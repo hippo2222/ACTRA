@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-
 DESKTOP_APP_DIR = Path(__file__).resolve().parent.parent.parent
 PROJECT_ROOT = DESKTOP_APP_DIR.parent
 for p in (str(DESKTOP_APP_DIR), str(PROJECT_ROOT)):
@@ -144,5 +143,41 @@ def test_import_payload_persists_manual_analysis_session_context(monkeypatch):
     assert meta["analysis_session_id"] == "manual_analysis_demo"
     assert meta["analysis_selected_task_type"] == "TEST"
     assert meta["analysis_selected_unit_ids"] == [3, 4]
-    assert meta["analysis_generation_focus"] == "Проверка точных критериев и диагностических ловушек."
+    assert (
+        meta["analysis_generation_focus"] == "Проверка точных критериев и диагностических ловушек."
+    )
     assert meta["analysis_coverage_role"] == "Различение корректной и искажённой интерпретации."
+
+
+def test_sequence_import_populates_custom_level_titles(monkeypatch):
+    monkeypatch.setattr(import_routes, "_ih", lambda: {"CURRENT_SCHEMA_VERSION": 1})
+
+    task = {
+        "type": "sequence_assembly",
+        "name": "seq-custom-titles",
+        "prompt": "Алгоритм реанимации",
+        "data": {
+            "elements": {
+                "element_1": "Безопасность",
+                "element_2": "Дыхание",
+            },
+            "levels": {
+                1: ["element_1"],
+                2: ["element_2"],
+            },
+            "level_names": {
+                1: "1. Оценка обстановки",
+                2: "2. Дыхательные пути",
+            },
+        },
+    }
+
+    payload = import_routes._build_imported_task_payload(task, "m1", "t1", "task-custom")
+    content = payload["content"]
+
+    assert content["levels"] == [
+        {"level_id": "level_1", "blocks": ["element_1"], "level_name": "1. Оценка обстановки"},
+        {"level_id": "level_2", "blocks": ["element_2"], "level_name": "2. Дыхательные пути"},
+    ]
+    assert content["sequence"][0]["title"] == "1. Оценка обстановки"
+    assert content["sequence"][1]["title"] == "2. Дыхательные пути"
