@@ -147,7 +147,33 @@ level_2: element_2, element_3
         assert task['type'] == 'sequence_assembly'
         assert len(task['data']['elements']) == 3
         assert len(task['data']['levels']) == 2
-    
+        # Without titles, level_names is empty
+        assert task['data'].get('level_names') == {}
+
+    def test_parse_sequence_with_custom_level_titles(self):
+        """Test parsing sequence with custom level titles in brackets and parentheses"""
+        parser = SequenceParser()
+        text = """
+@SEQUENCE
+# Алгоритм оказания помощи
+element_1: Оценить безопасность
+element_2: Проверить реакцию
+element_3: Оценить дыхание
+element_4: Начать компрессии
+level_1 [Безопасность и сознание]: element_1, element_2
+level_2 (Дыхание): element_3
+level_3: element_4
+"""
+        tasks = parser.parse_text(text)
+        assert len(tasks) == 1
+        task = tasks[0]
+        assert task['type'] == 'sequence_assembly'
+        assert len(task['data']['levels']) == 3
+        level_names = task['data'].get('level_names', {})
+        assert level_names.get(1) == 'Безопасность и сознание'
+        assert level_names.get(2) == 'Дыхание'
+        assert 3 not in level_names
+
     def test_duplicate_element_warning(self):
         """Test that duplicate element IDs generate warnings"""
         parser = SequenceParser()

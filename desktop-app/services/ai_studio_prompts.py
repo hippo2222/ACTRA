@@ -306,14 +306,15 @@ _GENERATION_PROMPTS_RU = {
 element_1: <текст элемента>
 element_2: <текст элемента>
 element_3: <текст элемента>
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Название этапа/группы 1]: element_1
+level_2 [Название этапа/группы 2]: element_2
+level_3 [Название этапа/группы 3]: element_3
 
 Элементы нумеруются последовательно (element_1, element_2, ...).
 Уровни (level_N) задают правильную структуру и должны идти последовательно без пропусков.
+В квадратных скобках [Название этапа] указывай краткое осмысленное название фазы или категории.
 Каждый element_X должен встретиться ровно в одном level_N.
-Если два элемента должны оказаться в одной группе/на одном уровне — укажи их через запятую: level_2: element_3, element_4.
+Если два элемента должны оказаться в одной группе/на одном уровне — укажи их через запятую: level_2 [Название]: element_3, element_4.
 </output_format>""",
 
     "CLICK_TEXT": r"""Ты — генератор заданий для образовательной платформы.
@@ -516,14 +517,15 @@ SYSTEM_INSTRUCTION_RU = r"""Ты — старший методист, экспе
 element_1: Текст первого элемента
 element_2: Текст второго элемента
 element_3: Текст третьего элемента
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Название этапа/группы 1]: element_1
+level_2 [Название этапа/группы 2]: element_2
+level_3 [Название этапа/группы 3]: element_3
 
 Критерии качества @SEQUENCE:
 - Подходит для процессов, хронологии, алгоритмов, классификации по группам, иерархий и ранжирования.
 - Содержит от 3 до 8 элементов (element_N) и от 2 до 5 уровней (level_N).
-- Каждый элемент используется ровно в одном уровне. Если на одном уровне несколько элементов — перечисляются через запятую: level_2: element_2, element_3.
+- В квадратных скобках [Название] указывай краткое название фазы процесса или группы.
+- Каждый элемент используется ровно в одном уровне. Если на одном уровне несколько элементов — перечисляются через запятую: level_2 [Название]: element_2, element_3.
 - Обязательно указывать директивы:
   @ level_order_matters: true (для порядка уровней) или false (для свободной группировки категорий).
   @ sequence_within_level_matters: true (если порядок внутри уровня важен) или false (если порядок внутри уровня произвольный).
@@ -860,14 +862,15 @@ Each block begins with the @SEQUENCE marker on a separate line. Between blocks �
 element_1: <element text>
 element_2: <element text>
 element_3: <element text>
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Stage 1 Title]: element_1
+level_2 [Stage 2 Title]: element_2
+level_3 [Stage 3 Title]: element_3
 
 Elements are numbered sequentially (element_1, element_2, ...).
 Levels (level_N) define the correct structure and must be sequential without gaps.
+In brackets [Stage Title] provide a concise, meaningful title for the phase or category.
 Each element_X must appear in exactly one level_N.
-If multiple elements belong to the same group/level, list them comma-separated: level_2: element_3, element_4.
+If multiple elements belong to the same group/level, list them comma-separated: level_2 [Title]: element_3, element_4.
 </output_format>""",
 
     "CLICK_TEXT": r"""You are a task generator for an educational platform.
@@ -1070,14 +1073,15 @@ Quality Criteria for @OPEN_ANSWER:
 element_1: Item one text
 element_2: Item two text
 element_3: Item three text
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Phase 1 Title]: element_1
+level_2 [Phase 2 Title]: element_2
+level_3 [Phase 3 Title]: element_3
 
 Quality Criteria for @SEQUENCE:
 - Suitable for processes, chronology, algorithms, multi-level classification, hierarchy, or ranking.
 - Contains 3 to 8 elements (element_N) distributed across 2 to 5 levels (level_N).
-- Every element must appear in exactly one level. Multiple items on the same level are comma-separated: level_2: element_2, element_3.
+- Provide a concise phase or category name in brackets [Phase Title].
+- Every element must appear in exactly one level. Multiple items on the same level are comma-separated: level_2 [Title]: element_2, element_3.
 - Directives are mandatory:
   @ level_order_matters: true (for ordered progressions) or false (for category grouping).
   @ sequence_within_level_matters: true (if intra-level ordering matters) or false (if items within a level form an unordered set).
@@ -1414,14 +1418,15 @@ _GENERATION_PROMPTS_UK = {
 element_1: <текст елемента>
 element_2: <текст елемента>
 element_3: <текст елемента>
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Назва етапу/групи 1]: element_1
+level_2 [Назва етапу/групи 2]: element_2
+level_3 [Назва етапу/групи 3]: element_3
 
 Елементи нумеруються послідовно (element_1, element_2, ...).
 Рівні (level_N) задають правильну структуру і повинні йти послідовно без пропусків.
+У квадратних дужках [Назва етапу] вкажи коротку змістовну назву фази або категорії.
 Кожен element_X повинен зустрітися рівно в одном level_N.
-Якщо два елементи повинні опинитися в одній групі/на одному рівні — вкажи їх через кому: level_2: element_3, element_4.
+Якщо два елементи повинні опинитися в одній групі/на одному рівні — вкажи їх через кому: level_2 [Назва]: element_3, element_4.
 </output_format>""",
 
     "CLICK_TEXT": r"""Ти — генератор завдань для освітньої платформи.
@@ -1624,14 +1629,15 @@ SYSTEM_INSTRUCTION_UK = r"""Ти — старший методист, експе
 element_1: Текст першого елемента
 element_2: Текст другого елемента
 element_3: Текст третього елемента
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Назва етапу 1]: element_1
+level_2 [Назва етапу 2]: element_2
+level_3 [Назва етапу 3]: element_3
 
 Критерії якості @SEQUENCE:
 - Підходить для процесів, хронології, алгоритмів, класифікації за групами, ієрархій та ранжування.
 - Містить від 3 до 8 елементів (element_N) та від 2 до 5 рівнів (level_N).
-- Кожен елемент використовується рівно в одному рівні. Кілька елементів на одному рівні вказуються через кому: level_2: element_2, element_3.
+- У квадратних дужках [Назва] вказуй коротку назву фази процесу або групи.
+- Кожен елемент використовується рівно в одному рівні. Кілька елементів на одному рівні вказуються через кому: level_2 [Назва]: element_2, element_3.
 - Обов'язкові директиви:
   @ level_order_matters: true (для порядку рівнів) або false (для групування категорій).
   @ sequence_within_level_matters: true (якщо порядок всередині рівня важливий) або false (якщо порядок довільний).

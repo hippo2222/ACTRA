@@ -676,6 +676,7 @@ def _build_imported_task_payload(
             data = task.get("data", {})
             elements_map = data.get("elements", {}) if isinstance(data.get("elements"), dict) else {}
             raw_levels = data.get("levels", {}) if isinstance(data.get("levels"), dict) else {}
+            raw_level_names = data.get("level_names", {}) if isinstance(data.get("level_names"), dict) else {}
             sorted_level_keys = sorted(raw_levels.keys(), key=lambda k: int(k))
 
             canonical_elements = [
@@ -692,6 +693,10 @@ def _build_imported_task_payload(
             for level_num in sorted_level_keys:
                 level_id = f"level_{level_num}"
                 level_elements = [str(element_id) for element_id in raw_levels.get(level_num, []) if element_id]
+                level_title = (
+                    str(raw_level_names.get(level_num) or raw_level_names.get(str(level_num)) or "").strip()
+                    or f"Level {level_num}"
+                )
                 level_items = []
                 for element_id in level_elements:
                     element_text = elements_map.get(element_id, element_id)
@@ -700,13 +705,14 @@ def _build_imported_task_payload(
                     {
                         "level_id": level_id,
                         "blocks": level_elements,
-                        "level_name": f"Level {level_num}",
+                        "level_name": level_title,
+                        "label": level_title,
                     }
                 )
                 legacy_sequence.append(
                     {
                         "level_id": level_id,
-                        "title": f"Level {level_num}",
+                        "title": level_title,
                         "items": level_items,
                     }
                 )

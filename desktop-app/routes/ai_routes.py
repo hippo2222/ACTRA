@@ -791,7 +791,7 @@ def ai_generate() -> Any:
             return (
                 f"Format recovery mode. Return exactly {expected_count_local} @SEQUENCE blocks and no extra text. "
                 "Use strict parser syntax only: @SEQUENCE, one # line, at least 3 lines like 'element_1: ...', "
-                "then one or more lines like 'level_1: element_1, element_2'. Levels must reference existing element_X IDs only."
+                "then one or more lines like 'level_1 [Stage Title]: element_1, element_2' (or 'level_1: element_1, element_2'). Levels must reference existing element_X IDs only."
             )
         if task_type_local == "TEST":
             return (
@@ -1359,7 +1359,7 @@ def ai_generate() -> Any:
                 sequence_fill_hint = (
                     f"Iterative fill repair round {sequence_fill_round}. Return exactly {fill_count} @SEQUENCE blocks and no extra blocks. "
                     "Strict parser syntax only: @SEQUENCE, one # line, at least 3 lines 'element_N: text', and one or more "
-                    "lines 'level_N: element_1, element_2'. Levels must reference only declared element_N IDs. No prose or Markdown."
+                    "lines 'level_N [Stage Title]: element_1, element_2' (or 'level_N: element_1, element_2'). Levels must reference only declared element_N IDs. No prose or Markdown."
                 )
                 try:
                     seq_fill_raw_response, seq_fill_provider_name, seq_fill_chain_attempts = _generate_raw_with_parse_escalation(

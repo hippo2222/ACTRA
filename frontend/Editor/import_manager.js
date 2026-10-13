@@ -3526,8 +3526,9 @@ ${remaining}
                     { tag: '@SEQUENCE', desc: wt('im.k008', 'Тип задания') },
                     { tag: '#', desc: wt('im.cheat_tag_title', 'Название') },
                     { tag: 'element_N:', desc: wt('im.cheat_tag_element', 'Шаг цепи') },
+                    { tag: 'level_N [Имя]:', desc: wt('im.cheat_tag_level', 'Уровень/фаза') },
                 ],
-                example: wt('im.cheat_example_seq', '@SEQUENCE\n# Базовая сердечно-легочная реанимация\nelement_1: Оценить безопасность места происшествия\nelement_2: Проверить сознание и дыхание пострадавшего\nelement_3: Вызвать скорую медицинскую помощь\nelement_4: Начать 30 компрессий грудной клетки\nelement_5: Выполнить 2 искусственных вдоха'),
+                example: wt('im.cheat_example_seq', '@SEQUENCE\n# Базовая сердечно-легочная реанимация\nelement_1: Оценить безопасность места происшествия\nelement_2: Проверить реакцию на голос и прикосновение\nelement_3: Запрокинуть голову и оценить дыхание за 10 секунд\nelement_4: Вызвать 112 и запросить дефибриллятор (АНД)\nelement_5: Выполнить 30 компрессий грудной клетки\nelement_6: Сделать 2 искусственных вдоха\nlevel_1 [Оценка безопасности]: element_1, element_2\nlevel_2 [Дыхание и вызов]: element_3, element_4\nlevel_3 [СЛР]: element_5, element_6'),
             },
             click_text: {
                 key: 'click_text',
@@ -5936,13 +5937,14 @@ ${wt('im.k572', '3. Скопируйте ответ ИИ без изменени
 element_1: <текст элемента>
 element_2: <текст элемента>
 element_3: <текст элемента>
-level_1: element_1
-level_2: element_2
-level_3: element_3
+level_1 [Название этапа (опционально)]: element_1
+level_2 [Название этапа (опционально)]: element_2
+level_3 [Название этапа (опционально)]: element_3
 
 Элементы нумеруются последовательно без пропусков (element_1, element_2, ...).
 Уровни (level_N) задают правильный порядок, ссылаясь на element_X.
-Если два элемента равноправны на одном уровне — перечисли их через запятую: level_2: element_3, element_4.
+К уровню можно указать понятное название этапа в скобках: level_1 [Осмотр]: element_1, element_2.
+Если два элемента равноправны на одном уровне — перечисли их через запятую: level_2 [Диагностика]: element_3, element_4.
 </output_format>
 
 <example>
@@ -5952,10 +5954,10 @@ element_1: Стадия прилива
 element_2: Стадия красного опеченения
 element_3: Стадия серого опеченения
 element_4: Стадия разрешения
-level_1: element_1
-level_2: element_2
-level_3: element_3
-level_4: element_4
+level_1 [1. Прилив]: element_1
+level_2 [2. Красное опеченение]: element_2
+level_3 [3. Серое опеченение]: element_3
+level_4 [4. Разрешение]: element_4
 
 @SEQUENCE
 # Упорядочьте действия врача при подозрении на пневмонию
@@ -5964,11 +5966,10 @@ element_2: Физикальный осмотр и аускультация
 element_3: Назначение рентгенографии грудной клетки
 element_4: Забор мокроты на анализ
 element_5: Назначение антибактериальной терапии
-level_1: element_1
-level_2: element_2
-level_3: element_3
-level_4: element_4
-level_5: element_5
+level_1 [1. Клинический осмотр]: element_1, element_2
+level_2 [2. Инструментальная диагностика]: element_3
+level_3 [3. Лабораторная диагностика]: element_4
+level_4 [4. Лечение]: element_5
 </example>`)
             },
             test: {

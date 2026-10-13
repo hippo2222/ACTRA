@@ -14,7 +14,7 @@ class SequenceParser(TaskImportParser):
         super().__init__()
         self.marker = '@SEQUENCE'
         self.element_pattern = re.compile(r'^element_(\d+):\s*(.+)$')
-        self.level_pattern = re.compile(r'^level_(\d+):\s*(.+)$')
+        self.level_pattern = re.compile(r'^level_(\d+)(?:\s*(?:\[(.*?)\]|\((.*?)\)))?:\s*(.+)$')
     
     def parse_text(self, text: str) -> List[Dict[str, Any]]:
         """
@@ -25,8 +25,10 @@ class SequenceParser(TaskImportParser):
         # Описание задачи
         element_1: Название элемента 1
         element_2: Название элемента 2
-        level_1: element_1, element_2
-        level_2: element_3
+        element_3: Название элемента 3
+        level_1 [Название этапа 1]: element_1, element_2
+        level_2 [Название этапа 2]: element_3
+        (или без скобок для автогенерации имен: level_1: element_1)
         
         Args:
             text: Текст для парсинга
@@ -64,6 +66,7 @@ class SequenceParser(TaskImportParser):
         prompt = None
         elements = {}
         levels = {}
+        level_names = {}
         
         for line_num, line in enumerate(lines):
             line_stripped = line.strip()
@@ -100,7 +103,10 @@ class SequenceParser(TaskImportParser):
             level_match = self.level_pattern.match(line_stripped)
             if level_match:
                 level_num = int(level_match.group(1))
-                level_elements = [e.strip() for e in level_match.group(2).split(',')]
+                level_name_raw = level_match.group(2) if level_match.group(2) is not None else level_match.group(3)
+                if level_name_raw is not None and level_name_raw.strip():
+                    level_names[level_num] = self.sanitize_text(level_name_raw.strip())
+                level_elements = [e.strip() for e in level_match.group(4).split(',') if e.strip()]
                 levels[level_num] = level_elements
                 continue
         
@@ -129,6 +135,7 @@ class SequenceParser(TaskImportParser):
                 'prompt': prompt,
                 'elements': elements,
                 'levels': levels,
+                'level_names': level_names,
                 **(({'metadata': metadata} if metadata else {}))
             }
         }
