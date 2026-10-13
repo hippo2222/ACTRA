@@ -3261,15 +3261,6 @@ ${remaining}
         const hasErrors = this.parsedResult?.parsing_errors?.length > 0;
         const errorsList = this.parsedResult?.parsing_errors || [];
         const cheatData = this.getCheatSheetData(this.cheatSheetTab || 'test');
-        const tabsRow1 = [
-            { key: 'test', label: wt('im.cheat_tab_test', 'Тест') },
-            { key: 'click_text', label: wt('im.cheat_tab_click_text', 'Выбор') },
-            { key: 'click_words', label: wt('im.cheat_tab_click_words', 'Ошибки') },
-        ];
-        const tabsRow2 = [
-            { key: 'sequence', label: wt('im.cheat_tab_seq', 'Последовательность') },
-            { key: 'open_answer', label: wt('im.cheat_tab_open', 'Открытый ответ') },
-        ];
         const lineCount = (this.sourceText || '').length > 0 ? (this.sourceText || '').split('\n').length : 0;
         const charCount = (this.sourceText || '').length;
 
@@ -3343,51 +3334,42 @@ ${remaining}
 
                     <!-- Right: Interactive Syntax Reference Assistant (40%) -->
                     <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="import-cheatsheet-tabs">
+                        <!-- Header with Title & Badge -->
                         <div class="flex items-center justify-between mb-2 shrink-0">
                             <div class="flex items-center gap-1.5 min-w-0">
-                                <span class="material-symbols-outlined text-text-secondary text-[17px] shrink-0">menu_book</span>
-                                <div class="min-w-0">
-                                    <h4 class="text-xs font-bold text-text-main truncate">${wt('im.cheat_reference_title', 'Справка по тегам')}</h4>
-                                    <p class="text-[10px] text-text-secondary truncate">${wt('im.cheat_reference_hint', 'Кликните тип для образца:')}</p>
-                                </div>
+                                <span class="material-symbols-outlined text-primary text-[17px] shrink-0">menu_book</span>
+                                <h4 class="text-xs font-bold text-text-main">${wt('im.cheat_reference_title', 'Справка по тегам')}</h4>
                             </div>
                             <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2/60 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
                         </div>
 
-                        <!-- Type Switcher Chips: Discrete tactile buttons, zero gray soup -->
-                        <div class="flex flex-col gap-1.5 mb-2.5 shrink-0" data-role="cheat-tabs-bar">
-                            <div class="grid grid-cols-3 gap-1.5">
-                                ${tabsRow1.map(t => `
-                                    <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
-                                        class="py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-primary text-white font-semibold shadow-xs border border-primary' : 'bg-surface-1 text-text-main border border-border-subtle hover:border-primary/60 hover:text-primary hover:bg-surface-2/20 shadow-2xs'}">
-                                        ${t.label}
-                                    </button>
-                                `).join('')}
-                            </div>
-                            <div class="grid grid-cols-2 gap-1.5">
-                                ${tabsRow2.map(t => `
-                                    <button type="button" data-tab-key="${t.key}" onclick="dashboard.importManager.setCheatSheetTab('${t.key}')"
-                                        class="py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer ${this.cheatSheetTab === t.key ? 'bg-primary text-white font-semibold shadow-xs border border-primary' : 'bg-surface-1 text-text-main border border-border-subtle hover:border-primary/60 hover:text-primary hover:bg-surface-2/20 shadow-2xs'}">
-                                        ${t.label}
-                                    </button>
-                                `).join('')}
-                            </div>
+                        <!-- Full Width Dedicated Type Selector (zero truncation risk) -->
+                        <div class="mb-2.5 shrink-0">
+                            <select id="cheat-type-select" data-role="cheat-type-select" onchange="dashboard.importManager.setCheatSheetTab(this.value)"
+                                class="w-full text-xs font-semibold bg-surface-1 text-text-main border border-border-subtle rounded-lg py-1.5 px-3 focus:ring-1 focus:ring-primary focus:border-primary cursor-pointer shadow-2xs">
+                                <option value="test" ${this.cheatSheetTab === 'test' ? 'selected' : ''}>@TEST · ${wt('im.cheat_tab_test', 'Тест')}</option>
+                                <option value="click_text" ${this.cheatSheetTab === 'click_text' ? 'selected' : ''}>@CLICK_TEXT · ${wt('im.cheat_tab_click_text', 'Выбор')}</option>
+                                <option value="click_words" ${this.cheatSheetTab === 'click_words' ? 'selected' : ''}>@CLICK_WORDS · ${wt('im.cheat_tab_click_words', 'Ошибки')}</option>
+                                <option value="sequence" ${this.cheatSheetTab === 'sequence' ? 'selected' : ''}>@SEQUENCE · ${wt('im.cheat_tab_seq', 'Последовательность')}</option>
+                                <option value="open_answer" ${this.cheatSheetTab === 'open_answer' ? 'selected' : ''}>@OPEN_ANSWER · ${wt('im.cheat_tab_open', 'Открытый ответ')}</option>
+                            </select>
                         </div>
 
-                        <!-- Syntax badges -->
-                        <div id="cheat-syntax-badges" class="flex flex-wrap gap-1 mb-2.5 shrink-0">
-                            ${cheatData.badges.map(b => `
-                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
-                                    <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
-                                    <span>${this.escapeHtml(b.desc)}</span>
-                                </span>
-                            `).join('')}
+                        <!-- Structured Key-Value Syntax Table (100% width, zero gaping holes) -->
+                        <div class="rounded-lg border border-border-subtle bg-surface-2/20 p-2.5 mb-2.5 shrink-0">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[10px] uppercase font-bold text-text-secondary tracking-wider">${wt('im.cheat_syntax_markers', 'Маркеры синтаксиса')}</span>
+                                <span id="cheat-sheet-tag" class="font-mono text-[10px] font-bold text-primary">${cheatData.typeTag}</span>
+                            </div>
+                            <div id="cheat-syntax-badges" class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                                ${this.renderSyntaxBadgesGrid(cheatData.badges || [])}
+                            </div>
                         </div>
 
                         <!-- Example Code Container with discreet header copy icon -->
                         <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle overflow-hidden">
-                            <div class="flex items-center justify-between px-3 py-1.5 bg-surface-2 border-b border-border-subtle text-[11px] shrink-0">
-                                <span id="cheat-sheet-tag" class="font-mono font-bold text-primary">${cheatData.typeTag}</span>
+                            <div class="flex items-center justify-between px-3 py-1.5 bg-surface-2/40 border-b border-border-subtle text-[11px] shrink-0">
+                                <span id="cheat-example-tag-label" class="font-mono font-bold text-primary">${cheatData.typeTag}</span>
                                 <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
                                     class="inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary hover:text-primary transition-colors cursor-pointer"
                                     title="${this.escapeHtml(wt('im.cheat_copy_tooltip', 'Скопировать образец разметки'))}">
@@ -3588,6 +3570,20 @@ ${remaining}
         return sheets[tab] || sheets.test;
     }
 
+    renderSyntaxBadgesGrid(badges) {
+        return (badges || []).map((b, idx) => {
+            const isWide = (b.tag || '').length > 15;
+            const isLastOdd = (idx === badges.length - 1) && (badges.length % 2 !== 0);
+            const spanClass = (isWide || isLastOdd) ? 'col-span-2' : '';
+            return `
+                <div class="flex items-center gap-1.5 min-w-0 ${spanClass}">
+                    <code class="font-bold text-primary font-mono text-[10px] px-1 py-0.5 rounded bg-surface-1 border border-border-subtle shrink-0">${this.escapeHtml(b.tag)}</code>
+                    <span class="text-text-secondary truncate text-[11px]">${this.escapeHtml(b.desc)}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
     setCheatSheetTab(tabKey) {
         this.cheatSheetTab = tabKey;
         this.updateCheatSheetPanel(tabKey);
@@ -3597,35 +3593,26 @@ ${remaining}
         const cheatData = this.getCheatSheetData(tabKey);
         if (!cheatData) return;
 
-        // 1. Update tab button active states
-        const tabsBar = document.querySelector('[data-role="cheat-tabs-bar"]');
-        if (tabsBar) {
-            const buttons = tabsBar.querySelectorAll('button[data-tab-key]');
-            buttons.forEach(btn => {
-                const isSelected = btn.getAttribute('data-tab-key') === tabKey;
-                if (isSelected) {
-                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer bg-primary text-white font-semibold shadow-xs border border-primary';
-                } else {
-                    btn.className = 'py-1.5 px-2 text-[11px] font-medium rounded-lg text-center transition-all cursor-pointer bg-surface-1 text-text-main border border-border-subtle hover:border-primary/60 hover:text-primary hover:bg-surface-2/20 shadow-2xs';
-                }
-            });
+        // 1. Update type selector dropdown
+        const selectEl = document.getElementById('cheat-type-select');
+        if (selectEl && selectEl.value !== tabKey) {
+            selectEl.value = tabKey;
         }
 
-        // 2. Update type tag badge
+        // 2. Update type tag labels
         const tagEl = document.getElementById('cheat-sheet-tag');
         if (tagEl) {
             tagEl.textContent = cheatData.typeTag || '';
         }
+        const exampleTagEl = document.getElementById('cheat-example-tag-label');
+        if (exampleTagEl) {
+            exampleTagEl.textContent = cheatData.typeTag || '';
+        }
 
-        // 3. Update syntax badges
+        // 3. Update syntax badges in balanced grid
         const badgesContainer = document.getElementById('cheat-syntax-badges');
         if (badgesContainer) {
-            badgesContainer.innerHTML = (cheatData.badges || []).map(b => `
-                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-surface-2 border border-border-subtle text-text-secondary">
-                    <code class="font-bold text-primary">${this.escapeHtml(b.tag)}</code>
-                    <span>${this.escapeHtml(b.desc)}</span>
-                </span>
-            `).join('');
+            badgesContainer.innerHTML = this.renderSyntaxBadgesGrid(cheatData.badges || []);
         }
 
         // 4. Update example code in <pre>

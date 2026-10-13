@@ -77,7 +77,8 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         expect(html).toContain('min-h-[160px]');
 
         // Cheatsheet assistant affordances
-        expect(html).toContain('data-role="cheat-tabs-bar"');
+        expect(html).toContain('data-role="cheat-type-select"');
+        expect(html).toContain('id="cheat-syntax-badges"');
         expect(html).toContain('id="cheat-copy-example-btn"');
         expect(html).toContain('data-role="cheat-copy-example"');
     });
@@ -103,12 +104,11 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         expect(dom.window.document.getElementById('cheat-sheet-tag').textContent).toBe('@SEQUENCE');
         expect(dom.window.document.getElementById('cheat-example-code').textContent).toContain('@SEQUENCE');
 
-        // Active class shifted on buttons: active is primary pill, inactive is tactile surface-1 button
-        const seqBtn = dom.window.document.querySelector('button[data-tab-key="sequence"]');
-        const testBtn = dom.window.document.querySelector('button[data-tab-key="test"]');
-        expect(seqBtn.className).toContain('bg-primary text-white font-semibold');
-        expect(testBtn.className).toContain('bg-surface-1 text-text-main');
-        expect(testBtn.className).not.toContain('bg-primary');
+        // Dropdown value and syntax badges updated in place
+        const selectEl = dom.window.document.getElementById('cheat-type-select');
+        expect(selectEl.value).toBe('sequence');
+        const badgesContainer = dom.window.document.getElementById('cheat-syntax-badges');
+        expect(badgesContainer.textContent).toContain('element_N:');
     });
 
     it('updateHeaderStats keeps char & line stats reactive and toggles clear button', () => {

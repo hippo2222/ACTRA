@@ -4619,6 +4619,7 @@
     "auto_detect_banner_title": "Automatic type detection:",
     "auto_detect_banner_desc": "the parser automatically detects task types by markers (@TEST, @SEQUENCE, @OPEN_ANSWER...). You can paste multiple tasks of different types in a row.",
     "cheat_reference_title": "Tag Reference",
+    "cheat_syntax_markers": "Syntax markers",
     "cheat_reference_badge": "Cheatsheet",
     "cheat_reference_hint": "Click a type for sample syntax:",
     "cheat_copy_btn": "Copy",

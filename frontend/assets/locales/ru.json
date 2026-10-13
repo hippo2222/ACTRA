@@ -4619,6 +4619,7 @@
     "auto_detect_banner_title": "Автоопределение типов:",
     "auto_detect_banner_desc": "парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.",
     "cheat_reference_title": "Справка по тегам",
+    "cheat_syntax_markers": "Маркеры синтаксиса",
     "cheat_reference_badge": "Памятка",
     "cheat_reference_hint": "Кликните тип для образца:",
     "cheat_copy_btn": "Копировать",
