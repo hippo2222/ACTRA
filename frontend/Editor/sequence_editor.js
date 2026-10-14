@@ -136,11 +136,13 @@ class SequenceEditor extends BaseEditor {
         if (!field) return;
         const minHeight = Number(field.dataset.minHeight || 44);
         field.style.height = 'auto';
-        const target = Math.max(minHeight, field.scrollHeight);
+        const viewportH = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 800;
+        const maxHeightPx = Math.min(256, Math.max(120, Math.floor(viewportH * 0.36)));
+        const target = Math.max(minHeight, Math.min(maxHeightPx, field.scrollHeight));
         field.style.height = `${target}px`;
-        if (target > 240) {
+        if (field.scrollHeight > maxHeightPx) {
             field.style.overflowY = 'auto';
-            field.style.maxHeight = '15rem';
+            field.style.maxHeight = `${maxHeightPx}px`;
         } else {
             field.style.overflowY = 'hidden';
             field.style.maxHeight = 'none';
@@ -654,31 +656,66 @@ class SequenceEditor extends BaseEditor {
         if (!card) return;
         this.collapseAllBlocks();
         card.classList.add('is-expanded');
+
+        // Elevate parent wrapper and level in CSS stacking context
+        const wrapper = card.closest('.sequence-block-wrapper');
+        if (wrapper) wrapper.classList.add('has-expanded-card');
+        const level = card.closest('.sequence-level-card');
+        if (level) level.classList.add('has-expanded-card');
+
         const textarea = card.querySelector('.block-title-input');
         if (textarea) {
-            textarea.style.height = 'auto';
-            const target = Math.max(76, textarea.scrollHeight);
-            textarea.style.height = `${target}px`;
-            textarea.style.overflowY = target > 240 ? 'auto' : 'hidden';
+            this.autoResizeField(textarea);
         }
         const expandTrigger = card.querySelector('.sequence-block-expand-trigger');
         if (expandTrigger) expandTrigger.style.setProperty('display', 'none', 'important');
+        const headerCollapse = card.querySelector('.sequence-block-header-collapse-btn');
+        if (headerCollapse) headerCollapse.style.setProperty('display', 'inline-flex', 'important');
+
+        // Smart in-view auto-scroll
+        const ensureInView = () => {
+            if (!card.classList.contains('is-expanded')) return;
+            const cardRect = card.getBoundingClientRect();
+            const viewportH = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 800;
+            if (cardRect.bottom > viewportH - 24) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        };
+        if (typeof requestAnimationFrame !== 'undefined') {
+            requestAnimationFrame(() => setTimeout(ensureInView, 60));
+        } else {
+            setTimeout(ensureInView, 60);
+        }
     }
 
     collapseBlock(card) {
         if (!card) return;
         card.classList.remove('is-expanded');
+        const wrapper = card.closest('.sequence-block-wrapper');
+        if (wrapper) wrapper.classList.remove('has-expanded-card');
+        const level = card.closest('.sequence-level-card');
+        if (level) level.classList.remove('has-expanded-card');
+
         const textarea = card.querySelector('.block-title-input');
         if (textarea) {
             textarea.style.height = '';
+            textarea.style.maxHeight = '';
             textarea.style.overflowY = 'hidden';
         }
+        const headerCollapse = card.querySelector('.sequence-block-header-collapse-btn');
+        if (headerCollapse) headerCollapse.style.setProperty('display', 'none', 'important');
         this.updateBlockExpandTrigger(card);
     }
 
     collapseAllBlocks() {
         document.querySelectorAll('.sequence-block-card.is-expanded').forEach(card => {
             this.collapseBlock(card);
+        });
+        document.querySelectorAll('.sequence-block-wrapper.has-expanded-card').forEach(el => {
+            el.classList.remove('has-expanded-card');
+        });
+        document.querySelectorAll('.sequence-level-card.has-expanded-card').forEach(el => {
+            el.classList.remove('has-expanded-card');
         });
     }
 
@@ -725,6 +762,10 @@ class SequenceEditor extends BaseEditor {
                         <span class="material-symbols-outlined text-[13px]">expand_more</span>
                         <span>${wt('seq_editor.expand_step', 'Развернуть')}</span>
                     </button>
+                    <button type="button" class="sequence-block-header-collapse-btn hidden inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-primary bg-primary-lighter/60 hover:bg-primary-lighter border border-primary/25 rounded cursor-pointer transition-colors" title="${wt('seq_editor.collapse_step_full', 'Свернуть шаг')}" aria-label="${wt('seq_editor.collapse_step_full', 'Свернуть шаг')}">
+                        <span class="material-symbols-outlined text-[13px]">expand_less</span>
+                        <span>${wt('seq_editor.collapse_step', 'Свернуть')}</span>
+                    </button>
                 </div>
                 <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error shrink-0" title="${wt('se.k014', 'Удалить элемент')}" aria-label="${wt('se.k014', 'Удалить элемент')} ${stepNumber}">
                     <span class="material-symbols-outlined text-[16px]">close</span>
@@ -750,6 +791,7 @@ class SequenceEditor extends BaseEditor {
 
         const titleField = div.querySelector('.block-title-input');
         const expandTrigger = div.querySelector('.sequence-block-expand-trigger');
+        const headerCollapse = div.querySelector('.sequence-block-header-collapse-btn');
         const collapseBtn = div.querySelector('.sequence-block-collapse-btn');
 
         if (titleField) {
@@ -782,6 +824,13 @@ class SequenceEditor extends BaseEditor {
                 e.stopPropagation();
                 this.expandBlock(div);
                 if (titleField) titleField.focus();
+            };
+        }
+
+        if (headerCollapse) {
+            headerCollapse.onclick = (e) => {
+                e.stopPropagation();
+                this.collapseBlock(div);
             };
         }
 

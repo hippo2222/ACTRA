@@ -143,6 +143,17 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     box-shadow: var(--shadow-sm);
 }
 
+/* Elevate active level and slot wrapper when a card is expanded to prevent sibling level clipping */
+.sequence-level-card:has(.sequence-block-card.is-expanded),
+.sequence-level-card.has-expanded-card {
+    z-index: 40 !important;
+}
+
+.sequence-block-wrapper:has(.sequence-block-card.is-expanded),
+.sequence-block-wrapper.has-expanded-card {
+    z-index: 45 !important;
+}
+
 .sequence-block-card.is-expanded {
     position: absolute;
     top: 0;
@@ -150,7 +161,7 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     width: 100%;
     height: auto;
     min-height: 100%;
-    z-index: 35;
+    z-index: 50;
     border-color: var(--color-primary);
     box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
     outline: 2px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
@@ -169,6 +180,14 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 
 .sequence-block-card.is-expanded .sequence-block-collapse-btn {
     display: flex !important;
+}
+
+.sequence-block-card:not(.is-expanded) .sequence-block-header-collapse-btn {
+    display: none !important;
+}
+
+.sequence-block-card.is-expanded .sequence-block-header-collapse-btn {
+    display: inline-flex !important;
 }
 
 .sequence-block-collapse-btn {
@@ -198,6 +217,10 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 
 .sequence-block-card.is-expanded .sequence-block-expand-trigger {
     display: none !important;
+}
+
+.sequence-block-header-collapse-btn {
+    display: none;
 }
 
 .sequence-add-block-btn {
@@ -256,7 +279,7 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 
 .sequence-block-card.is-expanded .sequence-block-title {
     min-height: 5.25rem;
-    max-height: 16rem;
+    max-height: min(16rem, 36vh);
     overflow-y: auto;
     height: auto;
     display: block;

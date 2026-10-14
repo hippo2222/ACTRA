@@ -348,4 +348,47 @@ describe('SequenceEditor', () => {
         expect(addBtn.className).toContain('empty-state-card--icon-only');
         expect(levelActions.className).toContain('sequence-level-actions');
     });
+
+    it('elevates stacking context and toggles header collapse button on expand/collapse', () => {
+        editor.levels = [
+            {
+                levelId: 'level_1',
+                title: 'Level 1',
+                items: [
+                    { id: 'elem_1', label: 'Long step description with multiple details to test overlay expansion', image: null }
+                ]
+            }
+        ];
+
+        editor.renderLevels();
+
+        const card = document.querySelector('.sequence-block-card');
+        const wrapper = document.querySelector('.sequence-block-wrapper');
+        const level = document.querySelector('.sequence-level-card');
+        const headerCollapse = document.querySelector('.sequence-block-header-collapse-btn');
+
+        expect(card).not.toBeNull();
+        expect(wrapper).not.toBeNull();
+        expect(level).not.toBeNull();
+        expect(headerCollapse).not.toBeNull();
+
+        // Initially not expanded
+        expect(card.classList.contains('is-expanded')).toBe(false);
+        expect(wrapper.classList.contains('has-expanded-card')).toBe(false);
+        expect(level.classList.contains('has-expanded-card')).toBe(false);
+
+        // Expand
+        editor.expandBlock(card);
+        expect(card.classList.contains('is-expanded')).toBe(true);
+        expect(wrapper.classList.contains('has-expanded-card')).toBe(true);
+        expect(level.classList.contains('has-expanded-card')).toBe(true);
+        expect(headerCollapse.style.display).toBe('inline-flex');
+
+        // Collapse via header collapse button
+        headerCollapse.click();
+        expect(card.classList.contains('is-expanded')).toBe(false);
+        expect(wrapper.classList.contains('has-expanded-card')).toBe(false);
+        expect(level.classList.contains('has-expanded-card')).toBe(false);
+    });
 });
+
