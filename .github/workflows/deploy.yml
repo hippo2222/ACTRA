@@ -39,7 +39,12 @@ jobs:
             fi
 
             echo "==> Rebuilding containers..."
-            docker compose -f docker-compose.hosted.yml up -d --build app
+            docker compose -f docker-compose.hosted.yml build app
+            if ! docker compose -f docker-compose.hosted.yml up -d --remove-orphans app; then
+              echo "==> Re-trying up after removing conflicting app container..."
+              docker rm -f actra-app-1 2>/dev/null || true
+              docker compose -f docker-compose.hosted.yml up -d --remove-orphans app
+            fi
 
             echo "==> Waiting for container..."
             for i in $(seq 1 30); do
