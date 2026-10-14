@@ -2306,9 +2306,34 @@ class ClickEditor extends BaseEditor {
                 this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
             }
 
-            const lastSaved = persisted ? (this.task.task_data?.meta?.modified || 0) : 0;
-            if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
-                const draft = this.autoSaveManager.loadDraft();
+            const lastSaved = persisted ? (
+                this.task.task_data?.meta?.modified
+                || this.task.metadata?.modified
+                || this.task.task_data?.meta?.updated_at
+                || this.task.metadata?.updated_at
+                || 0
+            ) : 0;
+            const draft = this.autoSaveManager.loadDraft();
+
+            if (this.restoreDraftIntent) {
+                if (draft && draft.data) {
+                    this.restoreState(draft.data);
+                    this.initTheoryGroundingPanel();
+                    this.bootstrapTheoryGroundingPanel().catch((error) => {
+                        console.warn("[ClickEditor] theory grounding bootstrap failed", error);
+                    });
+                    this.showToast(this.getAutoRestoreDraftToastMessage(), "info");
+                    this.autoSaveManager.start();
+                    this.hasUnsavedChanges = true;
+                    this.restoreDraftIntent = false;
+                    this.cleanupPersistedTaskRoute();
+                    return;
+                }
+                console.warn('[ClickEditor] restoreDraftIntent was set, but no local draft was found in storage');
+                this.showToast(wt('editor_base.error_draft_not_found', 'Черновик не найден. Откройте создание задания заново.'), 'warning');
+                this.restoreDraftIntent = false;
+                this.cleanupPersistedTaskRoute();
+            } else if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
                 if (this.shouldAutoRestoreDraft(draft)) {
                     this.restoreState(draft.data);
                     this.initTheoryGroundingPanel();
@@ -2318,10 +2343,6 @@ class ClickEditor extends BaseEditor {
                     this.showToast(this.getAutoRestoreDraftToastMessage(), "info");
                     this.autoSaveManager.start();
                     this.hasUnsavedChanges = true;
-                    if (this.restoreDraftIntent) {
-                        this.restoreDraftIntent = false;
-                        this.cleanupPersistedTaskRoute();
-                    }
                     return;
                 }
 
@@ -2348,10 +2369,6 @@ class ClickEditor extends BaseEditor {
             }
 
             this.autoSaveManager.start();
-            if (this.restoreDraftIntent) {
-                this.restoreDraftIntent = false;
-                this.cleanupPersistedTaskRoute();
-            }
         }
         this.detectTaskType();
         this.resetImageMetrics();

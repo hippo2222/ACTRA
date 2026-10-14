@@ -306,11 +306,19 @@ class AutoSaveManager {
         if (!moduleId || !topicId) return [];
 
         const ownerUserId = this.getDraftOwnerUserId();
-        return this.getDraftTaskIds().map((taskId) => this.getDraftKeyForTaskId(taskId, ownerUserId));
+        const keys = new Set();
+        this.getDraftTaskIds().forEach((taskId) => {
+            if (ownerUserId) {
+                keys.add(this.getDraftKeyForTaskId(taskId, ownerUserId));
+            }
+            keys.add(this.getLegacyDraftKeyForTaskId(taskId));
+        });
+        return Array.from(keys);
     }
 
     findLatestDraft() {
         const candidates = [];
+        const ownerUserId = this.getDraftOwnerUserId();
 
         this.getDraftKeys().forEach((key) => {
             const draftJson = localStorage.getItem(key);
@@ -319,6 +327,16 @@ class AutoSaveManager {
             try {
                 const parsed = JSON.parse(draftJson);
                 if (parsed) {
+                    const draftOwner = String(
+                        parsed.ownerUserId
+                        || parsed.owner_user_id
+                        || parsed.createdByUserId
+                        || parsed.created_by_user_id
+                        || ''
+                    ).trim();
+                    if (ownerUserId && draftOwner && draftOwner !== ownerUserId) {
+                        return;
+                    }
                     candidates.push(parsed);
                 }
             } catch (error) {

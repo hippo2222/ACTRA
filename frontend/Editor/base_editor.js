@@ -227,10 +227,43 @@ class BaseEditor {
 
         this.ensureAutoSaveManager();
 
-        const lastSaved = persisted ? (this.task?.task_data?.meta?.modified || 0) : 0;
+        const lastSaved = persisted ? (
+            this.task?.task_data?.meta?.modified
+            || this.task?.metadata?.modified
+            || this.task?.task_data?.meta?.updated_at
+            || this.task?.metadata?.updated_at
+            || 0
+        ) : 0;
         let restoredDraftSilently = false;
-        if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
-            const draft = this.autoSaveManager.loadDraft();
+        const draft = this.autoSaveManager.loadDraft();
+
+        if (this.restoreDraftIntent) {
+            if (draft && draft.data) {
+                this.restoreState(draft.data);
+                this.refreshDifficultyAuthoringControls().catch((error) => {
+                    console.warn('[BaseEditor] difficulty authoring bootstrap failed', error);
+                });
+                this.initTheoryGroundingPanel();
+                this.bootstrapTheoryGroundingPanel().catch((e) => console.warn('[P8] bootstrap failed', e));
+                this.showToast(this.getAutoRestoreDraftToastMessage(), 'info');
+                this.autoSaveManager.start();
+                restoredDraftSilently = true;
+                this.restoreDraftIntent = false;
+                this.cleanupPersistedTaskRoute();
+            } else {
+                console.warn('[BaseEditor] restoreDraftIntent was set, but no local draft was found in storage');
+                this.showToast(wt('editor_base.error_draft_not_found', 'Черновик не найден. Откройте создание задания заново.'), 'warning');
+                this.onTaskLoaded();
+                this.refreshDifficultyAuthoringControls().catch((error) => {
+                    console.warn('[BaseEditor] difficulty authoring bootstrap failed', error);
+                });
+                this.initTheoryGroundingPanel();
+                this.bootstrapTheoryGroundingPanel().catch((e) => console.warn('[P8] bootstrap failed', e));
+                this.autoSaveManager.start();
+                this.restoreDraftIntent = false;
+                this.cleanupPersistedTaskRoute();
+            }
+        } else if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
             if (this.shouldAutoRestoreDraft(draft)) {
                 this.restoreState(draft.data);
                 this.refreshDifficultyAuthoringControls().catch((error) => {
@@ -241,10 +274,6 @@ class BaseEditor {
                 this.showToast(this.getAutoRestoreDraftToastMessage(), 'info');
                 this.autoSaveManager.start();
                 restoredDraftSilently = true;
-                if (this.restoreDraftIntent) {
-                    this.restoreDraftIntent = false;
-                    this.cleanupPersistedTaskRoute();
-                }
             } else {
                 this.promptDraftRecovery(lastSaved);
             }
@@ -256,10 +285,6 @@ class BaseEditor {
             this.initTheoryGroundingPanel();
             this.bootstrapTheoryGroundingPanel().catch((e) => console.warn('[P8] bootstrap failed', e));
             this.autoSaveManager.start();
-            if (this.restoreDraftIntent) {
-                this.restoreDraftIntent = false;
-                this.cleanupPersistedTaskRoute();
-            }
         }
 
         if (!restoredDraftSilently) {
