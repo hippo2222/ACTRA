@@ -1291,8 +1291,7 @@
             : (isLastVisualStep
             ? wt('onboarding.btn_done', 'Понятно')
             : (hasImplementedNextStep ? wt('onboarding.btn_next', 'Далее') : (activeTour?.pendingNextLabel || wt('onboarding.btn_later', 'Дальше позже'))));
-        const isPreviewOrReference = Boolean(activePreviewMode || activeReferencePreviewMode);
-        if (isPreviewOrReference && isLastVisualStep && !isVariantBranch) {
+        if (activeReferencePreviewMode && isLastVisualStep && !isVariantBranch) {
             nextAction = hasPreviousStep ? 'prev' : 'pending-next';
             nextLabel = wt('onboarding.btn_back', 'Вернуться');
         }
@@ -1302,10 +1301,10 @@
         const branchTourId = String(step.branchTourId || '').trim();
         const branchLabel = step.branchLabel || wt('onboarding.btn_open', 'Открыть');
         const returnToUrl = activePreviewMode ? resolveReturnToUrl() : '';
-        const showPreviousButton = hasPreviousStep && !(isPreviewOrReference && isLastVisualStep && !isVariantBranch);
+        const showPreviousButton = hasPreviousStep && !(activeReferencePreviewMode && isLastVisualStep && !isVariantBranch);
         const showReturnPageButton = Boolean(returnToUrl && !activeReferencePreviewMode);
         const showSkipButton = !activeReferencePreviewMode && !isLastVisualStep;
-        const showPrimaryButton = !(isPreviewOrReference && isLastVisualStep && !hasPreviousStep && !isVariantBranch);
+        const showPrimaryButton = !(activeReferencePreviewMode && isLastVisualStep && !hasPreviousStep && !isVariantBranch);
         if (!controlEl) {
             controlEl = document.createElement('div');
             controlEl.className = 'onboarding-tour-control';

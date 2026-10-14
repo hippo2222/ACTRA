@@ -21,16 +21,17 @@
 }
 
 .sequence-header-status {
-    flex: 0 1 auto;
-    margin-left: auto;
-    min-height: 2.5rem;
-    max-inline-size: min(100%, 22rem);
+    flex: 0 0 auto;
+    min-height: 2rem;
+    max-inline-size: max-content;
     min-width: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
-    padding-inline: 1rem;
+    padding-inline: 0.75rem;
+    padding-block: 0.25rem;
+    border-radius: 9999px;
 }
 
 .sequence-header-status .status-cluster__label {
@@ -71,11 +72,13 @@
 }
 
 #task-title-display {
-    display: block;
+    display: inline-block;
     min-width: 0;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    vertical-align: middle;
 }
 
 #prompt-textarea::placeholder,
@@ -92,7 +95,8 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 }
 
 .sequence-level-actions {
-    opacity: 0;
+    opacity: 0.9;
+    transition: opacity 0.15s ease;
 }
 
 .group\/level:hover .sequence-level-actions,
@@ -100,8 +104,105 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     opacity: 1;
 }
 
+.sequence-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.sequence-block-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 8.75rem;
+    height: 8.75rem;
+}
+
 .sequence-block-card {
-    padding-top: 2rem;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 8.75rem;
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.35rem;
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-xs);
+    transition: box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.18s ease;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.sequence-block-card:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-border-subtle) 60%);
+    box-shadow: var(--shadow-sm);
+}
+
+.sequence-block-card.is-expanded {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    z-index: 35;
+    border-color: var(--color-primary);
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.18), 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    background: var(--color-surface-1);
+    overflow: visible;
+}
+
+[data-theme^="dark"] .sequence-block-card.is-expanded {
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6), 0 8px 16px -4px rgba(0, 0, 0, 0.4);
+    background: var(--color-surface-1);
+}
+
+.sequence-block-card:not(.is-expanded) .sequence-block-collapse-btn {
+    display: none !important;
+}
+
+.sequence-block-card.is-expanded .sequence-block-collapse-btn {
+    display: flex !important;
+}
+
+.sequence-block-collapse-btn {
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: var(--color-primary-lighter);
+    border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sequence-block-collapse-btn:hover {
+    background: color-mix(in srgb, var(--color-primary-lighter) 75%, var(--color-primary) 25%);
+    border-color: var(--color-primary);
+}
+
+.sequence-block-expand-trigger {
+    display: none;
+}
+
+.sequence-block-card.is-expanded .sequence-block-expand-trigger {
+    display: none !important;
+}
+
+.sequence-add-block-btn {
+    height: 8.75rem;
+    min-height: 8.75rem;
 }
 
 .sequence-level-index {
@@ -118,8 +219,48 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     box-shadow: none;
 }
 
+[data-theme^="dark"] .sequence-level-actions {
+    opacity: 0.95;
+}
+
+[data-theme^="dark"] .sequence-block-move-btn {
+    border-color: var(--color-border-strong);
+    background-color: var(--color-surface-2);
+}
+
+[data-theme^="dark"] .sequence-block-move-btn:hover {
+    background-color: var(--color-bg-hover);
+    border-color: var(--color-primary);
+}
+
 .sequence-block-title {
-    margin-top: 0.35rem;
+    field-sizing: content;
+    min-height: 2.65rem;
+    max-height: 16rem;
+    word-break: break-word;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    background: transparent;
+}
+
+.sequence-block-card:not(.is-expanded) .sequence-block-title {
+    height: 2.65rem;
+    max-height: 2.65rem;
+    overflow: hidden;
+    resize: none;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+}
+
+.sequence-block-card.is-expanded .sequence-block-title {
+    min-height: 5.25rem;
+    max-height: 16rem;
+    overflow-y: auto;
+    height: auto;
+    display: block;
+    resize: none;
 }
 
 .sequence-block-card .sequence-block-title::placeholder {
@@ -131,8 +272,6 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     background: color-mix(in srgb, white 84%, var(--color-error-light) 16%) !important;
     border-color: color-mix(in srgb, var(--color-error) 74%, var(--color-error-dark) 26%) !important;
     color: color-mix(in srgb, var(--color-error-darker) 86%, var(--color-text-main) 14%) !important;
-    top: 0.5rem;
-    right: 0.5rem;
 }
 
 .sequence-block-card .sequence-block-delete:hover {
@@ -143,26 +282,59 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 
 .sequence-block-actions {
     align-items: stretch;
+    margin-top: auto;
+}
+
+.sequence-block-card.is-expanded .sequence-block-actions {
+    margin-top: 0.35rem;
 }
 
 .sequence-block-move-btn {
     min-width: 0;
     width: 100%;
+    transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.sequence-block-move-btn:active {
+    transform: scale(0.96);
 }
 
 .sequence-block-move-btn .material-symbols-outlined {
     flex: 0 0 auto;
 }
 
+::view-transition-group(*) {
+    animation-duration: 0.22s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+        animation-duration: 0.01ms !important;
+    }
+    .sequence-block-card,
+    .sequence-block-move-btn,
+    .sequence-add-block-btn,
+    .level-container,
+    .settings-toggle-card {
+        transition: none !important;
+        transform: none !important;
+    }
+}
+
 .sequence-add-block-btn {
     border-color: var(--color-component-empty-state-border);
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
+    width: 100%;
+    min-height: 8.5rem;
 }
 
 .sequence-add-block-btn:hover {
-    background: color-mix(in srgb, var(--color-primary-lighter) 72%, var(--color-surface-1));
-    border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border-normal));
-    box-shadow: var(--shadow-md);
+    background: color-mix(in srgb, var(--color-primary-lighter) 60%, var(--color-surface-1));
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-xs);
     transform: translateY(-1px);
 }
 
@@ -286,4 +458,28 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     flex-direction: column;
     gap: 0.5rem;
     padding-top: 0.25rem;
+}
+
+.settings-toggle-card {
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.settings-toggle-card.is-checked {
+    border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border-subtle));
+    background: color-mix(in srgb, var(--color-primary-lighter) 30%, var(--color-surface-1));
+}
+
+[data-theme^="dark"] .settings-toggle-card.is-checked {
+    border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-border-strong));
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-1));
+}
+
+.settings-summary-card {
+    background: color-mix(in srgb, var(--color-primary-lighter) 36%, var(--color-surface-1));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--color-border-subtle));
+}
+
+[data-theme^="dark"] .settings-summary-card {
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2));
+    border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border-strong));
 }

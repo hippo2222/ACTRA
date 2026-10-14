@@ -2802,7 +2802,7 @@
             tourId: 'sequence-editor-authoring',
             version: 1,
             referenceCategory: 'create',
-            referenceTags: ["последовательность","уровни","шаги","порядок"],
+            referenceTags: ["последовательность","уровни","шаги","порядок","этапы","процедура","алгоритм"],
             referenceOrder: 160,
             route: ['/editor/Sequence%20Assembly%20Editor%20Procedural%20Steps.html'],
             autoStart: true,
@@ -3024,11 +3024,11 @@
                             target: '[data-onboarding-target="sequence-settings-block"]',
                             placement: 'left',
                             offsetX: 8,
-                            offsetY: 18,
+                            offsetY: 48,
                             gap: 30,
                             variant: 'open-answer-wide',
                             title: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c1_title', 'Настройки порядка'),
-                            body: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c1_body', 'Можно отдельно включить проверку порядка шагов внутри уровня и порядка самих уровней. Подсказка ниже сразу объясняет выбранную комбинацию.')
+                            body: wt('tours.sequence_editor_authoring.sequence_sidebar_settings.c1_body', 'Можно отдельно включить проверку порядка шагов внутри уровня и порядка самих уровней. Информационная карточка выше наглядно объясняет выбранный режим проверки.')
                         }
                     ]
                 }

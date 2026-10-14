@@ -1149,7 +1149,7 @@ const SequenceUI = (function () {
         line.className = "flex items-start justify-between gap-2";
 
         const text = document.createElement("div");
-        text.className = `truncate font-medium ${isSelected ? "text-text-main dark:text-primary-fg" : "text-text-main dark:text-text-on-dark"}`;
+        text.className = `break-words leading-snug ${isSelected ? '!line-clamp-none' : 'line-clamp-3'} hover:line-clamp-none focus-within:line-clamp-none font-medium ${isSelected ? "text-text-main dark:text-primary-fg" : "text-text-main dark:text-text-on-dark"}`;
         text.title = label;
         text.textContent = label;
         line.appendChild(text);
@@ -1736,7 +1736,7 @@ const SequenceUI = (function () {
                 : "";
 
             const baseInput =
-              "h-14 flex-1 min-w-[220px] rounded-lg px-3 py-2 text-sm font-medium border bg-surface-1 text-text-main dark:bg-surface-2 dark:text-text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 ";
+              "min-h-[3.5rem] h-auto flex-1 min-w-[220px] rounded-lg px-3 py-2 text-sm font-medium border bg-surface-1 text-text-main dark:bg-surface-2 dark:text-text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 ";
             const showVerdicts = !referenceView && isCheckedState();
             const v = normalizeTextForComparison(input.value);
 
@@ -1785,7 +1785,7 @@ const SequenceUI = (function () {
             btn.setAttribute("aria-label", wt("sequenceui.remove_element_aria", "Убрать элемент: {label}").replace("{label}", label));
 
             const basePlaced =
-              "h-14 flex-1 min-w-[180px] rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 relative overflow-hidden ";
+              "min-h-[3.5rem] h-auto flex-1 min-w-[180px] rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 relative overflow-hidden ";
 
             if (verdict === "correct") {
               btn.className =
@@ -1808,7 +1808,7 @@ const SequenceUI = (function () {
             row.className = "flex items-center justify-center gap-2 w-full";
 
             const t = document.createElement("div");
-            t.className = "truncate w-full";
+            t.className = "break-words leading-snug line-clamp-3 hover:line-clamp-none focus-within:line-clamp-none text-center w-full";
             t.title = label;
             t.textContent = label;
 
@@ -1835,7 +1835,7 @@ const SequenceUI = (function () {
             slotsWrap.appendChild(btn);
           } else {
             const slotBase =
-              "h-14 flex-1 min-w-[180px] rounded-lg flex items-center justify-center text-xs font-medium tracking-wider transition-colors ";
+              "min-h-[3.5rem] h-auto flex-1 min-w-[180px] rounded-lg flex items-center justify-center text-xs font-medium tracking-wider transition-colors py-2 ";
 
             // In level-click mode, empty slots must NOT be buttons; otherwise they capture clicks
             // and prevent placing by clicking the level panel.
@@ -1878,7 +1878,7 @@ const SequenceUI = (function () {
           const addSlotBtn = document.createElement("button");
           addSlotBtn.type = "button";
           addSlotBtn.setAttribute("aria-label", wt("sequenceui.add_slot_aria", "Добавить слот в уровень"));
-          addSlotBtn.className = "h-14 w-12 shrink-0 rounded-lg border border-border-strong dark:border-border-strong flex items-center justify-center hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors text-text-muted hover:text-text-muted dark:hover:text-text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2";
+          addSlotBtn.className = "min-h-[3.5rem] h-auto w-12 shrink-0 rounded-lg border border-border-strong dark:border-border-strong flex items-center justify-center hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors text-text-muted hover:text-text-muted dark:hover:text-text-on-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2";
           addSlotBtn.innerHTML = '<span class="material-symbols-outlined">add</span>';
 
           if (!canEdit()) {

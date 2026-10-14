@@ -31,7 +31,7 @@ class SequenceEditor extends BaseEditor {
 
     // Note: generateId() is now inherited from BaseEditor
 
-    createEmptyLevel(title = wt('se.k001', 'Новый уровень')) {
+    createEmptyLevel(title = '') {
         return {
             levelId: this.generateId("level"),
             title,
@@ -42,7 +42,7 @@ class SequenceEditor extends BaseEditor {
     createEmptyItem() {
         return {
             id: this.generateId("elem"),
-            label: wt('se.k002', 'Новый элемент'),
+            label: '',
             image: null,
             semanticKey: null
         };
@@ -117,16 +117,34 @@ class SequenceEditor extends BaseEditor {
         display.textContent = value || fallback || wt('se.k003', 'Новое задание');
     }
 
-    markUnsaved() {
-        super.markUnsaved();
+    getSaveStatusMessage(type = 'saved', options = {}) {
+        if (options.message) return options.message;
+        if (type === 'dirty') return wt('seq_editor.status_unsaved', 'Не сохранено');
+        if (type === 'saved') return wt('seq_editor.status_saved', 'Сохранено');
+        return super.getSaveStatusMessage(type, options);
+    }
+
+    markUnsaved(options = {}) {
+        super.markUnsaved({ message: wt('seq_editor.status_unsaved', 'Не сохранено'), ...options });
+    }
+
+    markSaved(options = {}) {
+        super.markSaved({ message: wt('seq_editor.status_saved', 'Сохранено'), ...options });
     }
 
     autoResizeField(field) {
         if (!field) return;
-        const minHeight = Number(field.dataset.minHeight || 40);
+        const minHeight = Number(field.dataset.minHeight || 44);
         field.style.height = 'auto';
         const target = Math.max(minHeight, field.scrollHeight);
         field.style.height = `${target}px`;
+        if (target > 240) {
+            field.style.overflowY = 'auto';
+            field.style.maxHeight = '15rem';
+        } else {
+            field.style.overflowY = 'hidden';
+            field.style.maxHeight = 'none';
+        }
     }
 
     buildSettingsHelpHtml({
@@ -134,15 +152,15 @@ class SequenceEditor extends BaseEditor {
         levelOrder = false,
     } = {}) {
         if (levelOrder && orderInside) {
-            return wt('se.k004', '<strong>Строгая проверка:</strong><br>Требуется соблюдение заданной последовательности уровней и последовательности элементов в каждом уровне.');
+            return wt('se.k004', 'Требуется соблюдение заданной последовательности уровней и последовательности элементов в каждом уровне.');
         }
         if (levelOrder && !orderInside) {
-            return wt('se.k005', '<strong>Проверка уровней:</strong><br>Важна последовательность уровней. Порядок элементов внутри уровня не учитывается, важна только их принадлежность к уровню.');
+            return wt('se.k005', 'Важна последовательность уровней. Порядок элементов внутри уровня не учитывается, важна только их принадлежность к уровню.');
         }
         if (!levelOrder && orderInside) {
-            return wt('se.k006', '<strong>Проверка элементов:</strong><br>Важна последовательность элементов в каждом уровне. Последовательность самих уровней не учитывается.');
+            return wt('se.k006', 'Важна последовательность элементов в каждом уровне. Последовательность самих уровней не учитывается.');
         }
-        return wt('se.k007', '<strong>Только группировка:</strong><br>Важна только принадлежность элементов к соответствующим уровням. Последовательность не учитывается.');
+        return wt('se.k007', 'Важна только принадлежность элементов к соответствующим уровням. Последовательность не учитывается.');
     }
 
     updateSettingsHelpText() {
@@ -150,10 +168,45 @@ class SequenceEditor extends BaseEditor {
         if (!helpText) return;
         const orderInside = document.querySelector('#order-inside-matters');
         const levelOrder = document.querySelector('#level-order-matters');
+        const isOrderInside = Boolean(orderInside?.checked);
+        const isLevelOrder = Boolean(levelOrder?.checked);
+
         helpText.innerHTML = this.buildSettingsHelpHtml({
-            orderInside: Boolean(orderInside?.checked),
-            levelOrder: Boolean(levelOrder?.checked),
+            orderInside: isOrderInside,
+            levelOrder: isLevelOrder,
         });
+
+        const modeBadge = document.querySelector('#settings-mode-badge');
+        const modeIcon = document.querySelector('#settings-mode-icon');
+
+        let badgeText = '';
+        let iconName = '';
+
+        if (isLevelOrder && isOrderInside) {
+            badgeText = wt('se.mode_strict', 'Строгий порядок');
+            iconName = 'verified';
+        } else if (isLevelOrder && !isOrderInside) {
+            badgeText = wt('se.mode_levels_only', 'Порядок уровней');
+            iconName = 'low_priority';
+        } else if (!isLevelOrder && isOrderInside) {
+            badgeText = wt('se.mode_steps_only', 'Порядок элементов');
+            iconName = 'checklist';
+        } else {
+            badgeText = wt('se.mode_grouping_only', 'Только группировка');
+            iconName = 'folder_shared';
+        }
+
+        if (modeBadge) modeBadge.textContent = badgeText;
+        if (modeIcon) modeIcon.textContent = iconName;
+
+        const orderInsideCard = orderInside?.closest('.settings-toggle-card');
+        const levelOrderCard = levelOrder?.closest('.settings-toggle-card');
+        if (orderInsideCard) {
+            orderInsideCard.classList.toggle('is-checked', isOrderInside);
+        }
+        if (levelOrderCard) {
+            levelOrderCard.classList.toggle('is-checked', isLevelOrder);
+        }
     }
 
     showToast(message, variant = 'success', timeout = 4000) {
@@ -209,14 +262,14 @@ class SequenceEditor extends BaseEditor {
             task_data: {
                 id: this.taskId,
                 type: 'sequence_assembly',
-                name: wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора'),
+                name: wt('sequence_editor.demo.solution_prep_title', 'Приготовление рабочего раствора'),
                 content: {},
                 settings: {},
                 meta: {
                     id: this.taskId,
                     module: this.moduleId,
                     topic: this.topicId,
-                    name: wt('sequence_editor.demo.solution_prep_title', 'Последовательность: приготовление раствора'),
+                    name: wt('sequence_editor.demo.solution_prep_title', 'Приготовление рабочего раствора'),
                 },
             },
             metadata: {
@@ -285,14 +338,14 @@ class SequenceEditor extends BaseEditor {
         if (!this.task.task_data) this.task.task_data = {};
         this.task.task_data.content = {
             prompt: '',
-            sequence_within_level_matters: false,
+            sequence_within_level_matters: true,
             level_order_matters: false,
             elements: [],
             levels: [],
         };
         this.task.task_data.settings = {
             ...(this.task.task_data.settings || {}),
-            sequence_within_level_matters: false,
+            sequence_within_level_matters: true,
             level_order_matters: false,
         };
         this.levels = [this.createEmptyLevel()];
@@ -471,34 +524,67 @@ class SequenceEditor extends BaseEditor {
             const levelEl = this.createLevelElement(level, lIndex);
             container.appendChild(levelEl);
         });
+
+        // Ensure all textarea heights are measured accurately after mounting into DOM tree
+        const doResize = () => {
+            container.querySelectorAll('.block-title-input').forEach((field) => {
+                this.autoResizeField(field);
+            });
+        };
+        if (typeof requestAnimationFrame !== 'undefined') {
+            requestAnimationFrame(doResize);
+        } else {
+            setTimeout(doResize, 0);
+        }
+    }
+
+    updateClearAllButtonState() {
+        const clearAllBtn = document.querySelector('#clear-all-btn');
+        if (!clearAllBtn) return;
+        const isBlank = this.levels.length === 1 &&
+            !this.levels[0].title &&
+            (this.levels[0].items.length === 0 || (this.levels[0].items.length === 1 && !this.levels[0].items[0].label));
+        clearAllBtn.disabled = isBlank;
+        if (isBlank) {
+            clearAllBtn.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        } else {
+            clearAllBtn.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+        }
     }
 
     createLevelElement(level, lIndex) {
         const div = document.createElement('div');
-        div.className = 'card-elevated rounded-xl p-2 group/level relative mb-6 transition-all';
+        div.className = 'sequence-level-card card-elevated rounded-2xl p-4 sm:p-5 group/level relative mb-6 transition-all';
         div.setAttribute('data-onboarding-spotlight', 'frame');
         div.setAttribute('data-onboarding-target', lIndex === 0 ? 'sequence-first-level' : `sequence-level-${lIndex + 1}`);
         if (level.levelId) {
             div.style.viewTransitionName = `level-${level.levelId}`;
         }
 
+        const totalLevels = this.levels.length;
+        const isSingleLevel = totalLevels <= 1;
+        const isFirstLevel = lIndex === 0;
+        const isLastLevel = lIndex === totalLevels - 1;
+
         div.innerHTML = `
-            <div class="flex items-center gap-3 p-3">
-                <div class="sequence-level-index w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
-                    ${lIndex + 1}
+            <div class="flex items-center justify-between gap-3 pb-3 mb-3 border-b border-border-subtle">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="sequence-level-index w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0">
+                        ${lIndex + 1}
+                    </div>
+                    <input class="level-title-input flex-1 min-w-[140px]" 
+                           type="text" placeholder="${wt('se.k008', 'Название уровня')}"/>
+                    <span class="sequence-level-title-onboarding-anchor absolute pointer-events-none" aria-hidden="true"></span>
+                    <span class="sequence-level-title-onboarding-edge absolute pointer-events-none" aria-hidden="true"></span>
                 </div>
-                <input class="level-title-input bg-transparent border-transparent hover:border-border-subtle focus:border-primary focus:ring-0 rounded text-sm font-bold text-text-main px-2 py-1 flex-1 transition-colors" 
-                       type="text" placeholder="${wt('se.k008', 'Название уровня')}"/>
-                <span class="sequence-level-title-onboarding-anchor absolute pointer-events-none" aria-hidden="true"></span>
-                <span class="sequence-level-title-onboarding-edge absolute pointer-events-none" aria-hidden="true"></span>
                 <div class="sequence-level-actions flex items-center gap-1 transition-opacity">
-                    <button class="move-up icon-button-muted" title="${wt('se.k009', 'Переместить вверх')}"><span class="material-symbols-outlined text-[20px]">arrow_upward</span></button>
-                    <button class="move-down icon-button-muted" title="${wt('se.k010', 'Переместить вниз')}"><span class="material-symbols-outlined text-[20px]">arrow_downward</span></button>
+                    <button class="move-up icon-button-muted disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isFirstLevel || isSingleLevel ? 'disabled' : ''} title="${wt('se.k009', 'Переместить вверх')}" aria-label="${wt('se.k009', 'Переместить вверх')} (${wt('se.k008', 'Уровень')} ${lIndex + 1})"><span class="material-symbols-outlined text-[18px]">arrow_upward</span></button>
+                    <button class="move-down icon-button-muted disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isLastLevel || isSingleLevel ? 'disabled' : ''} title="${wt('se.k010', 'Переместить вниз')}" aria-label="${wt('se.k010', 'Переместить вниз')} (${wt('se.k008', 'Уровень')} ${lIndex + 1})"><span class="material-symbols-outlined text-[18px]">arrow_downward</span></button>
                     <div class="w-px h-5 bg-border-subtle mx-1"></div>
-                    <button class="delete-level icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" title="${wt('se.k011', 'Удалить уровень')}"><span class="material-symbols-outlined text-[20px]">close</span></button>
+                    <button class="delete-level icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isSingleLevel ? 'disabled' : ''} title="${wt('se.k011', 'Удалить уровень')}" aria-label="${wt('se.k011', 'Удалить уровень')} ${lIndex + 1}"><span class="material-symbols-outlined text-[18px]">close</span></button>
                 </div>
             </div>
-            <div class="flex gap-4 overflow-x-auto p-4 pt-1 custom-scrollbar min-h-[140px] items-container"></div>
+            <div class="sequence-items-grid items-container"></div>
         `;
 
         const titleInput = div.querySelector('.level-title-input');
@@ -510,18 +596,18 @@ class SequenceEditor extends BaseEditor {
                 titleAnchor.setAttribute('data-onboarding-target', 'sequence-first-level-title');
                 titleAnchor.setAttribute('data-onboarding-clone-variant', 'sequence-level-title');
                 titleAnchor.textContent = level.title || wt('se.k008', 'Название уровня');
-                titleAnchor.style.left = '72px';
+                titleAnchor.style.left = '64px';
                 titleAnchor.style.top = '18px';
                 titleAnchor.style.width = `${titleWidth}px`;
-                titleAnchor.style.height = '30px';
+                titleAnchor.style.height = '32px';
 
                 const titleEdge = div.querySelector('.sequence-level-title-onboarding-edge');
                 if (titleEdge) {
                     titleEdge.setAttribute('data-onboarding-target', 'sequence-first-level-title-edge');
-                    titleEdge.style.left = `${72 + titleWidth - 6}px`;
+                    titleEdge.style.left = `${64 + titleWidth - 6}px`;
                     titleEdge.style.top = '18px';
                     titleEdge.style.width = '6px';
-                    titleEdge.style.height = '30px';
+                    titleEdge.style.height = '32px';
                 }
 
             }
@@ -529,6 +615,7 @@ class SequenceEditor extends BaseEditor {
         titleInput.oninput = (e) => {
             this.levels[lIndex].title = e.target.value;
             this.markUnsaved();
+            this.updateClearAllButtonState();
         };
 
         const levelActions = div.querySelector('.sequence-level-actions');
@@ -550,24 +637,70 @@ class SequenceEditor extends BaseEditor {
         });
 
         const addButton = document.createElement('button');
-        addButton.className = 'sequence-add-block-btn empty-state-card empty-state-card--compact empty-state-card--icon-only w-12 h-[104px] shrink-0 border-2 border-dashed text-text-disabled hover:text-primary transition-all duration-300';
+        addButton.className = 'sequence-add-block-btn empty-state-card empty-state-card--compact empty-state-card--icon-only rounded-xl border-2 border-dashed border-border-strong hover:border-primary hover:bg-primary-lighter/40 flex flex-col items-center justify-center gap-1.5 p-4 min-h-[140px] text-text-muted hover:text-primary transition-all duration-200 cursor-pointer';
         addButton.title = wt('se.k012', 'Добавить шаг в этот уровень');
         addButton.setAttribute('aria-label', wt('se.k013', 'Добавить блок'));
         if (lIndex === 0) {
             addButton.setAttribute('data-onboarding-target', 'sequence-first-level-add-step');
         }
-        addButton.innerHTML = '<span class="material-symbols-outlined text-[28px]">add</span>';
+        addButton.innerHTML = '<span class="material-symbols-outlined text-[28px]">add</span><span class="text-xs font-semibold tracking-wide">' + wt('se.k012', 'Добавить шаг') + '</span>';
         addButton.onclick = () => this.addBlock(lIndex);
         itemsContainer.appendChild(addButton);
 
         return div;
     }
 
+    expandBlock(card) {
+        if (!card) return;
+        this.collapseAllBlocks();
+        card.classList.add('is-expanded');
+        const textarea = card.querySelector('.block-title-input');
+        if (textarea) {
+            textarea.style.height = 'auto';
+            const target = Math.max(76, textarea.scrollHeight);
+            textarea.style.height = `${target}px`;
+            textarea.style.overflowY = target > 240 ? 'auto' : 'hidden';
+        }
+        const expandTrigger = card.querySelector('.sequence-block-expand-trigger');
+        if (expandTrigger) expandTrigger.style.setProperty('display', 'none', 'important');
+    }
+
+    collapseBlock(card) {
+        if (!card) return;
+        card.classList.remove('is-expanded');
+        const textarea = card.querySelector('.block-title-input');
+        if (textarea) {
+            textarea.style.height = '';
+            textarea.style.overflowY = 'hidden';
+        }
+        this.updateBlockExpandTrigger(card);
+    }
+
+    collapseAllBlocks() {
+        document.querySelectorAll('.sequence-block-card.is-expanded').forEach(card => {
+            this.collapseBlock(card);
+        });
+    }
+
+    updateBlockExpandTrigger(card) {
+        if (!card) return;
+        const textarea = card.querySelector('.block-title-input');
+        const expandTrigger = card.querySelector('.sequence-block-expand-trigger');
+        if (!textarea || !expandTrigger) return;
+        const text = String(textarea.value || '');
+        const isLong = text.includes('\n') || text.length > 45;
+        expandTrigger.style.setProperty('display', (isLong && !card.classList.contains('is-expanded')) ? 'inline-flex' : 'none', 'important');
+    }
+
     createBlockElement(item, lIndex, iIndex) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sequence-block-wrapper relative min-w-0';
+
         const div = document.createElement('div');
-        div.className = 'sequence-block-card card-elevated w-48 shrink-0 rounded-lg p-4 pt-8 flex flex-col gap-3 group/block relative transition-all';
+        div.className = 'sequence-block-card rounded-xl p-3 flex flex-col justify-between gap-1.5 relative transition-all border border-border-subtle bg-surface-1 hover:border-primary/40 group/block min-w-0 shadow-xs hover:shadow-sm cursor-pointer';
         if (lIndex === 0 && iIndex === 0) {
             div.setAttribute('data-onboarding-target', 'sequence-first-step');
+            wrapper.setAttribute('data-onboarding-target', 'sequence-first-step-wrapper');
         } else if (lIndex === 0 && iIndex === 1) {
             div.setAttribute('data-onboarding-target', 'sequence-second-step');
         }
@@ -575,39 +708,100 @@ class SequenceEditor extends BaseEditor {
             div.style.viewTransitionName = `block-${item.id}`;
         }
 
+        const isMultiLevel = this.levels.length > 1;
+        const stepNumber = isMultiLevel ? `${lIndex + 1}.${iIndex + 1}` : `#${iIndex + 1}`;
+        const totalItemsInLevel = this.levels[lIndex].items.length;
+        const isFirstItem = iIndex === 0;
+        const isLastItem = iIndex === totalItemsInLevel - 1;
+        const isSingleItem = totalItemsInLevel <= 1;
+
         div.innerHTML = `
-            <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs absolute top-2 right-2 border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" title="${wt('se.k014', 'Удалить элемент')}">
-                <span class="material-symbols-outlined text-[16px]">close</span>
-            </button>
-            <textarea class="block-title-input sequence-block-title w-full text-sm font-semibold border border-border-subtle bg-transparent focus:border-primary focus:ring-0 rounded-md text-text-main placeholder-text-disabled resize-none min-h-[44px] transition-colors py-2 px-3 text-center leading-tight overflow-hidden" 
-                   rows="1" placeholder="${wt('se.k015', 'Опишите элемент...')}"></textarea>
-            <div class="sequence-block-actions grid grid-cols-2 gap-2 pt-1 text-[11px] font-bold">
-                <button class="move-left sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all">
+            <div class="sequence-block-header flex items-center justify-between gap-1.5 w-full select-none">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="sequence-block-badge text-[11px] font-bold text-text-muted bg-surface-2/90 px-1.5 py-0.5 rounded border border-border-subtle/80 leading-none shrink-0">
+                        ${stepNumber}
+                    </span>
+                    <button type="button" class="sequence-block-expand-trigger inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-primary bg-primary-lighter/60 hover:bg-primary-lighter border border-primary/25 rounded cursor-pointer transition-colors" title="${wt('seq_editor.expand_step_full', 'Развернуть шаг')}" aria-label="${wt('seq_editor.expand_step_full', 'Развернуть шаг')}">
+                        <span class="material-symbols-outlined text-[13px]">expand_more</span>
+                        <span>${wt('seq_editor.expand_step', 'Развернуть')}</span>
+                    </button>
+                </div>
+                <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error shrink-0" title="${wt('se.k014', 'Удалить элемент')}" aria-label="${wt('se.k014', 'Удалить элемент')} ${stepNumber}">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            </div>
+            <textarea class="block-title-input sequence-block-title w-full flex-1 text-sm font-medium border border-transparent bg-transparent hover:border-border-subtle hover:bg-surface-2/30 focus:border-primary focus:bg-surface-1 focus:ring-2 focus:ring-primary/20 rounded-md text-text-main placeholder-text-disabled resize-none transition-colors py-1 px-1.5 text-left leading-snug break-words outline-none" 
+                   rows="2" placeholder="${wt('se.k015', 'Опишите элемент...')}"></textarea>
+            <div class="sequence-block-actions grid grid-cols-2 gap-2 text-[11px] font-bold select-none">
+                <button class="move-left sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isFirstItem || isSingleItem ? 'disabled' : ''} aria-label="${wt('se.k016', 'Влево')} (${stepNumber})">
                     <span class="material-symbols-outlined text-[16px]">chevron_left</span>
                     ${wt('se.k016', 'Влево')}
                 </button>
-                <button class="move-right sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all">
+                <button class="move-right sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isLastItem || isSingleItem ? 'disabled' : ''} aria-label="${wt('se.k017', 'Вправо')} (${stepNumber})">
                     ${wt('se.k017', 'Вправо')}
                     <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                 </button>
             </div>
+            <button type="button" class="sequence-block-collapse-btn btn-secondary btn-secondary--compact w-full items-center justify-center gap-1 py-1 px-2 text-xs font-bold text-primary hover:text-primary-dark bg-primary-lighter/50 hover:bg-primary-lighter border border-primary/30 rounded-md transition-all cursor-pointer shadow-xs select-none" title="${wt('seq_editor.collapse_step', 'Свернуть')}">
+                <span class="material-symbols-outlined text-[16px]">expand_less</span>
+                <span>${wt('seq_editor.collapse_step', 'Свернуть')}</span>
+            </button>
         `;
 
         const titleField = div.querySelector('.block-title-input');
+        const expandTrigger = div.querySelector('.sequence-block-expand-trigger');
+        const collapseBtn = div.querySelector('.sequence-block-collapse-btn');
+
         if (titleField) {
             if (lIndex === 0 && iIndex === 0) {
                 titleField.setAttribute('data-onboarding-target', 'sequence-first-step-text');
             }
             titleField.value = item.label || '';
-            titleField.dataset.minHeight = titleField.scrollHeight || titleField.clientHeight || 40;
-            titleField.style.overflow = 'hidden';
-            this.autoResizeField(titleField);
+            this.updateBlockExpandTrigger(div);
+
+            titleField.addEventListener('focus', () => {
+                const text = String(titleField.value || '');
+                if ((text.includes('\n') || text.length > 45) && !div.classList.contains('is-expanded')) {
+                    this.expandBlock(div);
+                }
+            });
+
             titleField.oninput = (e) => {
                 this.levels[lIndex].items[iIndex].label = e.target.value;
-                this.autoResizeField(e.target);
                 this.markUnsaved();
+                this.updateClearAllButtonState();
+                this.updateBlockExpandTrigger(div);
+                if (div.classList.contains('is-expanded')) {
+                    this.autoResizeField(e.target);
+                }
             };
         }
+
+        if (expandTrigger) {
+            expandTrigger.onclick = (e) => {
+                e.stopPropagation();
+                this.expandBlock(div);
+                if (titleField) titleField.focus();
+            };
+        }
+
+        if (collapseBtn) {
+            collapseBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.collapseBlock(div);
+            };
+        }
+
+        div.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            const text = String(titleField ? titleField.value : '');
+            if ((text.includes('\n') || text.length > 45) && !div.classList.contains('is-expanded')) {
+                this.expandBlock(div);
+            }
+            if (titleField && document.activeElement !== titleField) {
+                titleField.focus();
+            }
+        });
 
         div.querySelector('.delete-block').onclick = () => this.deleteBlock(lIndex, iIndex);
         const moveLeft = div.querySelector('.move-left');
@@ -620,7 +814,8 @@ class SequenceEditor extends BaseEditor {
         moveLeft.onclick = () => this.moveBlock(lIndex, iIndex, -1);
         moveRight.onclick = () => this.moveBlock(lIndex, iIndex, 1);
 
-        return div;
+        wrapper.appendChild(div);
+        return wrapper;
     }
 
     moveLevel(index, direction) {
@@ -789,6 +984,16 @@ class SequenceEditor extends BaseEditor {
             });
         }
 
+        document.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.sequence-block-card.is-expanded')) return;
+            this.collapseAllBlocks();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.collapseAllBlocks();
+            }
+        });
     }
 
     buildStructure() {
