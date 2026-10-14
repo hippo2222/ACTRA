@@ -7002,7 +7002,7 @@ class EditorDashboard {
                     const parsed = JSON.parse(raw);
                     if (!parsed || !parsed.moduleId || !parsed.topicId || !parsed.taskId) continue;
                     const ownerUserId = this.normalizeRecoveryDraftOwnerUserId(parsed);
-                    if (!this.isRecoveryDraftVisibleToCurrentUser(ownerUserId, { requireOwner: true })) continue;
+                    if (!this.isRecoveryDraftVisibleToCurrentUser(ownerUserId, { requireOwner: false })) continue;
                     const draftTaskName =
                         typeof parsed.taskName === 'string' && parsed.taskName.trim()
                             ? parsed.taskName.trim()

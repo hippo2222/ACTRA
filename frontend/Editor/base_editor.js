@@ -2793,9 +2793,11 @@ class BaseEditor {
             || null;
         this._syncTheoryGroundingRunPrefsState(this.theoryGrounding.selectedRunId);
         this.renderTheoryGroundingPanel();
-        await this.loadTheoryGroundingAnalyses();
-        if (this.theoryGrounding.selectedRunId) {
-            await this.openTheoryGroundingAnalysis(this.theoryGrounding.selectedRunId, { silent: true });
+        if (this.theoryGrounding.selectedRunId || this.theoryGrounding.panelOpen) {
+            await this.loadTheoryGroundingAnalyses();
+            if (this.theoryGrounding.selectedRunId) {
+                await this.openTheoryGroundingAnalysis(this.theoryGrounding.selectedRunId, { silent: true });
+            }
         }
     }
 
@@ -2821,8 +2823,15 @@ class BaseEditor {
             } else {
                 this.theoryGrounding.analyses = [];
                 this.theoryGrounding.items = [...manualItems];
-                this.theoryGrounding.analysesError = data?.error || data?.message || this.aiUxMessage('p8.analysis.list_load_failed', wt('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.'));
-                this.theoryGrounding.itemsError = this.theoryGrounding.analysesError;
+                this.theoryGrounding.analysesLoaded = true;
+                if (data?.error === 'ai_mode_in_progress') {
+                    this.theoryGrounding.aiModeDisabled = true;
+                    this.theoryGrounding.analysesError = '';
+                    this.theoryGrounding.itemsError = '';
+                } else {
+                    this.theoryGrounding.analysesError = data?.error || data?.message || this.aiUxMessage('p8.analysis.list_load_failed', wt('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.'));
+                    this.theoryGrounding.itemsError = this.theoryGrounding.analysesError;
+                }
             }
         } catch (_) {
             this.theoryGrounding.analyses = [];
@@ -2951,6 +2960,9 @@ class BaseEditor {
         this.theoryGrounding.panelOpen = typeof forceOpen === 'boolean'
             ? forceOpen
             : !this.theoryGrounding.panelOpen;
+        if (this.theoryGrounding.panelOpen && !this.theoryGrounding.analysesLoaded && !this.theoryGrounding.analysesLoading) {
+            this.loadTheoryGroundingAnalyses().catch(() => {});
+        }
         this.renderTheoryGroundingPanel();
     }
 
