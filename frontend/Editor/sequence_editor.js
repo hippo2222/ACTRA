@@ -96,25 +96,30 @@ class SequenceEditor extends BaseEditor {
         const taskData = this.task.task_data || {};
         const meta = taskData.meta || {};
         const metadata = this.task.metadata || {};
-        return (
+        const candidate = (
             taskData.name ||
             taskData.title ||
             meta.title ||
             meta.name ||
             metadata.title ||
             metadata.name ||
-            metadata.id ||
-            meta.id ||
-            wt('se.k003', 'Новое задание')
+            ''
         );
+        if (candidate && !/^task_[a-f0-9]{8,}$/i.test(String(candidate).trim())) {
+            return String(candidate).trim();
+        }
+        return wt('se.k003', 'Новое задание');
     }
 
     updateTaskTitleDisplay(name) {
         const display = document.querySelector('#task-title-display');
         if (!display) return;
+        display.removeAttribute('data-i18n');
         const fallback = this.getTaskDisplayName();
-        const value = typeof name === 'string' ? name.trim() : '';
-        display.textContent = value || fallback || wt('se.k003', 'Новое задание');
+        const value = typeof name === 'string' && !/^task_[a-f0-9]{8,}$/i.test(name.trim()) ? name.trim() : '';
+        const titleText = value || fallback || wt('se.k003', 'Новое задание');
+        display.textContent = titleText;
+        display.title = titleText;
     }
 
     getSaveStatusMessage(type = 'saved', options = {}) {
@@ -248,6 +253,7 @@ class SequenceEditor extends BaseEditor {
             this.ensureDefaultStructure();
             this.renderUI();
         }
+        this.updateTaskTitleDisplay();
         this.setupSequenceOnboardingTourBridge();
         this.setupEventListeners();
     }
@@ -969,6 +975,7 @@ class SequenceEditor extends BaseEditor {
             this.setupHeaderRenameTrigger(titleDisplay, {
                 onSuccess: () => this.updateTaskTitleDisplay()
             });
+            this.updateTaskTitleDisplay();
         }
 
         const backBtn = document.querySelector('#back-to-dashboard');
@@ -1298,6 +1305,7 @@ class SequenceEditor extends BaseEditor {
         const orderInside = document.querySelector('#order-inside-matters');
         const levelOrder = document.querySelector('#level-order-matters');
         return {
+            name: this.getTaskDisplayName(),
             levels: JSON.parse(JSON.stringify(this.levels)),
             prompt: promptArea ? promptArea.value : '',
             sequence_within_level_matters: Boolean(orderInside?.checked),
@@ -1311,6 +1319,10 @@ class SequenceEditor extends BaseEditor {
      * @param {Object} state - State to restore
      */
     restoreState(state) {
+        if (typeof state?.name === 'string' && state.name.trim() && !/^task_[a-f0-9]{8,}$/i.test(state.name.trim())) {
+            if (this.task?.task_data) this.task.task_data.name = state.name.trim();
+            if (this.task?.metadata) this.task.metadata.name = state.name.trim();
+        }
         this.levels = JSON.parse(JSON.stringify(state.levels));
         const content = this.task?.task_data?.content;
         const prompt = typeof state.prompt === 'string' ? state.prompt : '';
@@ -1347,6 +1359,7 @@ class SequenceEditor extends BaseEditor {
         }
 
         this.updateSettingsHelpText();
+        this.updateTaskTitleDisplay();
         this.refreshDifficultyAuthoringControls().catch((error) => {
             console.warn('[SequenceEditor] difficulty authoring refresh failed', error);
         });

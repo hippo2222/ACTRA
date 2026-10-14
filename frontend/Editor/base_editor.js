@@ -239,6 +239,10 @@ class BaseEditor {
 
         if (this.restoreDraftIntent) {
             if (draft && draft.data) {
+                if (draft.taskName && !/^task_[a-f0-9]{8,}$/i.test(String(draft.taskName).trim())) {
+                    if (this.task?.task_data && !this.task.task_data.name) this.task.task_data.name = draft.taskName;
+                    if (this.task?.metadata && !this.task.metadata.name) this.task.metadata.name = draft.taskName;
+                }
                 this.restoreState(draft.data);
                 this.refreshDifficultyAuthoringControls().catch((error) => {
                     console.warn('[BaseEditor] difficulty authoring bootstrap failed', error);
@@ -265,6 +269,10 @@ class BaseEditor {
             }
         } else if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
             if (this.shouldAutoRestoreDraft(draft)) {
+                if (draft.taskName && !/^task_[a-f0-9]{8,}$/i.test(String(draft.taskName).trim())) {
+                    if (this.task?.task_data && !this.task.task_data.name) this.task.task_data.name = draft.taskName;
+                    if (this.task?.metadata && !this.task.metadata.name) this.task.metadata.name = draft.taskName;
+                }
                 this.restoreState(draft.data);
                 this.refreshDifficultyAuthoringControls().catch((error) => {
                     console.warn('[BaseEditor] difficulty authoring bootstrap failed', error);
@@ -285,6 +293,12 @@ class BaseEditor {
             this.initTheoryGroundingPanel();
             this.bootstrapTheoryGroundingPanel().catch((e) => console.warn('[P8] bootstrap failed', e));
             this.autoSaveManager.start();
+        }
+
+        if (typeof this.updateTaskTitleDisplay === 'function') {
+            this.updateTaskTitleDisplay();
+        } else if (typeof this.updateEditorChrome === 'function') {
+            this.updateEditorChrome();
         }
 
         if (!restoredDraftSilently) {
@@ -446,12 +460,21 @@ class BaseEditor {
             cancelText: recoveryCopy.cancelText,
             variant: 'primary',
             onConfirm: () => {
+                if (draft.taskName && !/^task_[a-f0-9]{8,}$/i.test(String(draft.taskName).trim())) {
+                    if (this.task?.task_data && !this.task.task_data.name) this.task.task_data.name = draft.taskName;
+                    if (this.task?.metadata && !this.task.metadata.name) this.task.metadata.name = draft.taskName;
+                }
                 this.restoreState(draft.data);
                 this.refreshDifficultyAuthoringControls().catch((error) => {
                     console.warn('[BaseEditor] difficulty authoring bootstrap failed', error);
                 });
                 this.initTheoryGroundingPanel();
                 this.bootstrapTheoryGroundingPanel().catch((e) => console.warn('[P8] bootstrap failed', e));
+                if (typeof this.updateTaskTitleDisplay === 'function') {
+                    this.updateTaskTitleDisplay();
+                } else if (typeof this.updateEditorChrome === 'function') {
+                    this.updateEditorChrome();
+                }
                 this.showToast(wt('editor_base.toast_changes_restored', 'Несохранённые изменения восстановлены'), 'success');
                 this.autoSaveManager.start();
             },
