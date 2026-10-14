@@ -2793,7 +2793,7 @@ class BaseEditor {
             || null;
         this._syncTheoryGroundingRunPrefsState(this.theoryGrounding.selectedRunId);
         this.renderTheoryGroundingPanel();
-        if (this.theoryGrounding.selectedRunId || this.theoryGrounding.panelOpen) {
+        if (this.theoryGrounding.panelOpen) {
             await this.loadTheoryGroundingAnalyses();
             if (this.theoryGrounding.selectedRunId) {
                 await this.openTheoryGroundingAnalysis(this.theoryGrounding.selectedRunId, { silent: true });
@@ -2961,7 +2961,11 @@ class BaseEditor {
             ? forceOpen
             : !this.theoryGrounding.panelOpen;
         if (this.theoryGrounding.panelOpen && !this.theoryGrounding.analysesLoaded && !this.theoryGrounding.analysesLoading) {
-            this.loadTheoryGroundingAnalyses().catch(() => {});
+            this.loadTheoryGroundingAnalyses().then(() => {
+                if (this.theoryGrounding.selectedRunId) {
+                    this.openTheoryGroundingAnalysis(this.theoryGrounding.selectedRunId, { silent: true }).catch(() => {});
+                }
+            }).catch(() => {});
         }
         this.renderTheoryGroundingPanel();
     }
