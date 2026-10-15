@@ -40,6 +40,7 @@ class ImportManager {
         this.perTaskConflictRes = new Map(); // index -> 'skip'|'overwrite'|'new_id'
         this.aiTemplateType = 'open_answer';
         this.cheatSheetTab = 'test';
+        this.isCheatSheetOpen = false;
         this._userSelectedCheatSheetTab = false;
         this.aiPromptTab = 'prompt';
         this.previewFilterStatus = 'all';
@@ -3344,6 +3345,7 @@ ${remaining}
         const cheatData = this.getCheatSheetData(this.cheatSheetTab || 'test');
         const lineCount = (this.sourceText || '').length > 0 ? (this.sourceText || '').split('\n').length : 0;
         const charCount = (this.sourceText || '').length;
+        const isCheatOpen = Boolean(this.isCheatSheetOpen);
 
         return `
             <div class="h-full flex-1 flex flex-col min-h-0 animate-slide-up-fade">
@@ -3364,10 +3366,10 @@ ${remaining}
                     </div>
                 ` : ''}
 
-                <!-- Split Grid: 60% hero editor on left, 40% syntax reference on right -->
-                <div class="import-split-grid-text gap-4 flex-1 min-h-0">
-                    <!-- Left: Hero Editor Workspace (60%) -->
-                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3 overflow-hidden" data-role="editor-panel">
+                <!-- Split Grid: 100% full-width hero editor by default, expands to split layout when cheatsheet is opened -->
+                <div id="import-text-grid" class="import-split-grid-text ${isCheatOpen ? 'has-cheatsheet' : ''} gap-4 flex-1 min-h-0">
+                    <!-- Left: Hero Editor Workspace (100% full-width by default) -->
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3 overflow-hidden w-full flex-1" data-role="editor-panel">
                         <div class="flex items-center justify-between gap-3 mb-2 shrink-0">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="material-symbols-outlined text-primary text-[18px] shrink-0">edit_note</span>
@@ -3375,6 +3377,13 @@ ${remaining}
                                 <span id="import-text-stats" class="text-[11px] text-text-secondary shrink-0">(${charCount} ${wt('im.stat_chars', 'симв.')}, ${lineCount} ${wt('im.stat_lines', 'строк')})</span>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
+                                <!-- Cheatsheet Toggle Button (On-demand Progressive Disclosure) -->
+                                <button type="button" id="import-toggle-cheat-btn" data-role="cheat-toggle-btn" onclick="dashboard.importManager.toggleCheatSheet()"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-all cursor-pointer ${isCheatOpen ? 'bg-primary/10 text-primary border-primary/30 font-semibold' : 'text-text-secondary border-border-subtle hover:text-text-main hover:bg-surface-2'}"
+                                    title="${isCheatOpen ? this.escapeHtmlAttr(wt('im.cheat_toggle_btn_hide', 'Скрыть справку')) : this.escapeHtmlAttr(wt('im.cheat_toggle_btn', 'Справка по тегам'))}">
+                                    <span class="material-symbols-outlined text-[16px]">menu_book</span>
+                                    <span id="import-toggle-cheat-text">${isCheatOpen ? wt('im.cheat_toggle_btn_hide', 'Скрыть справку') : wt('im.cheat_toggle_btn', 'Справка по тегам')}</span>
+                                </button>
                                 <button type="button" id="import-clear-btn" onclick="dashboard.importManager.clearImportText()"
                                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-error hover:bg-error-lighter/40 rounded-lg border border-border-subtle hover:border-error/40 transition-colors cursor-pointer ${charCount > 0 ? '' : 'hidden'}"
                                     title="${wt('im.editor_clear_btn', 'Очистить')}">
@@ -3408,7 +3417,7 @@ ${remaining}
                         <!-- Optional Task Title Input -->
                         <div class="mb-2 shrink-0" data-role="import-title-group">
                             <label for="import-task-title-input" class="block text-xs font-semibold text-text-secondary mb-1">
-                                ${wt('im.task_title_optional_label', 'Название задания (опционально)')}
+                                ${wt('im.task_title_optional_label', 'Общая тема или серия заданий (опционально)')}
                             </label>
                             <input type="text"
                                 id="import-task-title-input"
@@ -3429,15 +3438,20 @@ ${remaining}
                         </div>
                     </div>
 
-                    <!-- Right: Interactive Syntax Reference Assistant (40%) -->
-                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="import-cheatsheet-tabs">
-                        <!-- Header with Title & Badge -->
+                    <!-- Right: On-demand Syntax Reference Assistant (Progressive Disclosure) -->
+                    <div id="import-cheatsheet-panel" class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden transition-all ${isCheatOpen ? '' : 'hidden'}" data-role="import-cheatsheet-tabs">
+                        <!-- Header with Title, Badge & Close Button -->
                         <div class="flex items-center justify-between mb-2 shrink-0">
                             <div class="flex items-center gap-1.5 min-w-0">
                                 <span class="material-symbols-outlined text-primary text-[17px] shrink-0">menu_book</span>
-                                <h4 class="text-xs font-bold text-text-main">${wt('im.cheat_reference_title', 'Справка по тегам')}</h4>
+                                <h4 class="text-xs font-bold text-text-main">${wt('im.cheat_reference_title', 'Памятка по оформлению')}</h4>
+                                <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2/60 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
                             </div>
-                            <span class="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-surface-2/60 text-text-secondary border border-border-subtle shrink-0">${wt('im.cheat_reference_badge', 'Памятка')}</span>
+                            <button type="button" id="cheat-close-btn" data-role="cheat-close-btn" onclick="dashboard.importManager.toggleCheatSheet(false)"
+                                class="p-1 rounded text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors cursor-pointer"
+                                title="${this.escapeHtmlAttr(wt('im.cheat_close_btn', 'Свернуть'))}">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
                         </div>
 
                         <!-- Full Width Dedicated Type Selector (zero truncation risk) -->
@@ -3463,16 +3477,26 @@ ${remaining}
                             </div>
                         </div>
 
-                        <!-- Example Code Container with discreet header copy icon -->
+                        <!-- Example Code Container with discreet actions -->
                         <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle overflow-hidden">
                             <div class="flex items-center justify-between px-3 py-1.5 bg-surface-2/40 border-b border-border-subtle text-[11px] shrink-0">
                                 <span id="cheat-example-tag-label" class="font-mono font-bold text-primary">${cheatData.typeTag}</span>
-                                <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
-                                    class="inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary hover:text-primary transition-colors cursor-pointer"
-                                    title="${this.escapeHtml(wt('im.cheat_copy_tooltip', 'Скопировать образец разметки'))}">
-                                    <span class="material-symbols-outlined text-[14px]" id="cheat-copy-example-icon">content_copy</span>
-                                    <span id="cheat-copy-example-text">${wt('im.cheat_copy_btn', 'Копировать')}</span>
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <!-- Safe primary action: insert directly into editor without clobbering clipboard -->
+                                    <button type="button" id="cheat-insert-example-btn" data-role="cheat-insert-example" onclick="dashboard.importManager.insertCheatSheetExample('${cheatData.key}')"
+                                        class="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary-dark transition-colors cursor-pointer"
+                                        title="${this.escapeHtmlAttr(wt('im.cheat_insert_into_editor', 'Вставить этот шаблон в поле'))}">
+                                        <span class="material-symbols-outlined text-[14px]">add</span>
+                                        <span>${wt('im.cheat_insert_short', 'В поле')}</span>
+                                    </button>
+                                    <!-- Secondary action: copy to OS clipboard -->
+                                    <button type="button" id="cheat-copy-example-btn" data-role="cheat-copy-example" onclick="dashboard.importManager.copyCheatSheetExample('${cheatData.key}')"
+                                        class="inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary hover:text-primary transition-colors cursor-pointer"
+                                        title="${this.escapeHtmlAttr(wt('im.cheat_copy_tooltip', 'Скопировать образец разметки'))}">
+                                        <span class="material-symbols-outlined text-[14px]" id="cheat-copy-example-icon">content_copy</span>
+                                        <span id="cheat-copy-example-text">${wt('im.cheat_copy_btn', 'Копировать')}</span>
+                                    </button>
+                                </div>
                             </div>
                             <div class="flex-1 min-h-0 bg-surface-1 p-2.5 overflow-y-auto">
                                 <pre id="cheat-example-code" class="font-mono text-[11px] text-text-main whitespace-pre-wrap leading-relaxed select-all">${this.escapeHtml(cheatData.example)}</pre>
@@ -3687,6 +3711,48 @@ ${remaining}
         }
         this.cheatSheetTab = tabKey;
         this.updateCheatSheetPanel(tabKey);
+    }
+
+    toggleCheatSheet(forcedState) {
+        if (typeof forcedState === 'boolean') {
+            this.isCheatSheetOpen = forcedState;
+        } else {
+            this.isCheatSheetOpen = !this.isCheatSheetOpen;
+        }
+
+        const grid = document.getElementById('import-text-grid');
+        const panel = document.getElementById('import-cheatsheet-panel');
+        const toggleBtn = document.getElementById('import-toggle-cheat-btn');
+        const toggleText = document.getElementById('import-toggle-cheat-text');
+
+        if (grid && panel) {
+            if (this.isCheatSheetOpen) {
+                grid.classList.add('has-cheatsheet');
+                panel.classList.remove('hidden');
+                if (toggleBtn) {
+                    toggleBtn.classList.remove('text-text-secondary', 'border-border-subtle', 'hover:text-text-main', 'hover:bg-surface-2');
+                    toggleBtn.classList.add('bg-primary/10', 'text-primary', 'border-primary/30', 'font-semibold');
+                    toggleBtn.setAttribute('title', wt('im.cheat_toggle_btn_hide', 'Скрыть справку'));
+                }
+                if (toggleText) {
+                    toggleText.textContent = wt('im.cheat_toggle_btn_hide', 'Скрыть справку');
+                }
+                this.updateCheatSheetPanel(this.cheatSheetTab);
+            } else {
+                grid.classList.remove('has-cheatsheet');
+                panel.classList.add('hidden');
+                if (toggleBtn) {
+                    toggleBtn.classList.remove('bg-primary/10', 'text-primary', 'border-primary/30', 'font-semibold');
+                    toggleBtn.classList.add('text-text-secondary', 'border-border-subtle', 'hover:text-text-main', 'hover:bg-surface-2');
+                    toggleBtn.setAttribute('title', wt('im.cheat_toggle_btn', 'Справка по тегам'));
+                }
+                if (toggleText) {
+                    toggleText.textContent = wt('im.cheat_toggle_btn', 'Справка по тегам');
+                }
+            }
+        } else if (this.currentStep === 2 && this.importMode === 'text') {
+            this.renderCurrentStep();
+        }
     }
 
     updateCheatSheetPanel(tabKey) {

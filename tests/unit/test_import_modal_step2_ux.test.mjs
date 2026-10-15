@@ -27,6 +27,8 @@ function setupDom() {
     defineGlobal('HTMLElement', dom.window.HTMLElement);
     defineGlobal('Node', dom.window.Node);
     defineGlobal('navigator', dom.window.navigator);
+    defineGlobal('requestAnimationFrame', (cb) => setTimeout(cb, 0));
+    defineGlobal('cancelAnimationFrame', (id) => clearTimeout(id));
     dom.window.fetch = vi.fn();
     defineGlobal('fetch', dom.window.fetch);
 
@@ -268,4 +270,54 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         manager.startEditName(0);
         expect(focusSpy).toHaveBeenCalled();
     });
+
+    it('defaults to 100% full-width editor with cheatsheet hidden, and expands/collapses via toggleCheatSheet', () => {
+        expect(manager.isCheatSheetOpen).toBe(false);
+
+        const contentArea = dom.window.document.querySelector('[data-role="import-content"]');
+        contentArea.innerHTML = manager.renderStep2Text();
+
+        const grid = dom.window.document.getElementById('import-text-grid');
+        const editorPanel = dom.window.document.querySelector('[data-role="editor-panel"]');
+        const cheatPanel = dom.window.document.getElementById('import-cheatsheet-panel');
+        const toggleBtn = dom.window.document.getElementById('import-toggle-cheat-btn');
+        const closeBtn = dom.window.document.getElementById('cheat-close-btn');
+
+        // Initially 100% width: no has-cheatsheet class on grid, panel has 'hidden', editor has 'w-full flex-1'
+        expect(grid.classList.contains('has-cheatsheet')).toBe(false);
+        expect(cheatPanel.classList.contains('hidden')).toBe(true);
+        expect(editorPanel.classList.contains('w-full')).toBe(true);
+        expect(toggleBtn).not.toBeNull();
+        expect(closeBtn).not.toBeNull();
+
+        // Toggle open
+        manager.toggleCheatSheet();
+        expect(manager.isCheatSheetOpen).toBe(true);
+        expect(grid.classList.contains('has-cheatsheet')).toBe(true);
+        expect(cheatPanel.classList.contains('hidden')).toBe(false);
+
+        // Toggle closed via close button
+        manager.toggleCheatSheet(false);
+        expect(manager.isCheatSheetOpen).toBe(false);
+        expect(grid.classList.contains('has-cheatsheet')).toBe(false);
+        expect(cheatPanel.classList.contains('hidden')).toBe(true);
+    });
+
+    it('insertCheatSheetExample inserts template into editor textarea safely without calling writeToClipboard', () => {
+        const toastSpy = vi.spyOn(manager, 'showToast').mockImplementation(() => {});
+        const writeSpy = vi.spyOn(manager, 'writeToClipboard');
+        const contentArea = dom.window.document.querySelector('[data-role="import-content"]');
+        contentArea.innerHTML = manager.renderStep2Text();
+
+        const textArea = dom.window.document.getElementById('import-text-area');
+        expect(textArea.value).toBe('');
+
+        manager.insertCheatSheetExample('test');
+
+        expect(textArea.value).toContain('@TEST');
+        expect(manager.sourceText).toContain('@TEST');
+        // writeToClipboard must NOT have been called (clipboard is preserved!)
+        expect(writeSpy).not.toHaveBeenCalled();
+    });
 });
+

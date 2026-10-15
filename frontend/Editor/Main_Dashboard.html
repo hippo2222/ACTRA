@@ -1412,13 +1412,17 @@
                 flex: 1;
                 min-height: 0;
                 height: 100%;
+                transition: grid-template-columns 0.2s ease;
             }
             @media (min-width: 900px) {
                 #import-modal .import-split-grid {
                     grid-template-columns: 5fr 7fr;
                 }
                 #import-modal .import-split-grid-text {
-                    grid-template-columns: 60fr 40fr;
+                    grid-template-columns: 1fr;
+                }
+                #import-modal .import-split-grid-text.has-cheatsheet {
+                    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
                 }
             }
             #import-modal .import-step1-container {
