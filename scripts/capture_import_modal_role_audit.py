@@ -47,6 +47,143 @@ def disable_onboarding(context):
     """)
 
 
+def scan_silent_clipping(page, root_selector="#import-modal"):
+    """
+    Automated Silent-Clipping DOM Scanner.
+    Walks all containers with overflow:hidden and verifies:
+    1. container.scrollHeight <= container.clientHeight + 1
+    2. child.bottom <= container.bottom + 1
+    """
+    violations = page.evaluate("""(rootSel) => {
+        const root = document.querySelector(rootSel);
+        if (!root) return [];
+        const elements = root.querySelectorAll('*');
+        const issues = [];
+        for (const el of elements) {
+            if (el.offsetParent === null && el.offsetWidth === 0 && el.offsetHeight === 0) continue;
+            // Ignore closed <details> elements for internal child clipping
+            if (el.tagName === 'DETAILS' && !el.open) continue;
+            const style = window.getComputedStyle(el);
+            const isHiddenY = style.overflowY === 'hidden' || style.overflow === 'hidden';
+            if (isHiddenY) {
+                if (el.scrollHeight > el.clientHeight + 2) {
+                    issues.push({
+                        type: 'container_overflow',
+                        tag: el.tagName,
+                        id: el.id,
+                        className: el.className,
+                        scrollHeight: el.scrollHeight,
+                        clientHeight: el.clientHeight,
+                        overflowPx: el.scrollHeight - el.clientHeight
+                    });
+                }
+                const elRect = el.getBoundingClientRect();
+                for (const child of el.children) {
+                    if (child.offsetParent === null && child.offsetWidth === 0 && child.offsetHeight === 0) continue;
+                    // Ignore elements inside closed details
+                    const closedDetails = child.closest('details:not([open])');
+                    if (closedDetails && child.tagName !== 'SUMMARY') continue;
+
+                    const childRect = child.getBoundingClientRect();
+                    if (childRect.bottom > elRect.bottom + 2 && childRect.height > 0) {
+                        issues.push({
+                            type: 'child_clipping',
+                            container: el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className.split(' ').join('.') : ''),
+                            child: child.tagName + (child.id ? '#' + child.id : '') + (child.className ? '.' + child.className.split(' ').join('.') : ''),
+                            childBottom: childRect.bottom,
+                            containerBottom: elRect.bottom,
+                            clippedPx: childRect.bottom - elRect.bottom
+                        });
+                    }
+                }
+            }
+        }
+        return issues;
+    }""", root_selector)
+    return violations
+
+
+def capture_panel_footer_crop(page, output_path):
+    box = page.evaluate("""() => {
+        const panel = document.querySelector('[data-role="editor-panel"]');
+        const counter = document.getElementById('import-live-counter');
+        if (!panel || !counter) return null;
+        const pRect = panel.getBoundingClientRect();
+        const cRect = counter.getBoundingClientRect();
+        return {
+            x: Math.max(0, pRect.left - 4),
+            y: Math.max(0, cRect.top - 20),
+            width: pRect.width + 8,
+            height: (pRect.bottom - cRect.top) + 30
+        };
+    }""")
+    if box:
+        page.screenshot(path=output_path, clip=box)
+        return True
+    return False
+
+
+def get_step1_metrics(page):
+    return page.evaluate("""() => {
+        const shell = document.querySelector('#import-modal .editor-import-modal-shell');
+        const contentShell = document.querySelector('#import-modal .editor-import-content-shell');
+        const innerContent = contentShell ? contentShell.firstElementChild : null;
+        const footer = document.querySelector('#import-modal .editor-import-footer');
+        if (!shell || !contentShell || !innerContent || !footer) return null;
+
+        const shellRect = shell.getBoundingClientRect();
+        const contentRect = contentShell.getBoundingClientRect();
+        const innerRect = innerContent.getBoundingClientRect();
+        const footerRect = footer.getBoundingClientRect();
+
+        const modeGrid = document.querySelector('#import-modal .import-mode-grid');
+        const targetSection = document.querySelector('#import-modal .import-section-target');
+        const historySection = document.querySelector('#import-modal .import-section-history');
+        
+        let modeToTargetGap = 0;
+        let targetToHistoryGap = 0;
+        if (modeGrid && targetSection) {
+            const modeRect = modeGrid.getBoundingClientRect();
+            const targetRect = targetSection.getBoundingClientRect();
+            modeToTargetGap = targetRect.top - modeRect.bottom;
+        }
+        if (targetSection && historySection) {
+            const targetRect = targetSection.getBoundingClientRect();
+            const histRect = historySection.getBoundingClientRect();
+            targetToHistoryGap = histRect.top - targetRect.bottom;
+        }
+
+        return {
+            shellWidth: shellRect.width,
+            shellHeight: shellRect.height,
+            contentHeight: contentRect.height,
+            innerHeight: innerRect.height,
+            bottomVoid: footerRect.top - innerRect.bottom,
+            densityRatio: innerRect.height / contentRect.height,
+            modeToTargetGap: modeToTargetGap,
+            targetToHistoryGap: targetToHistoryGap,
+            hasVerticalScroll: contentShell.scrollHeight > contentShell.clientHeight + 2
+        };
+    }""")
+
+
+def get_step2_metrics(page):
+    return page.evaluate("""() => {
+        const panel = document.querySelector('[data-role="editor-panel"]');
+        const counter = document.getElementById('import-live-counter');
+        if (!panel || !counter) return null;
+        const pRect = panel.getBoundingClientRect();
+        const cRect = counter.getBoundingClientRect();
+        return {
+            panelScrollHeight: panel.scrollHeight,
+            panelClientHeight: panel.clientHeight,
+            clippedPx: cRect.bottom - pRect.bottom,
+            counterBottom: cRect.bottom,
+            panelBottom: pRect.bottom
+        };
+    }""")
+
+
 STRESS_PAYLOAD_TEXT = """@TEST
 @ title: Расширенная дифференциальная диагностика и интенсивная терапия шоковых состояний у взрослых пациентов в ОРИТ
 ? Какой целевой показатель среднего артериального давления (САД / MAP) рекомендован протоколами Surviving Sepsis Campaign при септическом шоке после завершения первичной инфузионной нагрузки?
@@ -116,8 +253,6 @@ def capture_role_audit_matrix():
         page.goto(f"{BASE_URL}/editor/")
         page.wait_for_load_state("networkidle")
         page.wait_for_function("() => window.dashboard && window.dashboard.importManager")
-        time.sleep(1.0)
-
         # -------------------------------------------------------------
         # Shot 1: Step 1 Format Choice / Blank State
         # -------------------------------------------------------------
@@ -135,56 +270,20 @@ def capture_role_audit_matrix():
         }""")
         time.sleep(0.6)
         
-        # Deterministic Geometry & Underflow Assertions Gate for Step 1
-        metrics = page.evaluate("""() => {
-            const shell = document.querySelector('#import-modal .editor-import-modal-shell');
-            const contentShell = document.querySelector('#import-modal .editor-import-content-shell');
-            const innerContent = contentShell ? contentShell.firstElementChild : null;
-            const footer = document.querySelector('#import-modal .editor-import-footer');
-            if (!shell || !contentShell || !innerContent || !footer) return null;
-
-            const shellRect = shell.getBoundingClientRect();
-            const contentRect = contentShell.getBoundingClientRect();
-            const innerRect = innerContent.getBoundingClientRect();
-            const footerRect = footer.getBoundingClientRect();
-
-            const modeGrid = document.querySelector('#import-modal .import-mode-grid');
-            const targetSection = document.querySelector('#import-modal .import-section-target');
-            const historySection = document.querySelector('#import-modal .import-section-history');
-            
-            let modeToTargetGap = 0;
-            let targetToHistoryGap = 0;
-            if (modeGrid && targetSection) {
-                const modeRect = modeGrid.getBoundingClientRect();
-                const targetRect = targetSection.getBoundingClientRect();
-                modeToTargetGap = targetRect.top - modeRect.bottom;
-            }
-            if (targetSection && historySection) {
-                const targetRect = targetSection.getBoundingClientRect();
-                const histRect = historySection.getBoundingClientRect();
-                targetToHistoryGap = histRect.top - targetRect.bottom;
-            }
-
-            return {
-                shellWidth: shellRect.width,
-                shellHeight: shellRect.height,
-                contentHeight: contentRect.height,
-                innerHeight: innerRect.height,
-                bottomVoid: footerRect.top - innerRect.bottom,
-                densityRatio: innerRect.height / contentRect.height,
-                modeToTargetGap: modeToTargetGap,
-                targetToHistoryGap: targetToHistoryGap,
-                hasVerticalScroll: contentShell.scrollHeight > contentShell.clientHeight + 2
-            };
-        }""")
-        print(f"[QA GATE] Step 1 Geometry Metrics: {metrics}")
+        # 1. Deterministic Geometry & Underflow Assertions at 1280x800
+        metrics = get_step1_metrics(page)
+        print(f"[QA GATE] Step 1 Geometry Metrics (1280x800): {metrics}")
         if metrics:
-            assert not metrics["hasVerticalScroll"], f"Step 1 has vertical scroll!"
+            assert not metrics["hasVerticalScroll"], f"Step 1 has vertical scroll at 1280x800!"
             assert metrics["bottomVoid"] <= 48, f"Step 1 has dead white void ({metrics['bottomVoid']:.1f}px > 48px)!"
             assert metrics["densityRatio"] >= 0.70, f"Step 1 density ratio too low ({metrics['densityRatio']:.2f} < 0.70)!"
             assert metrics["shellWidth"] <= 820, f"Step 1 shell is too wide ({metrics['shellWidth']:.1f}px > 820px)!"
             assert metrics["modeToTargetGap"] >= 16, f"Mode to Target gap too small ({metrics['modeToTargetGap']:.1f}px < 16px)!"
             assert metrics["targetToHistoryGap"] >= 16, f"Target to History gap too small ({metrics['targetToHistoryGap']:.1f}px < 16px)!"
+
+        # Silent-Clipping DOM Scanner on Step 1 (1280x800)
+        violations_step1 = scan_silent_clipping(page)
+        assert len(violations_step1) == 0, f"Step 1 silent clipping violations: {violations_step1}"
 
         shot1_path = os.path.join(ARTIFACTS_DIR, "01_step1_format_choice.png")
         page.screenshot(path=shot1_path)
@@ -194,6 +293,32 @@ def capture_role_audit_matrix():
             "role_focus": ["Role 1 (First-Time UX)", "Role 3 (Visual Guardian)"],
             "description": "Шаг 1: Первое впечатление. Выбор модуля, темы и формата импорта (Текст / ZIP / AI)."
         })
+
+        # Micro-Crop: Step 1 Inter-Section Rhythm
+        crop_step1_rhythm = os.path.join(ARTIFACTS_DIR, "crop_step1_inter_section_rhythm.png")
+        page.locator('#import-modal .editor-import-content-shell').screenshot(path=crop_step1_rhythm)
+        manifest["screenshots"].append({
+            "id": "crop_step1_inter_section_rhythm",
+            "file": "crop_step1_inter_section_rhythm.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Вертикальный ритм Шага 1 (проверка отступов >= 16px между режимами, целевым разделом и историей)."
+        })
+
+        # Dual-Height Viewport Gate for Step 1 (1280x720)
+        print("[QA GATE] Testing Step 1 on compact 1280x720 viewport...")
+        page.set_viewport_size({"width": 1280, "height": 720})
+        time.sleep(0.3)
+        metrics_720 = get_step1_metrics(page)
+        print(f"[QA GATE] Step 1 Geometry Metrics (1280x720): {metrics_720}")
+        if metrics_720:
+            assert not metrics_720["hasVerticalScroll"], f"Step 1 vertical scroll appeared at 1280x720!"
+            assert metrics_720["bottomVoid"] <= 48, f"Step 1 void exceeded 48px at 1280x720 ({metrics_720['bottomVoid']:.1f}px)!"
+            assert metrics_720["densityRatio"] >= 0.70, f"Step 1 density ratio too low at 1280x720 ({metrics_720['densityRatio']:.2f})!"
+        violations_step1_720 = scan_silent_clipping(page)
+        assert len(violations_step1_720) == 0, f"Step 1 silent clipping at 1280x720: {violations_step1_720}"
+        # Reset back to 1280x800
+        page.set_viewport_size({"width": 1280, "height": 800})
+        time.sleep(0.3)
 
         # -------------------------------------------------------------
         # Transition to Step 2 (Pick Module & Topic)
@@ -216,42 +341,98 @@ def capture_role_audit_matrix():
             im.renderCurrentStep();
             im.updateStepUI();
         }""")
-        # Deterministic Vertical Overflow & Clipping Assertion for Step 2
-        step2_metrics = page.evaluate("""() => {
-            const panel = document.querySelector('[data-role="editor-panel"]');
-            const counter = document.getElementById('import-live-counter');
-            if (!panel || !counter) return null;
-            const pRect = panel.getBoundingClientRect();
-            const cRect = counter.getBoundingClientRect();
-            return {
-                panelScrollHeight: panel.scrollHeight,
-                panelClientHeight: panel.clientHeight,
-                clippedPx: cRect.bottom - pRect.bottom,
-                counterBottom: cRect.bottom,
-                panelBottom: pRect.bottom
-            };
-        }""")
-        print(f"[QA GATE] Step 2 Layout Metrics: {step2_metrics}")
-        if step2_metrics:
-            assert step2_metrics["panelScrollHeight"] <= step2_metrics["panelClientHeight"] + 2, (
-                f"Editor panel vertically overflows! ({step2_metrics['panelScrollHeight']} > {step2_metrics['panelClientHeight']})"
-            )
-            assert step2_metrics["clippedPx"] <= 1.0, (
-                f"Step 2 live counter is clipped at the bottom by {step2_metrics['clippedPx']:.1f}px!"
-            )
+        time.sleep(0.5)
 
         # -------------------------------------------------------------
-        # Shot 2: Step 2 Blank Idle (Empty Editor with Title Input)
+        # Shot 2: Step 2 Blank Idle (1280x800)
         # -------------------------------------------------------------
-        print("\n[QA] Capturing Shot 2: Step 2 Blank Idle...")
+        print("\n[QA] Capturing Shot 2: Step 2 Blank Idle (1280x800)...")
+        step2_metrics = get_step2_metrics(page)
+        print(f"[QA GATE] Step 2 Layout Metrics (1280x800): {step2_metrics}")
+        if step2_metrics:
+            assert step2_metrics["panelScrollHeight"] <= step2_metrics["panelClientHeight"] + 2, (
+                f"Editor panel vertically overflows at 1280x800! ({step2_metrics['panelScrollHeight']} > {step2_metrics['panelClientHeight']})"
+            )
+            assert step2_metrics["clippedPx"] <= 1.0, (
+                f"Step 2 live counter is clipped at 1280x800 by {step2_metrics['clippedPx']:.1f}px!"
+            )
+
+        # Silent-Clipping DOM Scanner on Step 2 (1280x800)
+        violations_step2 = scan_silent_clipping(page)
+        assert len(violations_step2) == 0, f"Step 2 silent clipping violations at 1280x800: {violations_step2}"
+
         shot2_path = os.path.join(ARTIFACTS_DIR, "02_step2_blank_idle.png")
         page.screenshot(path=shot2_path)
         manifest["screenshots"].append({
             "id": "02_step2_blank_idle",
             "file": "02_step2_blank_idle.png",
             "role_focus": ["Role 1 (First-Time UX)", "Role 3 (Visual Guardian)"],
-            "description": "Шаг 2: Чистое состояние. Инпут названия с плейсхолдером, пустое текстовое поле, панель шпаргалки 60/40."
+            "description": "Шаг 2: Чистое состояние (1280x800). Инпут названия с плейсхолдером, пустое текстовое поле, панель шпаргалки 60/40."
         })
+
+        # Micro-Crop: Step 2 Footer Boundary (1280x800)
+        crop_step2_footer_800 = os.path.join(ARTIFACTS_DIR, "crop_step2_footer_boundary_800.png")
+        capture_panel_footer_crop(page, crop_step2_footer_800)
+        manifest["screenshots"].append({
+            "id": "crop_step2_footer_boundary_800",
+            "file": "crop_step2_footer_boundary_800.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Нижняя кромка редактора на 1280x800 (проверка отсутствия среза шрифта и нижней рамки)."
+        })
+
+        # Dual-Height Viewport Gate for Step 2 (1280x720)
+        print("[QA GATE] Testing Step 2 on compact 1280x720 viewport...")
+        page.set_viewport_size({"width": 1280, "height": 720})
+        time.sleep(0.3)
+        step2_metrics_720 = get_step2_metrics(page)
+        print(f"[QA GATE] Step 2 Layout Metrics (1280x720): {step2_metrics_720}")
+        if step2_metrics_720:
+            assert step2_metrics_720["panelScrollHeight"] <= step2_metrics_720["panelClientHeight"] + 2, (
+                f"Editor panel vertically overflows at 1280x720! ({step2_metrics_720['panelScrollHeight']} > {step2_metrics_720['panelClientHeight']})"
+            )
+            assert step2_metrics_720["clippedPx"] <= 1.0, (
+                f"Step 2 live counter is clipped at 1280x720 by {step2_metrics_720['clippedPx']:.1f}px!"
+            )
+        violations_step2_720 = scan_silent_clipping(page)
+        assert len(violations_step2_720) == 0, f"Step 2 silent clipping violations at 1280x720: {violations_step2_720}"
+
+        shot2b_path = os.path.join(ARTIFACTS_DIR, "02b_step2_blank_idle_720.png")
+        page.screenshot(path=shot2b_path)
+        manifest["screenshots"].append({
+            "id": "02b_step2_blank_idle_720",
+            "file": "02b_step2_blank_idle_720.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Шаг 2 на компактном ноутбучном экране 1280x720: полная видимость подвала и счетчика."
+        })
+
+        crop_step2_footer_720 = os.path.join(ARTIFACTS_DIR, "crop_step2_footer_boundary_720.png")
+        capture_panel_footer_crop(page, crop_step2_footer_720)
+        manifest["screenshots"].append({
+            "id": "crop_step2_footer_boundary_720",
+            "file": "crop_step2_footer_boundary_720.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Нижняя кромка редактора на 1280x720 (проверка отсутствия среза выносных элементов шрифта)."
+        })
+
+        # Dual-Height Viewport Gate for Step 2 Extreme (1280x680)
+        print("[QA GATE] Testing Step 2 on extreme 1280x680 viewport...")
+        page.set_viewport_size({"width": 1280, "height": 680})
+        time.sleep(0.3)
+        step2_metrics_680 = get_step2_metrics(page)
+        print(f"[QA GATE] Step 2 Layout Metrics (1280x680): {step2_metrics_680}")
+        if step2_metrics_680:
+            assert step2_metrics_680["panelScrollHeight"] <= step2_metrics_680["panelClientHeight"] + 2, (
+                f"Editor panel vertically overflows at 1280x680! ({step2_metrics_680['panelScrollHeight']} > {step2_metrics_680['panelClientHeight']})"
+            )
+            assert step2_metrics_680["clippedPx"] <= 1.0, (
+                f"Step 2 live counter is clipped at 1280x680 by {step2_metrics_680['clippedPx']:.1f}px!"
+            )
+        violations_step2_680 = scan_silent_clipping(page)
+        assert len(violations_step2_680) == 0, f"Step 2 silent clipping violations at 1280x680: {violations_step2_680}"
+
+        # Return to standard 1280x800 for remainder of matrix
+        page.set_viewport_size({"width": 1280, "height": 800})
+        time.sleep(0.3)
 
         # -------------------------------------------------------------
         # Shot 3: Step 2 Focused Title
@@ -270,6 +451,15 @@ def capture_role_audit_matrix():
             "description": "Шаг 2: Активное состояние фокуса. Проверка focus-ring и контрастности инпута названия."
         })
 
+        crop_focus_ring = os.path.join(ARTIFACTS_DIR, "crop_step2_focus_ring.png")
+        title_input.screenshot(path=crop_focus_ring)
+        manifest["screenshots"].append({
+            "id": "crop_step2_focus_ring",
+            "file": "crop_step2_focus_ring.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Фокус-кольцо инпута названия (проверка отсутствия AABB-коллизий с соседними бейджами)."
+        })
+
         # -------------------------------------------------------------
         # Shot 4: Step 2 Heavy Stress Payload (>2500 chars)
         # -------------------------------------------------------------
@@ -286,6 +476,10 @@ def capture_role_audit_matrix():
             }}
         }}""")
         time.sleep(0.5)
+        # Verify no silent clipping with stress payload
+        violations_stress = scan_silent_clipping(page)
+        assert len(violations_stress) == 0, f"Step 2 stress silent clipping violations: {violations_stress}"
+
         shot4_path = os.path.join(ARTIFACTS_DIR, "04_step2_heavy_stress_payload.png")
         page.screenshot(path=shot4_path)
         manifest["screenshots"].append({
@@ -308,6 +502,8 @@ def capture_role_audit_matrix():
             im.updateStepUI();
         }""")
         time.sleep(1.0)
+        violations_step3 = scan_silent_clipping(page)
+        assert len(violations_step3) == 0, f"Step 3 silent clipping violations: {violations_step3}"
 
         # -------------------------------------------------------------
         # Shot 5: Step 3 Preview Standard
@@ -337,6 +533,15 @@ def capture_role_audit_matrix():
             "file": "06_step3_active_edit_focus.png",
             "role_focus": ["Role 3 (Visual Guardian)", "Role 2 (Didactics & Ergonomics)"],
             "description": "Шаг 3: Активное редактирование названия на карточке. Проверка focus-ring и отсутствия сброса курсора."
+        })
+
+        crop_step3_focus = os.path.join(ARTIFACTS_DIR, "crop_step3_card_focus_ring.png")
+        card_input.screenshot(path=crop_step3_focus)
+        manifest["screenshots"].append({
+            "id": "crop_step3_card_focus_ring",
+            "file": "crop_step3_card_focus_ring.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Фокус инпута названия на карточке Шага 3 (проверка контрастности и кольца ввода)."
         })
 
         # -------------------------------------------------------------
