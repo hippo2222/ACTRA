@@ -216,7 +216,29 @@ def capture_role_audit_matrix():
             im.renderCurrentStep();
             im.updateStepUI();
         }""")
-        time.sleep(0.5)
+        # Deterministic Vertical Overflow & Clipping Assertion for Step 2
+        step2_metrics = page.evaluate("""() => {
+            const panel = document.querySelector('[data-role="editor-panel"]');
+            const counter = document.getElementById('import-live-counter');
+            if (!panel || !counter) return null;
+            const pRect = panel.getBoundingClientRect();
+            const cRect = counter.getBoundingClientRect();
+            return {
+                panelScrollHeight: panel.scrollHeight,
+                panelClientHeight: panel.clientHeight,
+                clippedPx: cRect.bottom - pRect.bottom,
+                counterBottom: cRect.bottom,
+                panelBottom: pRect.bottom
+            };
+        }""")
+        print(f"[QA GATE] Step 2 Layout Metrics: {step2_metrics}")
+        if step2_metrics:
+            assert step2_metrics["panelScrollHeight"] <= step2_metrics["panelClientHeight"] + 2, (
+                f"Editor panel vertically overflows! ({step2_metrics['panelScrollHeight']} > {step2_metrics['panelClientHeight']})"
+            )
+            assert step2_metrics["clippedPx"] <= 1.0, (
+                f"Step 2 live counter is clipped at the bottom by {step2_metrics['clippedPx']:.1f}px!"
+            )
 
         # -------------------------------------------------------------
         # Shot 2: Step 2 Blank Idle (Empty Editor with Title Input)

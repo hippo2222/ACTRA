@@ -3346,7 +3346,7 @@ ${remaining}
         const charCount = (this.sourceText || '').length;
 
         return `
-            <div class="h-full flex-1 flex flex-col min-h-[420px] animate-slide-up-fade">
+            <div class="h-full flex-1 flex flex-col min-h-0 animate-slide-up-fade">
                 <!-- Errors alert if any -->
                 ${hasErrors ? `
                     <div class="mb-3 p-3 bg-error-lighter/50 border border-error-light rounded-xl shrink-0">
@@ -3367,7 +3367,7 @@ ${remaining}
                 <!-- Split Grid: 60% hero editor on left, 40% syntax reference on right -->
                 <div class="import-split-grid-text gap-4 flex-1 min-h-0">
                     <!-- Left: Hero Editor Workspace (60%) -->
-                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3.5 overflow-hidden" data-role="editor-panel">
+                    <div class="flex flex-col min-h-0 rounded-xl border border-border-subtle bg-surface-1 p-3 overflow-hidden" data-role="editor-panel">
                         <div class="flex items-center justify-between gap-3 mb-2 shrink-0">
                             <div class="flex items-center gap-2 min-w-0">
                                 <span class="material-symbols-outlined text-primary text-[18px] shrink-0">edit_note</span>
@@ -3390,12 +3390,12 @@ ${remaining}
                         </div>
 
                         <!-- Auto-detection Explanation Banner with clean semantic badge -->
-                        <div class="mb-2.5 px-3 py-2 rounded-lg bg-primary/6 border border-primary/15 flex items-center justify-between gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
+                        <div class="mb-2 px-3 py-1.5 rounded-lg bg-primary/6 border border-primary/15 flex items-center justify-between gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
                             <div class="flex items-center gap-2 min-w-0 leading-tight">
                                 <span class="material-symbols-outlined text-primary text-[17px] shrink-0">auto_awesome</span>
                                 <div class="min-w-0">
                                     <span class="font-bold text-primary">${wt('im.auto_detect_banner_title', 'Автоопределение типов:')}</span>
-                                    <span class="text-text-secondary">${wt('im.auto_detect_banner_desc', 'парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.')}</span>
+                                    <span class="text-text-secondary text-[11px]">${wt('im.auto_detect_banner_desc', 'парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.')}</span>
                                 </div>
                             </div>
                             <span class="inline-flex items-center gap-1 text-[11px] font-medium text-primary shrink-0 opacity-80" data-role="auto-detect-badge"
@@ -3406,7 +3406,7 @@ ${remaining}
                         </div>
 
                         <!-- Optional Task Title Input -->
-                        <div class="mb-2.5 shrink-0" data-role="import-title-group">
+                        <div class="mb-2 shrink-0" data-role="import-title-group">
                             <label for="import-task-title-input" class="block text-xs font-semibold text-text-secondary mb-1">
                                 ${wt('im.task_title_optional_label', 'Название задания (опционально)')}
                             </label>
@@ -3422,10 +3422,10 @@ ${remaining}
                         <!-- Unified Single-Card Editor (No split borders, no clipping) -->
                         <div class="flex-1 min-h-0 flex flex-col rounded-lg border border-border-subtle bg-surface-1 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary overflow-hidden transition-all shadow-2xs">
                             <textarea id="import-text-area" data-role="import-source-text"
-                                class="w-full flex-1 min-h-[160px] bg-transparent p-3 text-text-main font-mono text-xs outline-none border-0 resize-none placeholder:text-text-disabled leading-relaxed"
+                                class="w-full flex-1 min-h-[90px] bg-transparent p-3 text-text-main font-mono text-xs outline-none border-0 resize-none placeholder:text-text-disabled leading-relaxed"
                                 placeholder="${this.escapeHtml(wt('im.editor_text_placeholder', '@TEST\n# Вопрос по анатомии\n? Что вырабатывает печень?\n+ Желчь\n- Инсулин\n\n@SEQUENCE\n# Порядок действий\nelement_1: Шаг 1\nelement_2: Шаг 2\nlevel_1 [Этап 1]: element_1, element_2'))}">${this.escapeHtml(this.sourceText)}</textarea>
                             <!-- Integrated Parser Status Footer -->
-                            <div id="import-live-counter" class="border-t border-border-subtle/80 bg-surface-2/30 px-3 py-2 text-xs min-h-[38px] shrink-0 flex items-center justify-between gap-2"></div>
+                            <div id="import-live-counter" class="border-t border-border-subtle/80 bg-surface-2/30 px-3 py-1.5 text-xs min-h-[34px] shrink-0 flex items-center justify-between gap-2"></div>
                         </div>
                     </div>
 

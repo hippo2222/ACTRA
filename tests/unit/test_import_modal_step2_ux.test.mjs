@@ -74,7 +74,7 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         expect(html).toContain('bg-surface-2 text-text-main');
         expect(html).toContain('id="import-text-stats"');
         expect(html).toContain('id="import-live-counter"');
-        expect(html).toContain('min-h-[160px]');
+        expect(html).toContain('min-h-[90px]');
 
         // Cheatsheet assistant affordances
         expect(html).toContain('data-role="cheat-type-select"');
