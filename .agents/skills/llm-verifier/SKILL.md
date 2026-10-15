@@ -56,18 +56,10 @@ For UI audits, refactorings, or editor reviews, verification is conducted using 
 2. **Methodologist / Workflow Engineer (Didactics & Ergonomics):** Stress payloads (long text, 8–12 items, 4+ levels), didactic validity of evaluation modes, Z-pattern readability, `/reference` guide utility.
 3. **Cold-Eye Visual Critic (Design System Guardian):** 9 deadly layout sins, 13 Headless Assertions (Zero-Truncation, Anti-Collision, Viewport Fold, Stacking Context & Top-Layer Dialog-in-Dialog `elementFromPoint`, Dismiss Reachability, Anti-Void `densityRatio >= 0.70` & `bottomVoid <= 48px`, Anti-Glue `gap >= 16px`, Anti-Phantom-CSS, Silent-Clipping DOM Scanner, Interactive Control-Sweep Gate, Anti-Duplicate Glyph Assertion, Dropdown Chevron Clearance), Step-Aware Geometry Canon (Dialog vs Studio), dark theme contrast (WCAG AA).
 4. **Execution Protocol & Per-Iteration Gate:** 5 phases:
-   - *Phase 1 (Dual-Height Capture, Micro-Crops & Interactive Sweep):* 1280×800 and 1280×720 viewports, automated micro-crops (`crop_footer_boundary.png`, `crop_inter_section_rhythm.png`, `crop_focus_ring.png`, `crop_step3_conflict_select.png`, `crop_step3_status_badge.png`), Silent-Clipping DOM Scanner, and programmatic click-sweep of every control (`[Детали]`, `[Исключить]`, `<select>`, checkboxes, filter chips).
-   - *Phase 2 (Subagent Isolation & Adversarial Quota $\ge 3$):* Mandatory review of every screen + micro-crops against the **8-point Pixel-Level Checklist**:
-     1) Letter descenders check (буквы «р», «д», «з», «у», «ц», «щ», «p», «q», «y», «g», «j» у границ полей/подвалов — 0px срез запрещен);
-     2) Нижняя рамка и скругление углов (border-radius и border-b видны целиком);
-     3) Замер вертикального ритма ($\ge 16$px между блоками, отсутствие 0px слипания);
-     4) Отсутствие паразитного диалогового скролла на высоте $\le 720$px;
-     5) Свободный доступ к контролам закрытия и первичным CTA без ухода за fold (`rect.bottom <= window.innerHeight`);
-     6) Замер пропорций контента и мертвых зон ($< 48$px пустоты над футером, полезный контент $\ge 70\%$);
-     7) Anti-Duplicate Glyph Check (полный запрет на сдвоенные глифы в бейджах и кнопках, например `check_circle` + `✓ Готово`);
-     8) Top-Layer Stacking & Chevron Clearance (окно `[Детали]` открывается ПОВЕРХ модалки в Top Layer, `elementFromPoint` попадает в оверлей, Escape закрывает только оверлей, селект не перекрывает стрелку текстом).
-   - *Phase 3 (Cumulative Registry):* Record all issues in `audit_findings_registry.md`.
-   - *Phase 4 (Batched Fixes):* Implement systematic CSS/JS remediations.
-   - *Phase 5 (Post-Fix Verification Gate):* Re-run dual-height capture, headless assertions, and **Per-Iteration Subagent Review Gate** (subagents review screenshots + micro-crops via `view_file` and must return PASS on all 8 points).
+   - *Phase 1 (Control Tree Inventory & Scenario Design):* Before writing Playwright scripts, map all interactive controls (buttons, selects, checkboxes, tabs, chips, secondary modals `[Детали]`, accordions) and design end-to-end user flows guaranteeing 100% control and state coverage.
+   - *Phase 2 (Playwright Scenario Execution & Capture):* 1280×800 and 1280×720 viewports, automated micro-crops (`crop_footer_boundary.png`, `crop_inter_section_rhythm.png`, `crop_focus_ring.png`, `crop_step3_conflict_select.png`, `crop_step3_status_badge.png`), Silent-Clipping DOM Scanner, and programmatic click-sweep of every control.
+   - *Phase 3 (Unconstrained Role-Based Evaluation & Adversarial Quota $\ge 3$):* Independent subagents receive full screenshot suites without narrow rails/tunnel-vision directives ("look only at X"). Subagents freely critique UX friction, terminology, cognitive overload, layout sins, and design system alignment from their role's vantage point.
+   - *Phase 4 (Cumulative Registry):* Record all issues in `audit_findings_registry.md`.
+   - *Phase 5 (Post-Fix Verification Gate):* Re-run dual-height capture, headless assertions, and **Per-Iteration Subagent Review Gate** (subagents review screenshots + micro-crops via `view_file` and must return PASS).
 
 
