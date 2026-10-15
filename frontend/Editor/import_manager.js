@@ -6862,7 +6862,7 @@ text: Сердце человека состоит из [трёх] камер. �
             this.nextStep();
 
             try {
-                const result = await this.parseText(this.sourceText, this.selectedModule, this.selectedTopic, this.importTaskTitle);
+                const result = await this.parseText(this.sourceText, this.selectedModule, this.selectedTopic);
 
                 // Check if parsing was successful
                 if (!result.ok) {
