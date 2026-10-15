@@ -6775,6 +6775,11 @@ class EditorDashboard {
         if (!modal._cancelListenerAdded) {
             modal.addEventListener('cancel', (e) => {
                 e.preventDefault();
+                const taskDetailOverlay = document.getElementById('task-detail-overlay');
+                if (taskDetailOverlay) {
+                    taskDetailOverlay.remove();
+                    return;
+                }
                 this.closeImportModal();
             });
             modal._cancelListenerAdded = true;
@@ -6854,6 +6859,11 @@ class EditorDashboard {
             if (!modal._cancelListenerAdded) {
                 modal.addEventListener('cancel', (e) => {
                     e.preventDefault();
+                    const taskDetailOverlay = document.getElementById('task-detail-overlay');
+                    if (taskDetailOverlay) {
+                        taskDetailOverlay.remove();
+                        return;
+                    }
                     this.closeImportModal();
                 });
                 modal._cancelListenerAdded = true;
@@ -6891,6 +6901,11 @@ class EditorDashboard {
 
     async closeImportModal(options = {}) {
         const skipConfirm = options && options.skipConfirm === true;
+        const taskDetailOverlay = document.getElementById('task-detail-overlay');
+        if (taskDetailOverlay && !skipConfirm) {
+            taskDetailOverlay.remove();
+            return false;
+        }
         const modal = document.getElementById('import-modal');
 
         if (this.importManager) {

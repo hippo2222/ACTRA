@@ -3319,7 +3319,7 @@ ${remaining}
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                             <div>
                                 <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
-                                <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 px-2.5 focus:ring-1 focus:ring-primary">
+                                <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 pl-3 pr-10 text-text-main focus:ring-1 focus:ring-primary cursor-pointer transition-colors">
                                     <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
                                     <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
                                     <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
@@ -4129,7 +4129,7 @@ ${remaining}
                 <div class="px-3 py-2 bg-surface-1 border border-border-subtle rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-2">
                         <label for="conflict-resolution-select" class="font-semibold text-text-secondary">${wt('im.k909', 'Если задание уже существует')}:</label>
-                        <select id="conflict-resolution-select" class="rounded-lg border border-border-subtle bg-surface-2 text-xs py-1 px-2.5 text-text-main focus:ring-1 focus:ring-primary">
+                        <select id="conflict-resolution-select" class="rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 pl-3 pr-10 text-text-main focus:ring-1 focus:ring-primary cursor-pointer transition-colors">
                             <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
                             <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
                             <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
@@ -4453,13 +4453,13 @@ ${remaining}
             return `
                 <span class="inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2.5 py-1 text-xs font-semibold text-error-text">
                     <span class="material-symbols-outlined text-[14px]">error</span>
-                    <span>${wt('im.status_error', '✗ Ошибка')}</span>
+                    <span>${wt('im.status_error', 'Ошибка')}</span>
                 </span>
             `;
         }
         if (st === 'conflict') {
             const isDup = String(task.conflict_type || '').toLowerCase() === 'duplicate';
-            const label = isDup ? wt('im.status_duplicate', 'Дубликат') : wt('im.status_conflict', '⚡ Конфликт');
+            const label = isDup ? wt('im.status_duplicate', 'Дубликат') : wt('im.status_conflict', 'Конфликт');
             return `
                 <span class="inline-flex items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-2.5 py-1 text-xs font-semibold text-warning-text">
                     <span class="material-symbols-outlined text-[14px]">${isDup ? 'content_copy' : 'bolt'}</span>
@@ -4471,14 +4471,14 @@ ${remaining}
             return `
                 <span class="inline-flex items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-2.5 py-1 text-xs font-semibold text-warning-text">
                     <span class="material-symbols-outlined text-[14px]">warning</span>
-                    <span>${wt('im.status_warning', '⚠ Требует внимания')}</span>
+                    <span>${wt('im.status_warning', 'Требует внимания')}</span>
                 </span>
             `;
         }
         return `
             <span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2.5 py-1 text-xs font-semibold text-success-darker">
                 <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                <span>${wt('im.status_ready', '✓ Готово')}</span>
+                <span>${wt('im.status_ready', 'Готово')}</span>
             </span>
         `;
     }
@@ -4649,6 +4649,7 @@ ${remaining}
                 <div class="pt-2 mt-2 flex items-center justify-between gap-3">
                     <button type="button"
                         onclick="dashboard.importManager.showTaskDetails(${index})"
+                        data-task-details-btn="${index}"
                         class="px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-main bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors border border-border-subtle inline-flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[15px]">visibility</span>
                         <span>${wt('im.k173', 'Детали')}</span>
@@ -4754,7 +4755,7 @@ ${remaining}
                     <div class="pt-2 border-t border-border-subtle grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                         <div>
                             <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
-                            <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 px-2.5 focus:ring-1 focus:ring-primary">
+                            <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 pl-3 pr-10 text-text-main focus:ring-1 focus:ring-primary cursor-pointer transition-colors">
                                 <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
                                 <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
                                 <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
@@ -5401,6 +5402,9 @@ ${remaining}
         const task = this.parsedResult?.tasks?.[index];
         if (!task) return;
 
+        const shell = document.querySelector('#import-modal .editor-import-modal-shell') || document.getElementById('import-modal');
+        if (!shell) return;
+
         const typeLabels = {
             open_answer: wt('im.k186', 'Открытый ответ'),
             sequence_assembly: wt('im.k187', 'Последовательность'),
@@ -5422,53 +5426,118 @@ ${remaining}
         const data = task.data || {};
         let extraFieldsHtml = '';
         if (task.type === 'open_answer') {
-            if (data.reference_answer) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k739', 'Эталонный ответ')}</div><div class="text-sm text-text-main bg-surface-2 rounded p-2">${this.escapeHtml(data.reference_answer)}</div></div>`;
-            if (data.keywords?.length) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k740', 'Ключевые слова')}</div><div class="flex flex-wrap gap-1">${data.keywords.map(k => `<span class="px-2 py-0.5 bg-primary-lighter text-primary text-xs rounded-full">${this.escapeHtml(k)}</span>`).join('')}</div></div>`;
+            if (data.reference_answer) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k739', 'Эталонный ответ')}</div><div class="text-sm text-text-main bg-surface-2/40 border border-border-subtle rounded-lg p-2.5">${this.escapeHtml(data.reference_answer)}</div></div>`;
+            if (data.keywords?.length) extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k740', 'Ключевые слова')}</div><div class="flex flex-wrap gap-1">${data.keywords.map(k => `<span class="px-2 py-0.5 bg-primary-lighter text-primary text-xs rounded-full font-medium">${this.escapeHtml(k)}</span>`).join('')}</div></div>`;
         } else if (task.type === 'sequence_assembly') {
-            extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">${wt('im.k741', 'Элементов:')} ${data.elements_count || 0}, ${wt('im.k742', 'Уровней:')} ${data.levels_count || 0}</div>`;
+            extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary bg-surface-2/40 border border-border-subtle rounded-lg p-2.5">${wt('im.k741', 'Элементов:')} <strong>${data.elements_count || 0}</strong>, ${wt('im.k742', 'Уровней:')} <strong>${data.levels_count || 0}</strong></div>`;
         } else if (task.type === 'click') {
-            if (data.mode === 'text_choice') extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">${wt('im.k743', 'Вариантов:')} ${data.options_count || 0}, ${wt('im.k744', 'Правильных:')} ${data.correct_count || 0}</div>`;
-            else extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary">${wt('im.k745', 'Текст:')} ${data.text_length || 0} ${wt('im.k746', 'симв.,')} ${wt('im.k747', 'Ошибок:')} ${data.error_count || 0}</div>`;
+            if (data.mode === 'text_choice') extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary bg-surface-2/40 border border-border-subtle rounded-lg p-2.5">${wt('im.k743', 'Вариантов:')} <strong>${data.options_count || 0}</strong>, ${wt('im.k744', 'Правильных:')} <strong>${data.correct_count || 0}</strong></div>`;
+            else extraFieldsHtml += `<div class="mt-3 text-sm text-text-secondary bg-surface-2/40 border border-border-subtle rounded-lg p-2.5">${wt('im.k745', 'Текст:')} <strong>${data.text_length || 0}</strong> ${wt('im.k746', 'симв.,')} ${wt('im.k747', 'Ошибок:')} <strong>${data.error_count || 0}</strong></div>`;
+        } else if (task.type === 'test') {
+            const questions = Array.isArray(data.questions) ? data.questions : [];
+            const questionCount = data.question_count || questions.length;
+            extraFieldsHtml += `<div class="mt-3"><div class="text-xs font-semibold text-text-muted mb-1.5">${wt('im.k813', 'Вопросов:')} <strong>${questionCount}</strong></div>`;
+            if (questions.length) {
+                extraFieldsHtml += `<div class="space-y-2 max-h-52 overflow-y-auto pr-1">`;
+                questions.forEach((q, qi) => {
+                    const answers = Array.isArray(q.answers) ? q.answers : [];
+                    extraFieldsHtml += `
+                        <div class="bg-surface-2/40 border border-border-subtle rounded-lg p-2.5 text-xs">
+                            <div class="font-semibold text-text-main mb-1.5">${qi + 1}. ${this.escapeHtml(q.question || q.text || '')}</div>
+                            <div class="space-y-1">
+                                ${answers.map(ans => {
+                                    const isCorr = !!(ans.is_correct || ans.correct);
+                                    const ansText = typeof ans === 'string' ? ans : (ans.text || '');
+                                    return `
+                                        <div class="flex items-center gap-1.5 ${isCorr ? 'text-success-text font-semibold' : 'text-text-secondary'}">
+                                            <span class="text-[12px]">${isCorr ? '✓' : '•'}</span>
+                                            <span>${this.escapeHtml(ansText)}</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                });
+                extraFieldsHtml += `</div>`;
+            }
+            extraFieldsHtml += `</div>`;
         }
 
-        // Create modal overlay
-        let overlay = document.getElementById('task-detail-overlay');
-        if (overlay) overlay.remove();
+        // Clean up any existing overlay
+        const existingOverlay = document.getElementById('task-detail-overlay');
+        if (existingOverlay) existingOverlay.remove();
 
-        overlay = document.createElement('div');
+        const overlay = document.createElement('div');
         overlay.id = 'task-detail-overlay';
-        overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm';
-        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+        overlay.className = 'absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn';
+
+        const closeOverlay = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            overlay.remove();
+            document.removeEventListener('keydown', handleKeydown, true);
+        };
+
+        const handleKeydown = (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                closeOverlay(e);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeydown, true);
+
+        overlay.onclick = (e) => {
+            if (e.target === overlay) closeOverlay(e);
+        };
+
         overlay.innerHTML = `
-            <div class="bg-surface-1 rounded-2xl shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
-                <div class="flex items-center justify-between p-5 border-b border-border-subtle">
-                    <h3 class="text-lg font-bold text-text-main">${wt('im.k193', 'Задание #')}${index + 1}</h3>
-                    <button onclick="document.getElementById('task-detail-overlay').remove()" class="w-8 h-8 rounded-full hover:bg-bg-hover flex items-center justify-center">
-                        <span class="material-symbols-outlined text-text-muted">close</span>
+            <div class="bg-surface-1 rounded-2xl shadow-2xl border border-border-subtle max-w-lg w-full mx-4 max-h-[85vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between px-5 py-3.5 border-b border-border-subtle bg-surface-2/30 shrink-0">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[20px]">info</span>
+                        <h3 class="text-base font-bold text-text-main">${wt('im.k193', 'Задание #')}${index + 1}</h3>
+                    </div>
+                    <button id="task-detail-close-btn" class="w-8 h-8 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-main flex items-center justify-center transition-colors" aria-label="${wt('im.action_close', 'Закрыть')}">
+                        <span class="material-symbols-outlined text-[18px]">close</span>
                     </button>
                 </div>
-                <div class="p-5 space-y-4">
+                <div class="p-5 space-y-3.5 overflow-y-auto flex-1">
                     <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div><span class="text-text-muted">${wt('im.k987', 'Тип:')}</span> <span class="font-medium text-text-main">${typeLabels[task.type] || task.type}</span></div>
-                        <div><span class="text-text-muted">${wt('im.k194', 'Статус:</span>')}${statusLabels[task.status] || task.status}</div>
+                        <div class="bg-surface-2/40 p-2.5 rounded-lg border border-border-subtle"><span class="text-xs text-text-muted block mb-0.5">${wt('im.k987', 'Тип:')}</span><span class="font-semibold text-text-main">${typeLabels[task.type] || task.type}</span></div>
+                        <div class="bg-surface-2/40 p-2.5 rounded-lg border border-border-subtle"><span class="text-xs text-text-muted block mb-0.5">${wt('im.k194', 'Статус:')}</span>${statusLabels[task.status] || task.status}</div>
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k748', 'Название')}</div>
-                        <div class="text-sm text-text-main">${this.escapeHtml(task.name)}</div>
+                        <div class="text-sm font-medium text-text-main bg-surface-2/40 border border-border-subtle rounded-lg p-2.5">${this.escapeHtml(task.name)}</div>
                     </div>
                     <div>
-                        <div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k988', 'Промпт')}</div>
-                        <div class="text-sm text-text-main bg-surface-2 rounded p-3 whitespace-pre-wrap">${this.escapeHtml(data.prompt || wt('im.k752', 'Нет'))}</div>
+                        <div class="text-xs font-semibold text-text-muted mb-1">${wt('im.k988', 'Промпт / Описание')}</div>
+                        <div class="text-sm text-text-main bg-surface-2/40 border border-border-subtle rounded-lg p-3 whitespace-pre-wrap leading-relaxed">${this.escapeHtml(data.prompt || data.question || wt('im.k752', 'Нет'))}</div>
                     </div>
                     ${extraFieldsHtml}
                     <div>
-                        <div class="text-xs font-semibold text-text-muted mb-2">${wt('im.k749', 'Валидация')}</div>
-                        ${issuesHtml}
+                        <div class="text-xs font-semibold text-text-muted mb-1.5">${wt('im.k749', 'Валидация')}</div>
+                        <div class="bg-surface-2/40 border border-border-subtle rounded-lg p-2.5">
+                            ${issuesHtml}
+                        </div>
                     </div>
+                </div>
+                <div class="px-5 py-3 border-t border-border-subtle bg-surface-2/30 flex justify-end shrink-0">
+                    <button id="task-detail-dismiss-btn" class="btn btn--secondary px-4 py-1.5 text-xs font-semibold rounded-lg">${wt('im.action_close', 'Закрыть')}</button>
                 </div>
             </div>
         `;
-        document.body.appendChild(overlay);
+        shell.appendChild(overlay);
+
+        const closeBtn = overlay.querySelector('#task-detail-close-btn');
+        const dismissBtn = overlay.querySelector('#task-detail-dismiss-btn');
+        if (closeBtn) closeBtn.onclick = closeOverlay;
+        if (dismissBtn) dismissBtn.onclick = closeOverlay;
     }
 
     startEditName(index, el = null) {

@@ -545,6 +545,152 @@ def capture_role_audit_matrix():
         })
 
         # -------------------------------------------------------------
+        # Micro-Crops: Conflict Resolution Select & Status Badge
+        # -------------------------------------------------------------
+        print("\n[QA] Capturing Micro-Crops: Conflict Resolution Select & Status Badge...")
+        conflict_metrics = page.evaluate("""() => {
+            const select = document.getElementById('conflict-resolution-select');
+            if (!select) return null;
+            const style = window.getComputedStyle(select);
+            return {
+                paddingRight: parseFloat(style.paddingRight),
+                hasSvgChevron: style.backgroundImage.includes('svg') || style.backgroundImage.includes('data:image'),
+                value: select.value
+            };
+        }""")
+        print(f"[QA GATE] Conflict Select Metrics: {conflict_metrics}")
+        assert conflict_metrics, "Conflict resolution select not found!"
+        assert conflict_metrics["paddingRight"] >= 32, f"Conflict select padding-right too small ({conflict_metrics['paddingRight']} < 32px)!"
+        assert conflict_metrics["hasSvgChevron"], "Conflict select missing Tailwind Forms SVG chevron!"
+
+        crop_conflict_path = os.path.join(ARTIFACTS_DIR, "crop_step3_conflict_select.png")
+        page.locator("#conflict-resolution-select").screenshot(path=crop_conflict_path)
+        manifest["screenshots"].append({
+            "id": "crop_step3_conflict_select",
+            "file": "crop_step3_conflict_select.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Стилизованный выпадающий список политики конфликтов (Tailwind Forms SVG chevron, pr-10/40px clearance без перекрытия текстом)."
+        })
+
+        badge_metrics = page.evaluate("""() => {
+            const badge = document.querySelector('[data-status-badge="0"] .inline-flex');
+            if (!badge) return null;
+            const text = badge.innerText.trim();
+            const hasDuplicateCheck = (text.match(/✓/g) || []).length > 0;
+            const hasDuplicateWarning = (text.match(/⚠/g) || []).length > 0;
+            const hasDuplicateError = (text.match(/✗/g) || []).length > 0;
+            return {
+                text,
+                hasDuplicateCheck,
+                hasDuplicateWarning,
+                hasDuplicateError
+            };
+        }""")
+        print(f"[QA GATE] Status Badge Metrics: {badge_metrics}")
+        assert badge_metrics, "Status badge not found on card 0!"
+        assert not badge_metrics["hasDuplicateCheck"], f"Duplicate check glyph detected in badge: {badge_metrics['text']}"
+        assert not badge_metrics["hasDuplicateWarning"], f"Duplicate warning glyph detected in badge: {badge_metrics['text']}"
+
+        crop_badge_path = os.path.join(ARTIFACTS_DIR, "crop_step3_status_badge.png")
+        page.locator('[data-status-badge="0"] .inline-flex').screenshot(path=crop_badge_path)
+        manifest["screenshots"].append({
+            "id": "crop_step3_status_badge",
+            "file": "crop_step3_status_badge.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Бейдж статуса задания без дублирующих глифов (чистый Material Symbol check_circle + текст 'Готово')."
+        })
+
+        # -------------------------------------------------------------
+        # Shot 11: Step 3 Task Details Modal & Top Layer Stacking Assertions
+        # -------------------------------------------------------------
+        print("\n[QA] Capturing Shot 11: Task Details Modal (Top Layer Dialog-in-Dialog)...")
+        details_btn = page.locator('[data-task-details-btn="0"]')
+        details_btn.click()
+        time.sleep(0.4)
+
+        stacking_audit = page.evaluate("""() => {
+            const overlay = document.getElementById('task-detail-overlay');
+            if (!overlay) return { ok: false, error: 'no_overlay' };
+            const modal = document.getElementById('import-modal');
+            const isInsideModal = modal.contains(overlay);
+            const rect = overlay.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const hit = document.elementFromPoint(centerX, centerY);
+            const isHitChild = overlay.contains(hit);
+            const dismissBtn = document.getElementById('task-detail-dismiss-btn');
+            const dismissRect = dismissBtn ? dismissBtn.getBoundingClientRect() : null;
+            const isDismissInView = dismissRect && dismissRect.bottom <= window.innerHeight && dismissRect.top >= 0;
+            return {
+                ok: isInsideModal && isHitChild && isDismissInView,
+                isInsideModal,
+                isHitChild,
+                hitTag: hit ? hit.tagName : null,
+                isDismissInView,
+                overlayWidth: rect.width,
+                overlayHeight: rect.height,
+                windowHeight: window.innerHeight
+            };
+        }""")
+        print(f"[QA GATE] Task Details Overlay Top-Layer Stacking Audit: {stacking_audit}")
+        assert stacking_audit["ok"], f"Top-layer stacking assertion failed: {stacking_audit}"
+
+        crop_details_header = os.path.join(ARTIFACTS_DIR, "crop_step3_task_details_header.png")
+        page.locator('#task-detail-overlay > div').screenshot(path=crop_details_header)
+        manifest["screenshots"].append({
+            "id": "crop_step3_task_details_header",
+            "file": "crop_step3_task_details_header.png",
+            "role_focus": ["Role 3 (Visual Guardian)"],
+            "description": "Micro-crop: Карточка деталей задания в Top Layer (шапка, структурированные поля, валидация)."
+        })
+
+        shot11_path = os.path.join(ARTIFACTS_DIR, "11_step3_task_details_modal.png")
+        page.screenshot(path=shot11_path)
+        manifest["screenshots"].append({
+            "id": "11_step3_task_details_modal",
+            "file": "11_step3_task_details_modal.png",
+            "role_focus": ["Role 3 (Visual Guardian)", "Role 1 (First-Time UX)", "Role 2 (Didactics & Ergonomics)"],
+            "description": "Шаг 3: Вторичный диалог подробностей задания в Top Layer. Проверка z-index, затемнения бэкдропа, рендеринга вопросов теста и доступности кнопок закрытия."
+        })
+
+        # Test Escape key trapping
+        print("[QA] Testing Escape key trapping on Task Details Modal...")
+        page.keyboard.press("Escape")
+        time.sleep(0.3)
+        escape_check = page.evaluate("""() => {
+            const overlay = document.getElementById('task-detail-overlay');
+            const modal = document.getElementById('import-modal');
+            return {
+                overlayClosed: !overlay,
+                modalStillOpen: !!(modal && modal.open)
+            };
+        }""")
+        print(f"[QA GATE] Escape Key Trapping Result: {escape_check}")
+        assert escape_check["overlayClosed"], "Task details overlay did not close on Escape!"
+        assert escape_check["modalStillOpen"], "Import modal was accidentally dismissed when closing Task Details via Escape!"
+
+        # -------------------------------------------------------------
+        # Shot 12: Step 3 Filter Chips and Exclude State
+        # -------------------------------------------------------------
+        print("\n[QA] Capturing Shot 12: Step 3 Filter Chips and Exclude State...")
+        exclude_btn = page.locator('[data-task-exclude-btn="1"]')
+        exclude_btn.click()
+        time.sleep(0.3)
+        page.locator('#import-modal .preview-filter-chip').first.click()
+        time.sleep(0.3)
+        shot12_path = os.path.join(ARTIFACTS_DIR, "12_step3_filter_and_exclude_state.png")
+        page.screenshot(path=shot12_path)
+        manifest["screenshots"].append({
+            "id": "12_step3_filter_and_exclude_state",
+            "file": "12_step3_filter_and_exclude_state.png",
+            "role_focus": ["Role 2 (Didactics & Ergonomics)", "Role 3 (Visual Guardian)"],
+            "description": "Шаг 3: Интерактивное состояние фильтрации и ручного исключения задания. Проверка стиля .task-card-excluded и бейджа 'Исключено'."
+        })
+        # Restore task 1
+        exclude_btn.click()
+        time.sleep(0.2)
+
+        # -------------------------------------------------------------
         # Shot 7: Step 3 Heavy Cards Scroll
         # -------------------------------------------------------------
         print("\n[QA] Capturing Shot 7: Step 3 Heavy Cards Scroll...")
