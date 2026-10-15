@@ -1289,6 +1289,23 @@ def import_parse() -> Any:
                     logger.exception(f"[HTTP] Parser {marker} failed: {parse_exc}")
                     all_parsing_errors.append(f"Parser {marker} error: {str(parse_exc)}")
 
+        # Apply optional request-level title from Step 2 if provided
+        request_title = str(payload.get("title") or payload.get("name") or "").strip()
+        if request_title and all_tasks:
+            if len(all_tasks) == 1:
+                task_meta = all_tasks[0].get("data", {}).get("metadata", {})
+                has_explicit_meta_title = isinstance(task_meta, dict) and bool(task_meta.get("title") or task_meta.get("name"))
+                if not has_explicit_meta_title:
+                    all_tasks[0]["name"] = request_title
+            else:
+                unnamed_counter = 0
+                for task in all_tasks:
+                    task_meta = task.get("data", {}).get("metadata", {})
+                    has_explicit_meta_title = isinstance(task_meta, dict) and bool(task_meta.get("title") or task_meta.get("name"))
+                    if not has_explicit_meta_title:
+                        unnamed_counter += 1
+                        task["name"] = f"{request_title} #{unnamed_counter}"
+
         # Validate tasks and build preview
         preview_tasks = []
         valid_count = 0
@@ -1324,6 +1341,20 @@ def import_parse() -> Any:
                         "field": "general",
                     }
                 )
+
+            # Deduplicate validation issues (severity, message, field)
+            seen_issues = set()
+            deduped_issues = []
+            for issue in validation_issues:
+                key = (
+                    str(issue.get("severity") or ""),
+                    str(issue.get("message") or "").strip(),
+                    str(issue.get("field") or ""),
+                )
+                if key not in seen_issues:
+                    seen_issues.add(key)
+                    deduped_issues.append(issue)
+            validation_issues = deduped_issues
 
             # Format preview
             preview = _format_task_preview(task, i, validation_issues)

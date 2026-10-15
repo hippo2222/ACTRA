@@ -116,7 +116,10 @@ class TaskImportParser(ABC):
                 key_val = stripped[2:].split(':', 1)
                 key = key_val[0].strip().lower()
                 val = key_val[1].strip()
-                if key == 'difficulty':
+                if key in ('title', 'name'):
+                    metadata['title'] = val
+                    metadata['name'] = val
+                elif key == 'difficulty':
                     try:
                         metadata['difficulty'] = int(val)
                     except ValueError:
@@ -137,7 +140,7 @@ class TaskImportParser(ABC):
         lines[:] = remaining
         return metadata
 
-    def generate_task_name(self, task_type: str, index: int, prompt: str = "") -> str:
+    def generate_task_name(self, task_type: str, index: int, prompt: str = "", title: str = "") -> str:
         """
         Генерирует название задания
         
@@ -145,15 +148,20 @@ class TaskImportParser(ABC):
             task_type: Тип задания
             index: Порядковый номер задания
             prompt: Промпт задания (для укороченного названия)
+            title: Явное название задания (если передано, используется без обрезки)
             
         Returns:
-            Сгенерированное название
+            Сгенерированное или явное название
         """
+        if title and str(title).strip():
+            return str(title).strip()
+
         type_names = {
             'open_answer': 'Открытый ответ',
             'sequence_assembly': 'Последовательность',
             'click': 'Клик',
-            'image_labeling': 'Подписи на рисунке'
+            'image_labeling': 'Подписи на рисунке',
+            'test': 'Тест'
         }
         
         base_name = type_names.get(task_type, 'Задание')

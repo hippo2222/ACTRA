@@ -172,7 +172,7 @@ class OpenAnswerParser(TaskImportParser):
 
             task = {
                 'type': 'open_answer',
-                'name': self.generate_task_name('open_answer', index, prompt),
+                'name': self.generate_task_name('open_answer', index, prompt, title=metadata.get('title') or metadata.get('name')),
                 'prompt': prompt,
                 'data': data,
             }
@@ -261,7 +261,7 @@ class OpenAnswerParser(TaskImportParser):
         
         task = {
             'type': 'open_answer',
-            'name': self.generate_task_name('open_answer', index, prompt),
+            'name': self.generate_task_name('open_answer', index, prompt, title=metadata.get('title') or metadata.get('name')),
             'prompt': prompt,
             'data': data
         }

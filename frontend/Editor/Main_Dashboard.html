@@ -1340,6 +1340,7 @@
     </div>
     <!-- Import Tasks Modal -->
     <dialog id="import-modal"
+        data-current-step="1"
         class="bg-transparent p-0 overflow-visible border-none outline-none backdrop:backdrop-blur-lg backdrop:bg-black/70">
         <style>
             #import-modal::backdrop {
@@ -1363,10 +1364,30 @@
                 width: min(94vw, 76rem);
                 height: min(90vh, 56rem);
                 max-height: 92vh;
+                transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            #import-modal[data-current-step="1"] .editor-import-modal-shell {
+                width: min(92vw, 48rem);
+                height: auto;
+                max-height: min(88vh, 44rem);
+            }
+            #import-modal[data-current-step="1"] .editor-import-content-shell {
+                flex: 0 1 auto;
+                min-height: 0;
+            }
+            #import-modal:not([data-current-step="1"]) .editor-import-modal-shell {
+                width: min(94vw, 76rem);
+                height: min(90vh, 56rem);
+                max-height: 92vh;
+            }
+            #import-modal:not([data-current-step="1"]) .editor-import-content-shell {
+                flex: 1 1 0%;
+                min-height: 0;
             }
             #import-modal #import-text-area {
-                min-height: 160px;
-                height: 100%;
+                min-height: 140px;
+                height: auto;
+                flex: 1 1 0%;
             }
             #import-modal #ai-agent-prompt-textarea {
                 min-height: 220px;
@@ -1397,6 +1418,45 @@
                 }
                 #import-modal .import-split-grid-text {
                     grid-template-columns: 60fr 40fr;
+                }
+            }
+            #import-modal .import-step1-container {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+                width: 100%;
+            }
+            #import-modal .import-section-group {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            #import-modal .import-section-target {
+                display: flex;
+                flex-direction: column;
+            }
+            #import-modal .import-section-history {
+                display: flex;
+                flex-direction: column;
+            }
+            #import-modal .import-mode-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            @media (min-width: 640px) {
+                #import-modal .import-mode-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+            }
+            #import-modal .import-target-grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            @media (min-width: 640px) {
+                #import-modal .import-target-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
             }
             #import-modal .task-card-excluded {
@@ -1459,7 +1519,7 @@
             <div class="editor-import-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4 shrink-0" data-role="import-header">
                 <div class="min-w-0 flex-1">
                     <h2 class="editor-flow-wrap text-xl font-bold text-text-main leading-tight" data-role="import-modal-title" data-i18n="md.import_tasks">Импорт заданий</h2>
-                    <p class="editor-flow-wrap mt-1 text-sm text-text-secondary leading-normal" data-role="import-modal-subtitle" data-i18n="md.import_modal_subtitle">Быстрый импорт готовых задач или прямой AI-import по конкретному типу.</p>
+                    <p class="editor-flow-wrap mt-1 text-sm text-text-secondary leading-normal" data-role="import-modal-subtitle" data-i18n="md.import_modal_subtitle">Быстрый импорт готовых задач или прямой ИИ-импорт по конкретному типу.</p>
                 </div>
                 <button onclick="dashboard.closeImportModal()"
                     data-role="close-import-modal"
@@ -1477,7 +1537,7 @@
                         <div class="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-bold text-sm shadow-sm transition-all duration-200" data-role="step-circle-1">
                             1
                         </div>
-                        <span class="editor-import-step-label text-xs font-semibold text-text-main text-center whitespace-nowrap px-1" data-role="step-label-1" data-i18n="md.step1_label">Модуль/Тема</span>
+                        <span class="editor-import-step-label text-xs font-semibold text-text-main text-center whitespace-nowrap px-1" data-role="step-label-1" data-i18n="md.step1_label">Формат</span>
                     </div>
                     <!-- Divider 1 -->
                     <div class="w-8 sm:w-12 h-[2px] bg-border-subtle mx-1.5 sm:mx-2 rounded-full shrink-0 transition-colors duration-200" data-role="step-divider-1"></div>

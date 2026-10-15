@@ -104,7 +104,7 @@ class ClickTextParser(TaskImportParser):
         # Создаем задание в формате Click с подтипом error_detection
         task = {
             'type': 'click',
-            'name': self.generate_task_name('click', index, prompt),
+            'name': self.generate_task_name('click', index, prompt, title=metadata.get('title') or metadata.get('name')),
             'prompt': prompt,
             'data': {
                 'prompt': prompt,

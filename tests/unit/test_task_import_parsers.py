@@ -8,7 +8,8 @@ from task_system.models.parsers import (
     OpenAnswerParser,
     SequenceParser,
     ClickTextParser,
-    ClickWordsParser
+    ClickWordsParser,
+    TestImportParser as TestImportParserCls,
 )
 
 
@@ -345,6 +346,74 @@ level_1: element_1
         assert len(tasks) == 2
         assert tasks[0]['name'] != tasks[1]['name']
         assert 'Открытый ответ' in tasks[0]['name']
+
+    def test_explicit_title_metadata_preserved_across_all_parsers(self):
+        """Test that @ title: and @ name: directives are respected without 37-char truncation."""
+        long_title = "Клинический протокол расширенной сердечно-легочной реанимации при остановке сердца"
+        assert len(long_title) > 40
+
+        # SequenceParser
+        seq_text = f"""
+@SEQUENCE
+@ title: {long_title}
+# Описание шагов реанимации
+element_1: Компрессии 30
+level_1: element_1
+"""
+        seq_tasks = SequenceParser().parse_text(seq_text)
+        assert len(seq_tasks) == 1
+        assert seq_tasks[0]['name'] == long_title
+        assert not seq_tasks[0]['name'].endswith("...")
+
+        # TestImportParser
+        test_text = f"""
+@TEST
+@ title: {long_title}
+? Какова глубина компрессий грудной клетки у взрослых?
++ 5-6 см
+- 2-3 см
+"""
+        test_tasks = TestImportParserCls().parse_text(test_text)
+        assert len(test_tasks) == 1
+        assert test_tasks[0]['name'] == long_title
+        assert not test_tasks[0]['name'].endswith("...")
+
+        # ClickTextParser
+        click_text = f"""
+@CLICK_TEXT
+@ name: {long_title}
+# Найдите правильное утверждение
++ ИВЛ с частотой 10 в минуту
+- Отсутствие компрессий
+"""
+        click_tasks = ClickTextParser().parse_text(click_text)
+        assert len(click_tasks) == 1
+        assert click_tasks[0]['name'] == long_title
+        assert not click_tasks[0]['name'].endswith("...")
+
+        # ClickWordsParser
+        click_words_text = f"""
+@CLICK_WORDS
+@ title: {long_title}
+# Найдите ошибку в описании: индексы 2
+Пациент в сознании [бездыханный] стабилен
+"""
+        words_tasks = ClickWordsParser().parse_text(click_words_text)
+        assert len(words_tasks) == 1
+        assert words_tasks[0]['name'] == long_title
+        assert not words_tasks[0]['name'].endswith("...")
+
+        # OpenAnswerParser
+        open_text = f"""
+@OPEN_ANSWER
+@ title: {long_title}
+# Опишите алгоритм действий
+= Алгоритм включает раннюю дефибрилляцию
+"""
+        open_tasks = OpenAnswerParser().parse_text(open_text)
+        assert len(open_tasks) == 1
+        assert open_tasks[0]['name'] == long_title
+        assert not open_tasks[0]['name'].endswith("...")
 
 
 if __name__ == '__main__':

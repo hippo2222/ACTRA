@@ -69,9 +69,9 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         // Badge must NOT have broken 'hidden sm:inline-flex'
         expect(html).not.toMatch(/class="[^"]*hidden sm:inline-flex/);
 
-        // Editor hero affordances
+        // Editor hero affordances (single primary CTA per visible zone: paste button is secondary)
         expect(html).toContain('data-role="import-paste-btn"');
-        expect(html).toContain('bg-primary text-primary-contrast');
+        expect(html).toContain('bg-surface-2 text-text-main');
         expect(html).toContain('id="import-text-stats"');
         expect(html).toContain('id="import-live-counter"');
         expect(html).toContain('min-h-[160px]');
@@ -202,5 +202,70 @@ describe('ImportManager Step 2 UI/UX & Interaction Quality', () => {
         expect(writeSpy).toHaveBeenCalled();
         expect(writeSpy.mock.calls[0][0]).toContain('@TEST');
         expect(toastSpy).toHaveBeenCalled();
+    });
+
+    it('renders optional task title input on Step 2 and synchronizes importTaskTitle state', () => {
+        manager.setImportTaskTitle('Базовая реанимация (протокол)');
+        const html = manager.renderStep2Text();
+
+        expect(html).toContain('data-role="import-title-group"');
+        expect(html).toContain('data-role="import-task-title-input"');
+        expect(html).toContain('value="Базовая реанимация (протокол)"');
+
+        const contentArea = dom.window.document.querySelector('[data-role="import-content"]');
+        contentArea.innerHTML = html;
+
+        const inputEl = dom.window.document.getElementById('import-task-title-input');
+        expect(inputEl).not.toBeNull();
+        expect(inputEl.value).toBe('Базовая реанимация (протокол)');
+
+        manager.setImportTaskTitle('Новое название протокола');
+        expect(manager.importTaskTitle).toBe('Новое название протокола');
+    });
+
+    it('renders open direct title input on Step 3 preview card and reacts to updates', () => {
+        manager.currentStep = 3;
+        manager.parsedResult = {
+            tasks: [
+                {
+                    index: 0,
+                    name: 'Исходное название задания',
+                    type: 'test',
+                    status: 'valid',
+                    data: {
+                        prompt: 'Вопрос по анатомии',
+                        name: 'Исходное название задания',
+                        questions: [{ text: 'Вопрос', answers: [] }]
+                    },
+                    validation: { issues: [] }
+                }
+            ],
+            summary: { total: 1, valid: 1, warnings: 0, errors: 0 }
+        };
+
+        const cardHtml = manager.renderTaskCard(manager.parsedResult.tasks[0], 0);
+
+        // Open input must exist and not be hidden
+        expect(cardHtml).toContain('data-role="task-title-edit-input"');
+        expect(cardHtml).toContain('data-task-title-input="0"');
+        expect(cardHtml).toContain('value="Исходное название задания"');
+        expect(cardHtml).not.toContain('task-title-edit-wrap hidden');
+
+        const contentArea = dom.window.document.querySelector('[data-role="import-content"]');
+        contentArea.innerHTML = cardHtml;
+
+        const titleInput = dom.window.document.querySelector('[data-task-title-input="0"]');
+        expect(titleInput).not.toBeNull();
+        expect(titleInput.value).toBe('Исходное название задания');
+
+        // Test updateTaskName
+        manager.updateTaskName(0, 'Скорректированное название');
+        expect(manager.parsedResult.tasks[0].name).toBe('Скорректированное название');
+        expect(manager.parsedResult.tasks[0].data.name).toBe('Скорректированное название');
+
+        // Test startEditName focuses input
+        const focusSpy = vi.spyOn(titleInput, 'focus');
+        manager.startEditName(0);
+        expect(focusSpy).toHaveBeenCalled();
     });
 });

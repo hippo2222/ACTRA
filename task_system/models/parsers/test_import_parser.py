@@ -12,6 +12,7 @@ from ..task_import_parser import TaskImportParser
 class TestImportParser(TaskImportParser):
     """Парсер для импорта тестовых заданий в формате @TEST"""
 
+    __test__ = False
     marker = '@TEST'
 
     def parse_text(self, text: str) -> List[Dict[str, Any]]:
@@ -45,6 +46,7 @@ class TestImportParser(TaskImportParser):
     def _parse_single_block(self, content: str, index: int) -> Optional[Dict[str, Any]]:
         """Парсит один блок @TEST, извлекая вопросы и ответы."""
         lines = content.split('\n')
+        metadata = self.parse_metadata(lines)
 
         question_pattern = re.compile(r'^\?\s*(.+)$')
         answer_pattern = re.compile(r'^([+-])\s*(.+)$')
@@ -160,7 +162,8 @@ class TestImportParser(TaskImportParser):
                         'code': 'multiple_correct'
                     })
 
-        task_name = self.generate_task_name('test', index, prompt or f'Тест ({len(questions)} вопросов)')
+        task_title = metadata.get('title') or metadata.get('name')
+        task_name = self.generate_task_name('test', index, prompt or f'Тест ({len(questions)} вопросов)', title=task_title)
 
         has_multiple_questions = any(
             sum(1 for a in q.get('answers', []) if a.get('is_correct', a.get('correct'))) > 1
@@ -179,9 +182,10 @@ class TestImportParser(TaskImportParser):
                 'settings': {
                     'shuffle_questions': True,
                     'shuffle_answers': True,
-                    'time_limit': None,
+                    'time_limit': metadata.get('time_limit'),
                     'passing_score': 70
-                }
+                },
+                **(({'metadata': metadata} if metadata else {}))
             }
         }
 

@@ -127,9 +127,10 @@ class SequenceParser(TaskImportParser):
         prompt = self.sanitize_text(prompt)
         
         # Создаем задание
+        task_title = metadata.get('title') or metadata.get('name')
         task = {
             'type': 'sequence_assembly',
-            'name': self.generate_task_name('sequence_assembly', index, prompt),
+            'name': self.generate_task_name('sequence_assembly', index, prompt, title=task_title),
             'prompt': prompt,
             'data': {
                 'prompt': prompt,

@@ -31,6 +31,7 @@ class ImportManager {
         this.excludedTasks = new Set();
         this.selectedTasks = new Set(); // For bulk actions
         this.importMode = 'text'; // 'text' | 'archive' | 'ai'
+        this.importTaskTitle = '';
         this.uploadedFile = null;
         this.checkResult = null;
         this.archiveCacheId = null;
@@ -2217,6 +2218,10 @@ ${remaining}
             }
         }
         this.currentStep = step;
+        const modalEl = document.getElementById('import-modal');
+        if (modalEl) {
+            modalEl.setAttribute('data-current-step', String(step));
+        }
         this.updateStepUI();
         this.renderCurrentStep();
         this.updateNavigationButtons();
@@ -2454,6 +2459,10 @@ ${remaining}
 
     updateStepUI() {
         if (this.modalPurpose === 'theory_analysis') return;
+        const modal = document.getElementById('import-modal');
+        if (modal) {
+            modal.setAttribute('data-current-step', String(this.currentStep));
+        }
         const steps = document.querySelectorAll('[data-role="import-steps"] [data-step]');
         steps.forEach(stepEl => {
             const stepNum = parseInt(stepEl.dataset.step);
@@ -2758,6 +2767,8 @@ ${remaining}
             }, 300);
 
             this.attachStepEventListeners();
+            this.updateFooterStatus();
+            this.updateNavigationButtons();
 
             // Apply preset selection for step 1 after DOM is ready
             if (this.currentStep === 1) {
@@ -2835,10 +2846,47 @@ ${remaining}
         cancelText = wt('im.k109', 'Отмена'),
         variant = 'error',
     } = {}) {
-        // Поскольку import-modal открывается как native dialog через showModal,
-        // кастомный NotificationUI.confirm (добавляемый в document.body) становится inert (некликбельным).
-        // Поэтому для надежности используем нативный window.confirm.
-        return window.confirm(message);
+        const modal = document.getElementById('import-modal');
+        if (!modal) return window.confirm(message);
+
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'absolute inset-0 z-50 flex items-center justify-center p-4 bg-scrim/60 backdrop-blur-xs animate-fade-in';
+            overlay.setAttribute('data-role', 'inline-confirm-overlay');
+            overlay.innerHTML = `
+                <div class="w-full max-w-md rounded-2xl border border-border-strong bg-surface-1 p-6 shadow-xl animate-scale-in">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-[26px] ${variant === 'warning' ? 'text-warning' : 'text-error'} shrink-0">
+                            ${variant === 'warning' ? 'warning' : 'help'}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-base font-bold text-text-main">${this.escapeHtml(title)}</h3>
+                            <p class="text-xs text-text-secondary mt-1.5 leading-relaxed">${this.escapeHtml(message)}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-2.5 mt-6 pt-3 border-t border-border-subtle">
+                        <button type="button" data-role="modal-confirm-cancel"
+                            class="px-4 py-2 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 text-text-main hover:bg-surface-3 transition-colors cursor-pointer">
+                            ${this.escapeHtml(cancelText)}
+                        </button>
+                        <button type="button" data-role="modal-confirm-proceed"
+                            class="px-4 py-2 text-xs font-bold rounded-lg ${variant === 'warning' ? 'bg-warning text-white hover:bg-warning-dark' : 'bg-error text-white hover:bg-error-dark'} transition-colors cursor-pointer">
+                            ${this.escapeHtml(confirmText)}
+                        </button>
+                    </div>
+                </div>
+            `;
+            const cleanup = (res) => {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                resolve(res);
+            };
+            const cancelBtn = overlay.querySelector('[data-role="modal-confirm-cancel"]');
+            const proceedBtn = overlay.querySelector('[data-role="modal-confirm-proceed"]');
+            if (cancelBtn) cancelBtn.onclick = () => cleanup(false);
+            if (proceedBtn) proceedBtn.onclick = () => cleanup(true);
+            modal.appendChild(overlay);
+            if (cancelBtn) cancelBtn.focus();
+        });
     }
 
     getImportModalCloseGuardState() {
@@ -2874,6 +2922,7 @@ ${remaining}
         }).length;
         const hasMeaningfulState = !!(
             String(this.sourceText || '').trim()
+            || String(this.importTaskTitle || '').trim()
             || this.parsedResult
             || this.uploadedFile
             || this.checkResult
@@ -2952,6 +3001,7 @@ ${remaining}
         this.selectedModuleName = '';
         this.selectedTopicName = '';
         this.sourceText = '';
+        this.importTaskTitle = '';
         this.manualAnalysisResult = null;
         this.parsedResult = null;
         this.excludedTasks.clear();
@@ -2979,6 +3029,20 @@ ${remaining}
         this.aiAnalyzing = false;
         this.importRequestKey = null;
         this.theoryOpeningRunId = null;
+    }
+
+    setImportTaskTitle(value) {
+        this.importTaskTitle = typeof value === 'string' ? value : '';
+    }
+
+    updateTaskName(index, newName) {
+        const task = this.parsedResult?.tasks?.[index];
+        if (!task) return;
+        const name = typeof newName === 'string' ? newName : '';
+        task.name = name;
+        if (task.data && typeof task.data === 'object') {
+            task.data.name = name;
+        }
     }
 
     _makeIdempotencyKey() {
@@ -3029,14 +3093,17 @@ ${remaining}
         const items = this.loadImportHistory();
         if (!items.length) {
             return `
-                <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3">
-                    <div class="text-xs font-semibold text-text-secondary mb-1">${wt('im.k842', 'Последние импорты')}</div>
-                    <div class="editor-import-history-summary text-[11px]">${wt('im.k843', 'История пока пуста.')}</div>
-                </div>
+                <details class="group rounded-xl border border-border-subtle bg-surface-1 overflow-hidden transition-all">
+                    <summary class="px-3 py-2 text-xs font-semibold text-text-secondary cursor-pointer flex items-center justify-between hover:bg-surface-2 select-none">
+                        <span>${wt('im.k842', 'Последние импорты')}</span>
+                        <span class="material-symbols-outlined text-[16px] text-text-muted transition-transform group-open:rotate-180">expand_more</span>
+                    </summary>
+                    <div class="px-3 pb-2.5 pt-1 text-[11px] text-text-muted border-t border-border-subtle editor-import-history-summary">${wt('im.k843', 'История пока пуста.')}</div>
+                </details>
             `;
         }
 
-        const rows = items.slice(0, 4).map((item) => {
+        const rows = items.slice(0, 3).map((item) => {
             const date = new Date(item.timestamp || Date.now());
             const dateText = Number.isNaN(date.getTime())
                 ? wt('im.k114', 'недавно')
@@ -3048,22 +3115,27 @@ ${remaining}
             const location = [item.module, item.topic].filter(Boolean).join(' / ');
             const summary = `+${Number(item.imported || 0)} | skip ${Number(item.skipped || 0)} | err ${Number(item.errors || 0)}`;
             return `
-                <div class="rounded-lg border border-border-subtle bg-surface-2 px-2.5 py-2">
+                <div class="rounded-lg border border-border-subtle bg-surface-2 px-2.5 py-1.5">
                     <div class="flex items-center justify-between gap-2">
                         <div class="text-[11px] font-semibold ${tone}">${this.escapeHtml(status === 'ok' ? wt('im.k844', 'Успешно') : status === 'error' ? wt('im.k845', 'Ошибка') : wt('im.k846', 'Частично'))}</div>
                         <div class="editor-import-history-meta text-[10px]" title="${this.escapeHtmlAttr(dateText)}">${this.escapeHtml(dateText)}</div>
                     </div>
-                    <div class="editor-import-history-title text-[11px] mt-1">${this.escapeHtml(location || wt('im.k847', 'Без привязки'))}</div>
-                    <div class="editor-import-history-summary text-[10px] mt-0.5">${this.escapeHtml(summary)}</div>
+                    <div class="editor-import-history-title text-[11px] mt-0.5">${this.escapeHtml(location || wt('im.k847', 'Без привязки'))}</div>
+                    <div class="editor-import-history-summary text-[10px] text-text-muted mt-0.5">${this.escapeHtml(summary)}</div>
                 </div>
             `;
         }).join('');
 
         return `
-            <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3 space-y-2">
-                <div class="text-xs font-semibold text-text-secondary">${wt('im.k842', 'Последние импорты')}</div>
-                ${rows}
-            </div>
+            <details class="group rounded-xl border border-border-subtle bg-surface-1 overflow-hidden transition-all">
+                <summary class="px-3 py-2 text-xs font-semibold text-text-secondary cursor-pointer flex items-center justify-between hover:bg-surface-2 select-none">
+                    <span>${wt('im.k842', 'Последние импорты')} (${items.length})</span>
+                    <span class="material-symbols-outlined text-[16px] text-text-muted transition-transform group-open:rotate-180">expand_more</span>
+                </summary>
+                <div class="p-2.5 pt-1 space-y-1.5 border-t border-border-subtle">
+                    ${rows}
+                </div>
+            </details>
         `;
     }
 
@@ -3084,72 +3156,76 @@ ${remaining}
         const modules = this.dashboard?.catalog || [];
 
         return `
-            <div class="max-w-3xl mx-auto space-y-6 animate-slide-up-fade">
-                <div>
-                    <h3 class="text-base font-bold text-text-main">${wt('im.k652', 'Выберите режим импорта')}</h3>
-                    <p class="text-xs text-text-secondary mt-1">${wt('md.import_modal_subtitle', 'Пакетная загрузка заданий, генерация через AI-промпты и анализ теории.')}</p>
-                </div>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <button type="button" data-role="import-mode-text" data-mode="text" onclick="dashboard.importManager.setImportMode('text')" 
-                        class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'text' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'text' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
-                                <span class="material-symbols-outlined text-xl">description</span>
-                            </span>
-                            <span class="font-bold text-sm text-text-main">${wt('im.k848', 'Из текста')}</span>
-                        </div>
-                        <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_text_desc', 'Вставка текста заданий с разметкой (@TEST, @OPEN_ANSWER...)')}</p>
-                    </button>
+            <div class="import-step1-container animate-slide-up-fade">
+                <div class="import-section-group">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-text-secondary">${wt('im.k652', 'Выберите режим импорта')}</h3>
                     
-                    <button type="button" data-role="import-mode-archive" data-mode="archive" onclick="dashboard.importManager.setImportMode('archive')" 
-                        class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'archive' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'archive' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
-                                <span class="material-symbols-outlined text-xl">folder_zip</span>
-                            </span>
-                            <span class="font-bold text-sm text-text-main">${wt('im.k850', 'Из архива')}</span>
-                        </div>
-                        <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_archive_desc', 'Загрузка ZIP-архива с заданиями и изображениями')}</p>
-                    </button>
+                    <div class="import-mode-grid">
+                        <button type="button" data-role="import-mode-text" data-mode="text" onclick="dashboard.importManager.setImportMode('text')" 
+                            class="p-3.5 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'text' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
+                            <div class="flex items-center gap-2.5 mb-1.5">
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'text' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
+                                    <span class="material-symbols-outlined text-lg">description</span>
+                                </span>
+                                <span class="font-bold text-sm text-text-main">${wt('im.k848', 'Из текста')}</span>
+                            </div>
+                            <p class="text-[11px] text-text-secondary leading-snug line-clamp-2">${wt('im.step1_mode_text_desc', 'Вставка текста заданий с разметкой (@TEST, @OPEN_ANSWER...)')}</p>
+                        </button>
+                        
+                        <button type="button" data-role="import-mode-archive" data-mode="archive" onclick="dashboard.importManager.setImportMode('archive')" 
+                            class="p-3.5 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'archive' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
+                            <div class="flex items-center gap-2.5 mb-1.5">
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'archive' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
+                                    <span class="material-symbols-outlined text-lg">folder_zip</span>
+                                </span>
+                                <span class="font-bold text-sm text-text-main">${wt('im.k850', 'Из архива')}</span>
+                            </div>
+                            <p class="text-[11px] text-text-secondary leading-snug line-clamp-2">${wt('im.step1_mode_archive_desc', 'Загрузка ZIP-архива с заданиями и изображениями')}</p>
+                        </button>
 
-                    <button type="button" data-role="import-mode-ai" data-mode="ai" onclick="dashboard.importManager.setImportMode('ai')" 
-                        class="p-4 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'ai' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'ai' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
-                                <span class="material-symbols-outlined text-xl">auto_awesome</span>
-                            </span>
-                            <span class="font-bold text-sm text-text-main">${wt('im.k852', 'ИИ-генерация')}</span>
-                        </div>
-                        <p class="text-xs text-text-secondary leading-relaxed">${wt('im.step1_mode_ai_desc', 'Промпты для внешних нейросетей и импорт результата')}</p>
-                    </button>
+                        <button type="button" data-role="import-mode-ai" data-mode="ai" onclick="dashboard.importManager.setImportMode('ai')" 
+                            class="p-3.5 rounded-xl border text-left transition-all cursor-pointer ${this.importMode === 'ai' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2'}">
+                            <div class="flex items-center gap-2.5 mb-1.5">
+                                <span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${this.importMode === 'ai' ? 'bg-primary text-primary-contrast' : 'bg-surface-2 text-text-secondary'}">
+                                    <span class="material-symbols-outlined text-lg">auto_awesome</span>
+                                </span>
+                                <span class="font-bold text-sm text-text-main">${wt('im.k852', 'ИИ-генерация')}</span>
+                            </div>
+                            <p class="text-[11px] text-text-secondary leading-snug line-clamp-2">${wt('im.step1_mode_ai_desc', 'Промпты для внешних нейросетей и импорт результата')}</p>
+                        </button>
+                    </div>
                 </div>
 
-                ${this.renderImportHistoryCompact()}
-                
-                ${this.importMode === 'text' ? this.renderStep1Text(modules) : ''}
-                ${this.importMode === 'archive' ? this.renderStep1Archive(modules) : ''}
-                ${this.importMode === 'ai' ? this.renderStep1AI(modules) : ''}
+                <div class="import-section-target">
+                    ${this.importMode === 'text' ? this.renderStep1Text(modules) : ''}
+                    ${this.importMode === 'archive' ? this.renderStep1Archive(modules) : ''}
+                    ${this.importMode === 'ai' ? this.renderStep1AI(modules) : ''}
+                </div>
+
+                <div class="import-section-history">
+                    ${this.renderImportHistoryCompact()}
+                </div>
             </div>
         `;
     }
 
     renderStep1Text(modules) {
         return `
-            <div class="space-y-4 animate-fade-in">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="animate-fade-in space-y-2.5">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-text-secondary">${wt('im.step1_target_section_title', 'Целевой раздел')}</h3>
+                <div class="import-target-grid">
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
+                        <label class="block text-xs font-semibold text-text-secondary mb-1.5">${wt('im.k854', 'Целевой модуль')}</label>
                         <select id="import-module-select"
-                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                            class="block w-full rounded-lg border border-border-subtle bg-surface-2 py-2 px-3 text-text-main focus:ring-2 focus:ring-primary text-sm">
                             ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                         </select>
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
+                        <label class="block text-xs font-semibold text-text-secondary mb-1.5">${wt('im.k855', 'Целевая тема')}</label>
                         <select id="import-topic-select"
-                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
+                            class="block w-full rounded-lg border border-border-subtle bg-surface-2 py-2 px-3 text-text-main focus:ring-2 focus:ring-primary text-sm"
                             disabled>
                             <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                         </select>
@@ -3161,46 +3237,50 @@ ${remaining}
 
     renderStep1Archive(modules) {
         return `
-            <div class="space-y-4 animate-fade-in">
+            <div class="space-y-3 animate-fade-in">
                  <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k861', 'Файл архива (.zip)')}</label>
-                    <div id="import-drop-zone" data-role="archive-dropzone" class="border-2 border-dashed border-border-subtle rounded-xl p-8 text-center bg-surface-1 hover:bg-surface-2 hover:border-primary transition-all cursor-pointer relative group">
+                    <label class="block text-xs font-semibold text-text-secondary mb-1.5">${wt('im.k861', 'Файл архива (.zip)')}</label>
+                    <div id="import-drop-zone" data-role="archive-dropzone" class="border-2 border-dashed border-border-subtle rounded-xl p-4 text-center bg-surface-1 hover:bg-surface-2 hover:border-primary transition-all cursor-pointer relative group">
                         <input type="file" id="import-file-input" accept=".zip" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                         <div class="pointer-events-none flex flex-col items-center">
-                            <div class="w-12 h-12 rounded-full bg-surface-2 group-hover:bg-primary/10 flex items-center justify-center mb-3 transition-colors">
-                                <span class="material-symbols-outlined text-2xl text-text-secondary group-hover:text-primary transition-colors">cloud_upload</span>
+                            <div class="w-9 h-9 rounded-full bg-surface-2 group-hover:bg-primary/10 flex items-center justify-center mb-1.5 transition-colors">
+                                <span class="material-symbols-outlined text-xl text-text-secondary group-hover:text-primary transition-colors">cloud_upload</span>
                             </div>
-                            <p class="text-sm font-semibold text-text-main" id="file-name-display">${wt('im.k862', 'Перетащите файл сюда или кликните')}</p>
-                            <p class="text-xs text-text-disabled mt-1">${wt('im.k863', 'Максимальный размер: 200MB')}</p>
+                            <p class="text-xs font-semibold text-text-main" id="file-name-display">${wt('im.k862', 'Перетащите файл сюда или кликните')}</p>
+                            <p class="text-[10px] text-text-disabled mt-0.5">${wt('im.k863', 'Максимальный размер: 200MB')}</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="pt-3 border-t border-border-subtle">
+                <div class="pt-2 border-t border-border-subtle">
                    <button type="button" class="flex items-center justify-between w-full text-left cursor-pointer group py-1" onclick="document.getElementById('advanced-options').classList.toggle('hidden')">
                        <span class="text-xs font-semibold text-text-secondary group-hover:text-text-main">${wt('im.k864', 'Дополнительно (Target Override)')}</span>
                        <span class="material-symbols-outlined text-text-disabled group-hover:text-text-main text-base">expand_more</span>
                    </button>
-                   <div id="advanced-options" class="hidden mt-3 space-y-3">
-                       <div>
-                            <label class="block text-xs font-medium text-text-secondary mb-1">${wt('im.k865', 'Переопределить модуль (опционально)')}</label>
-                            <select id="import-module-select" 
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 px-3 text-text-main text-xs">
-                                ${this.renderModuleOptions(modules, wt('im.k654', 'Не переопределять (из архива)'))}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-text-secondary mb-1">${wt('im.k866', 'Переопределить тему (опционально)')}</label>
-                            <select id="import-topic-select" 
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 px-3 text-text-main text-xs" disabled>
-                                <option value="">${wt('im.k867', 'Не переопределять')}</option>
-                            </select>
-                        </div>
+                   <div id="advanced-options" class="hidden mt-2 space-y-2">
+                       <div class="import-target-grid">
+                           <div>
+                               <label class="block text-xs font-medium text-text-secondary mb-1">${wt('im.k865', 'Переопределить модуль (опционально)')}</label>
+                               <select id="import-module-select" 
+                                   class="block w-full rounded-lg border-border-subtle bg-surface-2 py-1.5 px-2.5 text-text-main text-xs">
+                                   ${this.renderModuleOptions(modules, wt('im.k654', 'Не переопределять (из архива)'))}
+                               </select>
+                           </div>
+                           <div>
+                               <label class="block text-xs font-medium text-text-secondary mb-1">${wt('im.k866', 'Переопределить тему (опционально)')}</label>
+                               <select id="import-topic-select" 
+                                   class="block w-full rounded-lg border-border-subtle bg-surface-2 py-1.5 px-2.5 text-text-main text-xs"
+                                   disabled>
+                                   <option value="">${wt('im.k867', 'Сначала выберите модуль...')}</option>
+                               </select>
+                           </div>
+                       </div>
                    </div>
                 </div>
             </div>
         `;
     }
+
     renderStep2() {
         if (this.importMode === 'ai' && !this.isInternalAiGenerationInDevelopment()) {
             return this.renderStep2InternalAI();
@@ -3302,27 +3382,41 @@ ${remaining}
                                     <span>${wt('im.editor_clear_btn', 'Очистить')}</span>
                                 </button>
                                 <button type="button" id="import-paste-clipboard-btn" data-role="import-paste-btn" onclick="dashboard.importManager.pasteImportTextFromClipboard()"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-all shadow-xs cursor-pointer">
-                                    <span class="material-symbols-outlined text-[16px]">content_paste</span>
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle bg-surface-2 text-text-main hover:bg-surface-3 hover:border-border-normal transition-all shadow-2xs cursor-pointer">
+                                    <span class="material-symbols-outlined text-[16px] text-text-secondary">content_paste</span>
                                     <span>${wt('im.editor_paste_btn', 'Вставить из буфера')}</span>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Auto-detection Explanation Banner with integrated status badge -->
-                        <div class="mb-2.5 px-3 py-2 rounded-lg bg-primary/8 border border-primary/20 flex items-center justify-between gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
+                        <!-- Auto-detection Explanation Banner with clean semantic badge -->
+                        <div class="mb-2.5 px-3 py-2 rounded-lg bg-primary/6 border border-primary/15 flex items-center justify-between gap-2.5 text-xs text-text-main shrink-0" data-role="auto-detect-banner">
                             <div class="flex items-center gap-2 min-w-0 leading-tight">
-                                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">auto_awesome</span>
+                                <span class="material-symbols-outlined text-primary text-[17px] shrink-0">auto_awesome</span>
                                 <div class="min-w-0">
                                     <span class="font-bold text-primary">${wt('im.auto_detect_banner_title', 'Автоопределение типов:')}</span>
                                     <span class="text-text-secondary">${wt('im.auto_detect_banner_desc', 'парсер сам определяет типы заданий по маркерам (@TEST, @SEQUENCE, @OPEN_ANSWER...). Вы можете вставить несколько заданий разных типов подряд.')}</span>
                                 </div>
                             </div>
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-1 text-primary border border-primary/25 shrink-0 shadow-2xs" data-role="auto-detect-badge"
+                            <span class="inline-flex items-center gap-1 text-[11px] font-medium text-primary shrink-0 opacity-80" data-role="auto-detect-badge"
                                 title="${this.escapeHtml(wt('im.auto_detect_tooltip', 'Типы заданий (@TEST, @SEQUENCE и др.) определяются автоматически из текста. Можно объединять разные типы в одном импорте.'))}">
-                                <span class="material-symbols-outlined text-[12px]">magic_button</span>
+                                <span class="material-symbols-outlined text-[13px]">magic_button</span>
                                 <span>${wt('im.auto_detect_badge', 'Авто-типы')}</span>
                             </span>
+                        </div>
+
+                        <!-- Optional Task Title Input -->
+                        <div class="mb-2.5 shrink-0" data-role="import-title-group">
+                            <label for="import-task-title-input" class="block text-xs font-semibold text-text-secondary mb-1">
+                                ${wt('im.task_title_optional_label', 'Название задания (опционально)')}
+                            </label>
+                            <input type="text"
+                                id="import-task-title-input"
+                                data-role="import-task-title-input"
+                                value="${this.escapeHtmlAttr(this.importTaskTitle || '')}"
+                                placeholder="${this.escapeHtmlAttr(wt('im.task_title_optional_placeholder', 'Например: Базовая сердечно-легочная реанимация'))}"
+                                class="w-full px-3 py-1.5 text-xs bg-surface-2 rounded-lg border border-border-subtle focus:border-primary focus:ring-1 focus:ring-primary text-text-main placeholder:text-text-muted transition-all"
+                                oninput="dashboard.importManager.setImportTaskTitle(this.value)">
                         </div>
 
                         <!-- Unified Single-Card Editor (No split borders, no clipping) -->
@@ -4020,7 +4114,7 @@ ${remaining}
                     </div>
                 </div>
 
-                ${notes.length ? `
+                ${(this.importMode !== 'text' && notes.length) ? `
                     <div class="p-3 bg-info-lighter border border-info-light rounded-xl">
                         <div class="flex items-start gap-2">
                             <span class="material-symbols-outlined text-info text-[18px]">info</span>
@@ -4031,23 +4125,21 @@ ${remaining}
                     </div>
                 ` : ''}
 
-                <!-- Settings Panel -->
-                <div class="p-3.5 bg-surface-1 border border-border-subtle rounded-xl shadow-xs">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                        <div>
-                            <label class="block text-xs font-semibold text-text-secondary mb-1">${wt('im.k909', 'Если задание уже существует')}</label>
-                            <select id="conflict-resolution-select" class="block w-full rounded-lg border border-border-subtle bg-surface-2 text-xs py-1.5 px-2.5 focus:ring-1 focus:ring-primary">
-                                <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
-                                <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
-                                <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
-                            </select>
-                        </div>
-                        <div class="sm:pt-5">
-                            <label class="flex items-center gap-2 cursor-pointer select-none">
-                                <input type="checkbox" id="skip-errors-checkbox" ${this.skipErrors ? 'checked' : ''} class="rounded text-primary focus:ring-primary w-4 h-4">
-                                <span class="text-xs text-text-secondary font-medium">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
-                            </label>
-                        </div>
+                <!-- Compact Settings Strip (Zero-occlusion, saves 40px+ fold space) -->
+                <div class="px-3 py-2 bg-surface-1 border border-border-subtle rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-2">
+                        <label for="conflict-resolution-select" class="font-semibold text-text-secondary">${wt('im.k909', 'Если задание уже существует')}:</label>
+                        <select id="conflict-resolution-select" class="rounded-lg border border-border-subtle bg-surface-2 text-xs py-1 px-2.5 text-text-main focus:ring-1 focus:ring-primary">
+                            <option value="skip" ${this.conflictResolution === 'skip' ? 'selected' : ''}>${wt('im.k910', 'Пропустить (по умолчанию)')}</option>
+                            <option value="overwrite" ${this.conflictResolution === 'overwrite' ? 'selected' : ''}>${wt('im.k911', 'Перезаписать')}</option>
+                            <option value="new_id" ${this.conflictResolution === 'new_id' ? 'selected' : ''}>${wt('im.k912', 'Создать копию (новый ID)')}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="skip-errors-checkbox" ${this.skipErrors ? 'checked' : ''} class="rounded text-primary focus:ring-primary w-4 h-4">
+                            <span class="text-xs text-text-secondary font-medium">${wt('im.k913', 'Пропускать задания с ошибками')}</span>
+                        </label>
                     </div>
                 </div>
 
@@ -4299,8 +4391,8 @@ ${remaining}
         const isAllSelected = selectableCount > 0 && selectedCount >= selectableCount;
 
         return `
-            <div id="preview-bulk-actions-bar" data-role="preview-bulk-actions-bar" class="p-3 bg-surface-1 border border-border-subtle rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
-                <div class="flex flex-wrap items-center gap-3 min-w-0">
+            <div id="preview-bulk-actions-bar" data-role="preview-bulk-actions-bar" class="py-2 px-3 bg-surface-1 border border-border-subtle rounded-xl flex flex-wrap items-center justify-between gap-2.5 shadow-xs">
+                <div class="flex flex-wrap items-center gap-2.5 min-w-0">
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                         <input 
                             type="checkbox" 
@@ -4308,9 +4400,9 @@ ${remaining}
                             onchange="dashboard.importManager.toggleSelectAll()"
                             class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary cursor-pointer"
                             ${isAllSelected ? 'checked' : ''}>
-                        <span class="text-xs font-semibold text-text-secondary">${wt('im.select_all', 'Выбрать все')}</span>
+                        <span class="text-xs font-semibold text-text-main">${wt('im.select_all', 'Выбрать все')}</span>
                     </label>
-                    <span id="preview-selected-counter" class="text-xs text-text-muted px-2.5 py-0.5 bg-surface-2 rounded-full border border-border-subtle ${selectedCount > 0 ? '' : 'hidden'}">
+                    <span id="preview-selected-counter" class="text-xs text-text-muted px-2 py-0.5 bg-surface-2 rounded-full border border-border-subtle ${selectedCount > 0 ? '' : 'hidden'}">
                         ${wt('im.selected_count', 'Выбрано: {count}').replace('{count}', selectedCount)}
                     </span>
                 </div>
@@ -4319,7 +4411,7 @@ ${remaining}
                         type="button"
                         onclick="dashboard.importManager.bulkExclude()"
                         data-role="bulk-exclude-btn"
-                        class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        class="px-2.5 py-1 text-xs font-medium text-text-main bg-surface-2 border border-border-subtle rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         ${selectedCount === 0 ? 'disabled' : ''}>
                         ${wt('im.bulk_exclude', 'Исключить выбранные')}
                     </button>
@@ -4327,7 +4419,7 @@ ${remaining}
                         type="button"
                         onclick="dashboard.importManager.bulkInclude()"
                         data-role="bulk-include-btn"
-                        class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        class="px-2.5 py-1 text-xs font-medium text-text-main bg-surface-2 border border-border-subtle rounded-lg hover:bg-surface-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         ${selectedCount === 0 ? 'disabled' : ''}>
                         ${wt('im.bulk_include', 'Включить выбранные')}
                     </button>
@@ -4460,45 +4552,21 @@ ${remaining}
                     </div>
                 </div>
 
-                <!-- Task Name with Inline Editing -->
-                <div class="task-title-row mb-2">
-                    <div class="task-title-view flex items-center gap-2" data-task-title-view="${index}">
-                        <h4 class="task-card-title font-bold text-text-main text-base break-words flex-1 cursor-pointer hover:text-primary transition-colors ${isExcluded ? 'line-through text-text-disabled' : ''}"
-                            title="${this.escapeHtmlAttr(taskName)}"
-                            onclick="dashboard.importManager.startEditName(${index})">
-                            ${this.escapeHtml(taskName)}
-                        </h4>
-                        <button type="button"
-                            data-task-edit-btn="${index}"
-                            onclick="dashboard.importManager.startEditName(${index})"
-                            class="shrink-0 p-1 rounded-lg text-text-disabled hover:text-text-main hover:bg-surface-2 transition-colors"
-                            title="${wt('im.edit_title_tooltip', 'Редактировать название задания')}">
-                            <span class="material-symbols-outlined text-[16px]">edit</span>
-                        </button>
-                    </div>
-                    <div class="task-title-edit-wrap hidden" data-task-title-edit="${index}">
+                <!-- Task Name with Open Direct Input -->
+                <div class="task-title-row mb-2.5" data-task-title-container="${index}">
+                    <label for="task-title-input-${index}" class="block text-[11px] font-semibold text-text-secondary mb-1">
+                        ${wt('im.card_title_label', 'Название задания')}
+                    </label>
+                    <div class="task-title-edit-wrap relative flex items-center" data-task-title-edit="${index}">
                         <input type="text"
-                            class="task-title-input"
+                            id="task-title-input-${index}"
+                            class="task-title-input w-full px-2.5 py-1.5 text-sm font-bold text-text-main bg-surface-2 rounded-lg border border-border-subtle focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-text-muted ${isExcluded ? 'opacity-60 line-through' : ''}"
                             data-role="task-title-edit-input"
                             data-task-title-input="${index}"
                             value="${this.escapeHtmlAttr(taskName)}"
+                            placeholder="${this.escapeHtmlAttr(wt('im.card_title_placeholder', 'Введите название задания'))}"
+                            oninput="dashboard.importManager.updateTaskName(${index}, this.value)"
                             onkeydown="dashboard.importManager.handleEditNameKeydown(event, ${index})">
-                        <button type="button"
-                            onclick="dashboard.importManager.saveEditName(${index})"
-                            data-role="save-task-name"
-                            data-task-title-save="${index}"
-                            class="p-1.5 rounded-lg bg-success text-white hover:bg-success-dark transition-colors shrink-0"
-                            title="${wt('im.action_save', 'Сохранить')}">
-                            <span class="material-symbols-outlined text-[16px]">check</span>
-                        </button>
-                        <button type="button"
-                            onclick="dashboard.importManager.cancelEditName(${index})"
-                            data-role="cancel-task-name"
-                            data-task-title-cancel="${index}"
-                            class="p-1.5 rounded-lg bg-surface-2 text-text-secondary hover:bg-bg-hover transition-colors shrink-0"
-                            title="${wt('im.action_cancel', 'Отмена')}">
-                            <span class="material-symbols-outlined text-[16px]">close</span>
-                        </button>
                     </div>
                 </div>
 
@@ -4919,18 +4987,50 @@ ${remaining}
 
         if (task.type === 'open_answer') {
             const promptLength = (data.prompt || '').length;
+            const refAnswer = data.reference_answer || data.ideal_answer || (Array.isArray(data.questions) ? data.questions[0]?.reference_answer : null);
+            const keywords = Array.isArray(data.keywords) ? data.keywords : [];
             return `
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u270E</span>
                     <span class="text-text-secondary">${wt('im.k803', 'Длина вопроса:')}</span>
                     <span class="font-semibold text-text-main">${promptLength} ${wt('im.k804', 'симв.')}</span>
                 </div>
+                ${keywords.length > 0 ? `
+                    <div class="flex items-center gap-1 truncate">
+                        <span class="text-text-muted">\u2217</span>
+                        <span class="text-text-secondary">${wt('im.cheat_tag_criterion', 'Ключей:')}</span>
+                        <span class="font-semibold text-text-main">${keywords.length}</span>
+                    </div>
+                ` : '<div></div>'}
+                ${refAnswer ? `
+                    <div class="col-span-2 flex items-start gap-1.5 text-[11px] pt-1.5 mt-1 border-t border-border-subtle">
+                        <span class="font-bold text-success-text shrink-0">${wt('im.reference_answer_label', 'Эталон:')}</span>
+                        <span class="text-text-secondary line-clamp-1 italic">${this.escapeHtml(refAnswer)}</span>
+                    </div>
+                ` : ''}
             `;
         }
 
         if (task.type === 'sequence_assembly') {
-            const elementsCount = data.elements_count || 0;
-            const levelsCount = data.levels_count || 0;
+            const elementsCount = data.elements_count || (data.elements ? Object.keys(data.elements).length : 0);
+            const levelsCount = data.levels_count || (data.levels ? Object.keys(data.levels).length : 0);
+            
+            let chain = [];
+            if (data.levels && typeof data.levels === 'object') {
+                const sortedLevels = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
+                sortedLevels.forEach(lvl => {
+                    const elIds = Array.isArray(data.levels[lvl]) ? data.levels[lvl] : [data.levels[lvl]];
+                    elIds.forEach(id => {
+                        const text = data.elements?.[id] || id;
+                        if (text) chain.push(text);
+                    });
+                });
+            } else if (Array.isArray(data.steps)) {
+                chain = data.steps;
+            } else if (data.elements && typeof data.elements === 'object') {
+                chain = Object.values(data.elements);
+            }
+
             return `
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u25A6</span>
@@ -4942,13 +5042,29 @@ ${remaining}
                     <span class="text-text-secondary">${wt('im.k806', 'Уровней:')}</span>
                     <span class="font-semibold text-text-main">${levelsCount}</span>
                 </div>
+                ${chain.length > 0 ? `
+                    <div class="col-span-2 flex flex-col gap-1 text-[11px] pt-1.5 mt-1 border-t border-border-subtle">
+                        <span class="text-text-muted font-medium">${wt('im.card_sequence_chain', 'Цепочка:')}</span>
+                        <div class="flex flex-wrap items-center gap-1">
+                            ${chain.slice(0, 3).map((step, idx) => `
+                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-surface-1 border border-border-subtle text-text-main text-[11px]">
+                                    <span class="text-text-muted font-bold">${idx + 1}.</span>
+                                    <span class="truncate max-w-[130px]">${this.escapeHtml(typeof step === 'string' ? step : (step.text || step.name || ''))}</span>
+                                </span>
+                                ${idx < Math.min(chain.length, 3) - 1 ? '<span class="text-text-muted text-[10px]">\u2192</span>' : ''}
+                            `).join('')}
+                            ${chain.length > 3 ? `<span class="text-text-muted text-[10px] font-semibold">+${chain.length - 3}</span>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
             `;
         }
 
         if (task.type === 'click') {
             if (data.mode === 'text_choice') {
-                const optionsCount = data.options_count || 0;
-                const correctCount = data.correct_count || 0;
+                const options = Array.isArray(data.options) ? data.options : [];
+                const optionsCount = data.options_count || options.length;
+                const correctCount = data.correct_count || options.filter(o => !!(o.is_correct || o.correct)).length;
                 return `
                     <div class="flex items-center gap-1">
                         <span class="text-text-muted">\u25A3</span>
@@ -4960,11 +5076,20 @@ ${remaining}
                         <span class="text-text-secondary">${wt('im.k808', 'Правильных:')}</span>
                         <span class="font-semibold text-text-main">${correctCount}</span>
                     </div>
-                    <div class="col-span-2 flex items-center gap-1">
-                        <span class="text-text-muted">\u2699</span>
-                        <span class="text-text-secondary">${wt('im.k809', 'Режим:')}</span>
-                        <span class="font-semibold text-text-main">${wt('im.k810', 'Текстовый выбор')}</span>
-                    </div>
+                    ${options.length > 0 ? `
+                        <div class="col-span-2 flex flex-wrap gap-1 pt-1.5 mt-1 border-t border-border-subtle">
+                            ${options.slice(0, 3).map(opt => {
+                                const isCorr = !!(opt.is_correct || opt.correct);
+                                return `
+                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] ${isCorr ? 'bg-success-lighter text-success-text font-semibold' : 'bg-surface-1 text-text-secondary border border-border-subtle'}">
+                                        <span>${isCorr ? '\u2713' : '\u2022'}</span>
+                                        <span class="truncate max-w-[140px]">${this.escapeHtml(typeof opt === 'string' ? opt : (opt.text || ''))}</span>
+                                    </span>
+                                `;
+                            }).join('')}
+                            ${options.length > 3 ? `<span class="text-text-muted text-[10px] self-center">+${options.length - 3}</span>` : ''}
+                        </div>
+                    ` : ''}
                 `;
             } else if (data.mode === 'word_errors' || data.mode === 'text_errors') {
                 const textLength = data.text_length || 0;
@@ -4985,13 +5110,35 @@ ${remaining}
         }
 
         if (task.type === 'test') {
-            const questionCount = data.question_count || 0;
+            const questions = Array.isArray(data.questions) ? data.questions : [];
+            const questionCount = data.question_count || questions.length;
+            const q0 = questions[0] || {};
+            const answers = Array.isArray(q0.answers) ? q0.answers : [];
+
             return `
                 <div class="flex items-center gap-1">
                     <span class="text-text-muted">\u25A3</span>
                     <span class="text-text-secondary">${wt('im.k813', 'Вопросов:')}</span>
                     <span class="font-semibold text-text-main">${questionCount}</span>
                 </div>
+                <div></div>
+                ${answers.length > 0 ? `
+                    <div class="col-span-2 flex flex-col gap-1 text-[11px] pt-1.5 mt-1 border-t border-border-subtle">
+                        <span class="text-text-muted font-medium">${wt('im.card_answers_preview', 'Варианты:')}</span>
+                        <div class="flex flex-wrap gap-1">
+                            ${answers.slice(0, 3).map(ans => {
+                                const isCorr = !!(ans.is_correct || ans.correct);
+                                return `
+                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] ${isCorr ? 'bg-success-lighter text-success-text font-semibold' : 'bg-surface-1 text-text-secondary border border-border-subtle'}">
+                                        <span>${isCorr ? '\u2713' : '\u2022'}</span>
+                                        <span class="truncate max-w-[140px]">${this.escapeHtml(typeof ans === 'string' ? ans : (ans.text || ''))}</span>
+                                    </span>
+                                `;
+                            }).join('')}
+                            ${answers.length > 3 ? `<span class="text-text-muted text-[10px] self-center">+${answers.length - 3}</span>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
             `;
         }
 
@@ -5329,6 +5476,14 @@ ${remaining}
             this.cancelEditName(this.editingTaskIndex);
         }
 
+        const directInput = document.querySelector(`[data-task-title-input="${index}"]`);
+        if (directInput) {
+            this.editingTaskIndex = index;
+            directInput.focus();
+            directInput.select();
+            return;
+        }
+
         const editWrap = document.querySelector(`[data-task-title-edit="${index}"]`);
         const viewWrap = document.querySelector(`[data-task-title-view="${index}"]`);
         if (editWrap && viewWrap) {
@@ -5386,18 +5541,20 @@ ${remaining}
 
     saveEditName(index) {
         const task = this.parsedResult?.tasks?.[index];
+        const directInput = document.querySelector(`[data-task-title-input="${index}"]`);
         const editWrap = document.querySelector(`[data-task-title-edit="${index}"]`);
         const viewWrap = document.querySelector(`[data-task-title-view="${index}"]`);
         if (!task) return;
 
-        if (editWrap) {
-            const input = editWrap.querySelector('input');
-            if (input) {
-                const newName = input.value.trim();
-                if (newName) {
-                    task.name = newName;
-                    if (task.data) task.data.name = newName;
-                }
+        const input = directInput || editWrap?.querySelector('input');
+        if (input) {
+            const newName = input.value.trim();
+            if (newName) {
+                task.name = newName;
+                if (task.data) task.data.name = newName;
+            }
+            if (input === document.activeElement) {
+                input.blur();
             }
         }
 
@@ -5418,12 +5575,14 @@ ${remaining}
 
     cancelEditName(index) {
         const task = this.parsedResult?.tasks?.[index];
+        const directInput = document.querySelector(`[data-task-title-input="${index}"]`);
         const editWrap = document.querySelector(`[data-task-title-edit="${index}"]`);
         const viewWrap = document.querySelector(`[data-task-title-view="${index}"]`);
-        if (editWrap) {
-            const input = editWrap.querySelector('input');
-            if (input && task) {
-                input.value = task.name || '';
+        const input = directInput || editWrap?.querySelector('input');
+        if (input && task) {
+            input.value = task.name || '';
+            if (input === document.activeElement) {
+                input.blur();
             }
         }
         if (editWrap && viewWrap) {
@@ -5438,6 +5597,13 @@ ${remaining}
         if (event.key === 'Enter') {
             event.preventDefault();
             this.saveEditName(index);
+            const nextInput = document.querySelector(`[data-task-title-input="${index + 1}"]`);
+            if (nextInput) {
+                nextInput.focus();
+                if (typeof nextInput.select === 'function') {
+                    nextInput.select();
+                }
+            }
         } else if (event.key === 'Escape') {
             event.preventDefault();
             this.cancelEditName(index);
@@ -5770,8 +5936,8 @@ ${remaining}
 
         if (this.aiTemplateType === 'material_analysis') {
             const markers = [
-                { marker: '<human_summary>', label: wt('im.k197', 'Краткое резюме'), color: 'bg-sky-100 text-sky-700' },
-                { marker: '<analysis_json>', label: wt('im.k198', 'Структурный JSON'), color: 'bg-emerald-100 text-emerald-700' },
+                { marker: '<human_summary>', label: wt('im.k197', 'Краткое резюме'), color: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 dark:border dark:border-sky-800' },
+                { marker: '<analysis_json>', label: wt('im.k198', 'Структурный JSON'), color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border dark:border-emerald-800' },
             ];
             const badges = [];
             let total = 0;
@@ -5795,17 +5961,17 @@ ${remaining}
             } else {
                 container.innerHTML = text.trim()
                     ? `<div class="flex items-center gap-1.5 text-warning-text text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">info</span><span class="truncate">${wt('im.k199', 'Маркеры анализа (<human_summary>, <analysis_json>) пока не найдены')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_check_syntax', 'Проверьте образец в справочнике')}</span>`
-                    : `<div class="flex items-center gap-1.5 text-text-disabled text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">code</span><span class="truncate">${wt('im.status_waiting_input', 'Вставьте ответ внешнего ИИ')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_auto_parse_ready', 'Парсер готов')}</span>`;
+                    : `<div class="flex items-center gap-1.5 text-text-disabled text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">code</span><span class="truncate">${wt('im.status_waiting_input', 'Вставьте ответ внешнего ИИ')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_auto_parse_ready', 'Готово к распознаванию')}</span>`;
             }
             return;
         }
 
         const markers = [
-            { marker: '@OPEN_ANSWER', key: 'open_answer', label: wt('im.k200', 'Открытый ответ'), color: 'bg-blue-100 text-blue-700' },
-            { marker: '@SEQUENCE', key: 'sequence', label: wt('im.k201', 'Последовательность'), color: 'bg-purple-100 text-purple-700' },
-            { marker: '@CLICK_TEXT', key: 'click_text', label: wt('im.k202', 'Клик / Ошибки (выбор)'), color: 'bg-amber-100 text-amber-700' },
-            { marker: '@CLICK_WORDS', key: 'click_words', label: wt('im.k203', 'Клик / Ошибки (текст)'), color: 'bg-rose-100 text-rose-700' },
-            { marker: '@TEST', key: 'test', label: wt('im.k204', 'Тест'), color: 'bg-orange-100 text-orange-700' }
+            { marker: '@OPEN_ANSWER', key: 'open_answer', label: wt('im.k200', 'Открытый ответ'), color: 'bg-info-lighter text-info-dark dark:bg-blue-950/60 dark:text-blue-300 dark:border dark:border-blue-800' },
+            { marker: '@SEQUENCE', key: 'sequence', label: wt('im.k201', 'Последовательность'), color: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 dark:border dark:border-purple-800' },
+            { marker: '@CLICK_TEXT', key: 'click_text', label: wt('im.k202', 'Клик / Ошибки (выбор)'), color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800' },
+            { marker: '@CLICK_WORDS', key: 'click_words', label: wt('im.k203', 'Клик / Ошибки (текст)'), color: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 dark:border dark:border-rose-800' },
+            { marker: '@TEST', key: 'test', label: wt('im.k204', 'Тест'), color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border dark:border-emerald-800' }
         ];
 
         const badges = [];
@@ -5845,7 +6011,7 @@ ${remaining}
         } else {
             container.innerHTML = text.trim()
                 ? `<div class="flex items-center gap-1.5 text-warning-text text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">info</span><span class="truncate">${wt('im.status_no_tags_found', 'Маркеры заданий (@TEST, @SEQUENCE...) пока не найдены в тексте')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_check_syntax', 'Проверьте образец в справочнике')}</span>`
-                : `<div class="flex items-center gap-1.5 text-text-disabled text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">code</span><span class="truncate">${wt('im.status_waiting_input', 'Вставьте текст с маркерами заданий (@TEST, @SEQUENCE и др.)')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_auto_parse_ready', 'Парсер готов')}</span>`;
+                : `<div class="flex items-center gap-1.5 text-text-disabled text-[11px] min-w-0"><span class="material-symbols-outlined text-[15px] shrink-0">code</span><span class="truncate">${wt('im.status_waiting_input', 'Вставьте текст с маркерами заданий (@TEST, @SEQUENCE и др.)')}</span></div><span class="text-[10px] text-text-disabled shrink-0">${wt('im.status_auto_parse_ready', 'Готово к распознаванию')}</span>`;
         }
     }
 
@@ -6429,16 +6595,21 @@ text: Сердце человека состоит из [трёх] камер. �
     // API Calls
     // =========================================================================
 
-    async parseText(text, moduleId, topicId) {
+    async parseText(text, moduleId, topicId, title = '') {
         try {
+            const payload = {
+                module_id: moduleId,
+                topic_id: topicId,
+                text: text
+            };
+            const customTitle = (title || this.importTaskTitle || '').trim();
+            if (customTitle) {
+                payload.title = customTitle;
+            }
             const response = await fetch('/api/editor/import/parse', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    module_id: moduleId,
-                    topic_id: topicId,
-                    text: text
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -6682,11 +6853,16 @@ text: Сердце человека состоит из [трёх] камер. �
                 return;
             }
 
+            const titleInput = document.getElementById('import-task-title-input');
+            if (titleInput && typeof titleInput.value === 'string') {
+                this.importTaskTitle = titleInput.value.trim();
+            }
+
             // Show loading step
             this.nextStep();
 
             try {
-                const result = await this.parseText(this.sourceText, this.selectedModule, this.selectedTopic);
+                const result = await this.parseText(this.sourceText, this.selectedModule, this.selectedTopic, this.importTaskTitle);
 
                 // Check if parsing was successful
                 if (!result.ok) {
@@ -11209,19 +11385,19 @@ ${wt('im.k573', '3. Нажмите «Распарсить» для предпр�
 
         if (this.isInternalAiGenerationInDevelopment()) {
             return `
-                <div class="space-y-4 animate-fade-in">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="animate-fade-in">
+                    <div class="import-target-grid">
                         <div>
-                            <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k854', 'Целевой модуль')}</label>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1.5">${wt('im.k854', 'Целевой модуль')}</label>
                             <select id="import-module-select" 
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                class="block w-full rounded-lg border border-border-subtle bg-surface-2 py-2 px-3 text-text-main focus:ring-2 focus:ring-primary text-sm">
                                 ${this.renderModuleOptions(modules, wt('im.k653', 'Выберите модуль...'))}
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-text-secondary mb-2">${wt('im.k855', 'Целевая тема')}</label>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1.5">${wt('im.k855', 'Целевая тема')}</label>
                             <select id="import-topic-select"
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 px-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
+                                class="block w-full rounded-lg border border-border-subtle bg-surface-2 py-2 px-3 text-text-main focus:ring-2 focus:ring-primary text-sm"
                                 disabled>
                                 <option value="">${wt('im.k856', 'Сначала выберите модуль...')}</option>
                             </select>
