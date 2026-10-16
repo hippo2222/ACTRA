@@ -482,8 +482,15 @@ const SequenceUI = (function () {
       ".seq-levels-header{padding:0.45rem 0.75rem!important;margin-bottom:0.25rem!important;}" +
       ".seq-levels-header .text-base{font-size:0.875rem!important;}" +
       "}" +
-      ".seq-available-list{transition:mask-image 140ms ease,-webkit-mask-image 140ms ease;}" +
-      ".seq-sidebar-scroll-mask{mask-image:linear-gradient(to bottom,black 85%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,black 85%,transparent 100%);}" +
+      "@property --mask-top-size{syntax:'<length>';inherits:false;initial-value:0px;}" +
+      "@property --mask-bottom-size{syntax:'<length>';inherits:false;initial-value:0px;}" +
+      ".seq-available-list{" +
+      "--mask-top-size:0px;" +
+      "--mask-bottom-size:0px;" +
+      "mask-image:linear-gradient(to bottom,transparent 0px,black var(--mask-top-size,0px),black calc(100% - var(--mask-bottom-size,0px)),transparent 100%);" +
+      "-webkit-mask-image:linear-gradient(to bottom,transparent 0px,black var(--mask-top-size,0px),black calc(100% - var(--mask-bottom-size,0px)),transparent 100%);" +
+      "transition:--mask-top-size 150ms ease,--mask-bottom-size 150ms ease;" +
+      "}" +
       "@media (prefers-reduced-motion:reduce){" +
       ".seq-available-item,.seq-slot-target,.seq-element-entry,.seq-level-entry{transition:none!important;transform:none!important;}" +
       "}";
@@ -545,14 +552,18 @@ const SequenceUI = (function () {
 
     function updateAvailableScrollMask() {
       if (!availableList) return;
-      // If content doesn't overflow or user scrolled within 10px of bottom, remove mask completely
-      const canScrollDown =
-        availableList.scrollHeight - availableList.scrollTop - availableList.clientHeight > 10;
-      if (canScrollDown) {
-        availableList.classList.add("seq-sidebar-scroll-mask");
-      } else {
-        availableList.classList.remove("seq-sidebar-scroll-mask");
-      }
+      const scrollTop = availableList.scrollTop;
+      const scrollHeight = availableList.scrollHeight;
+      const clientHeight = availableList.clientHeight;
+      const distFromBottom = Math.max(0, scrollHeight - scrollTop - clientHeight);
+
+      // Top fade: smoothly scales from 0px up to 28px over the first 24px of scroll
+      const topSize = scrollHeight > clientHeight ? Math.min(28, Math.max(0, scrollTop * 1.2)) : 0;
+      // Bottom fade: smoothly scales from 0px up to 32px over the last 28px before bottom
+      const bottomSize = scrollHeight > clientHeight ? Math.min(32, Math.max(0, distFromBottom * 1.2)) : 0;
+
+      availableList.style.setProperty("--mask-top-size", `${Math.round(topSize)}px`);
+      availableList.style.setProperty("--mask-bottom-size", `${Math.round(bottomSize)}px`);
     }
 
     availableList.addEventListener("scroll", updateAvailableScrollMask, { passive: true });
