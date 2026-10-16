@@ -482,6 +482,7 @@ const SequenceUI = (function () {
       ".seq-levels-header{padding:0.45rem 0.75rem!important;margin-bottom:0.25rem!important;}" +
       ".seq-levels-header .text-base{font-size:0.875rem!important;}" +
       "}" +
+      ".seq-available-list{transition:mask-image 140ms ease,-webkit-mask-image 140ms ease;}" +
       ".seq-sidebar-scroll-mask{mask-image:linear-gradient(to bottom,black 85%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,black 85%,transparent 100%);}" +
       "@media (prefers-reduced-motion:reduce){" +
       ".seq-available-item,.seq-slot-target,.seq-element-entry,.seq-level-entry{transition:none!important;transform:none!important;}" +
@@ -535,12 +536,26 @@ const SequenceUI = (function () {
     availableHint.textContent = wt("sequenceui.available_hint", "Перетащите элемент в нужный слот или нажмите на него, а затем на слот.");
 
     const availableList = document.createElement("div");
-    availableList.className = "mt-3 min-h-0 flex-1 overflow-y-auto pr-1 sequenceui-scrollbar seq-sidebar-scroll-mask";
+    availableList.className = "seq-available-list mt-3 min-h-0 flex-1 overflow-y-auto pr-1 sequenceui-scrollbar";
     availableList.dataset.sequenceui = "available-list";
 
     const availableInner = document.createElement("div");
-    availableInner.className = "space-y-2 pr-1";
+    availableInner.className = "space-y-2 pr-1 pb-3";
     availableList.appendChild(availableInner);
+
+    function updateAvailableScrollMask() {
+      if (!availableList) return;
+      // If content doesn't overflow or user scrolled within 10px of bottom, remove mask completely
+      const canScrollDown =
+        availableList.scrollHeight - availableList.scrollTop - availableList.clientHeight > 10;
+      if (canScrollDown) {
+        availableList.classList.add("seq-sidebar-scroll-mask");
+      } else {
+        availableList.classList.remove("seq-sidebar-scroll-mask");
+      }
+    }
+
+    availableList.addEventListener("scroll", updateAvailableScrollMask, { passive: true });
 
     availableCard.appendChild(availableHeader);
     availableCard.appendChild(availableHint);
@@ -1434,6 +1449,7 @@ const SequenceUI = (function () {
 
         availableInner.appendChild(btn);
       });
+      requestAnimationFrame(updateAvailableScrollMask);
     }
 
     function isMotionReduced() {
@@ -2743,6 +2759,7 @@ const SequenceUI = (function () {
     const onResize = () => {
       syncAvailableSidebarStickyMode();
       requestAnimationFrame(refreshScrollablePanels);
+      requestAnimationFrame(updateAvailableScrollMask);
     };
     window.addEventListener("resize", onResize);
 
@@ -2939,6 +2956,9 @@ const SequenceUI = (function () {
       },
       cleanup() {
         window.removeEventListener("resize", onResize);
+        if (availableList) {
+          availableList.removeEventListener("scroll", updateAvailableScrollMask);
+        }
       },
       movePlacedElement,
       removeFromLevel,
