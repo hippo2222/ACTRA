@@ -386,6 +386,26 @@ const SequenceUI = (function () {
       shuffleInPlace(initialAvailable);
     }
 
+    const canonicalOrderMap = new Map();
+    initialAvailable.forEach((id, idx) => {
+      if (!canonicalOrderMap.has(id)) {
+        canonicalOrderMap.set(id, idx);
+      }
+    });
+
+    function restoreAvailableItem(elemId) {
+      if (elemId == null) return;
+      const targetOrder = canonicalOrderMap.has(elemId) ? canonicalOrderMap.get(elemId) : 999;
+      let insertAt = state.available.findIndex((id) => {
+        const o = canonicalOrderMap.has(id) ? canonicalOrderMap.get(id) : 999;
+        return o > targetOrder;
+      });
+      if (insertAt < 0) {
+        insertAt = state.available.length;
+      }
+      state.available.splice(insertAt, 0, elemId);
+    }
+
     const state = {
       mode: "initial",
       data,
@@ -441,7 +461,31 @@ const SequenceUI = (function () {
       ".sequenceui-scrollbar{scrollbar-width:auto;scrollbar-color:rgba(107,114,128,0.8) rgba(0,0,0,0.05);}" +
       ".dark .sequenceui-scrollbar{scrollbar-color:rgba(156,163,175,0.5) rgba(255,255,255,0.05);} " +
       ".seq-level-entry,.seq-element-entry{transform:translateZ(0);backface-visibility:hidden;}" +
-      ".seq-level-entry[data-reordering='true']{will-change:transform;}";
+      ".seq-level-entry[data-reordering='true']{will-change:transform;}" +
+      ".seq-available-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;cursor:grab;touch-action:manipulation;}" +
+      ".seq-available-item:active:not(:disabled){transform:scale(0.97)!important;cursor:grabbing;}" +
+      ".seq-available-item:disabled{cursor:default;}" +
+      ".seq-slot-target{transition:border-color 140ms ease,box-shadow 140ms ease,background-color 140ms ease,transform 140ms ease;touch-action:manipulation;}" +
+      ".seq-slot-target.seq-slot-hover{border-style:solid!important;border-color:var(--color-primary,#6366f1)!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 12%,transparent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 25%,transparent)!important;transform:scale(1.015);}" +
+      ".seq-element-entry{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease;touch-action:manipulation;}" +
+      ".seq-element-entry:active:not(:disabled):not([disabled]){transform:scale(0.97)!important;}" +
+      ".seq-placed-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;touch-action:manipulation;}" +
+      ".seq-placed-item:not([disabled]):not(:disabled){cursor:grab;}" +
+      ".seq-placed-item:active:not([disabled]):not(:disabled){cursor:grabbing;transform:scale(0.97)!important;}" +
+      ".seq-placed-item.seq-slot-hover{outline:2px solid var(--color-primary,#6366f1)!important;outline-offset:2px!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 15%,transparent)!important;transform:scale(1.02);}" +
+      "@media (max-height:768px){" +
+      ".seq-levels-container{gap:0.375rem!important;margin-top:0.375rem!important;}" +
+      ".seq-level-panel{padding:0.45rem 0.625rem!important;}" +
+      ".seq-level-header-row{margin-bottom:0.2rem!important;padding-bottom:0.2rem!important;}" +
+      ".seq-slot-target,.seq-placed-item{min-height:2.15rem!important;padding-top:0.2rem!important;padding-bottom:0.2rem!important;}" +
+      ".seq-level-entry{margin-bottom:0.25rem!important;}" +
+      ".seq-levels-header{padding:0.45rem 0.75rem!important;margin-bottom:0.25rem!important;}" +
+      ".seq-levels-header .text-base{font-size:0.875rem!important;}" +
+      "}" +
+      ".seq-sidebar-scroll-mask{mask-image:linear-gradient(to bottom,black 85%,transparent 100%);-webkit-mask-image:linear-gradient(to bottom,black 85%,transparent 100%);}" +
+      "@media (prefers-reduced-motion:reduce){" +
+      ".seq-available-item,.seq-slot-target,.seq-element-entry,.seq-level-entry{transition:none!important;transform:none!important;}" +
+      "}";
     root.appendChild(style);
 
     const layout = document.createElement("div");
@@ -472,7 +516,7 @@ const SequenceUI = (function () {
     availableCard.style.maxHeight = "calc(100vh - 7rem)";
 
     const availableHeader = document.createElement("div");
-    availableHeader.className = "flex items-start justify-between gap-3";
+    availableHeader.className = "flex items-center justify-between gap-2";
 
     const availableTitle = document.createElement("div");
     availableTitle.className = "text-sm font-bold text-text-main dark:text-text-on-dark";
@@ -480,7 +524,7 @@ const SequenceUI = (function () {
 
     const availableCount = document.createElement("div");
     availableCount.className =
-      "text-xs font-semibold bg-surface-1 dark:bg-surface-1 border border-border-strong text-text-secondary dark:text-text-on-dark px-2 py-0.5 rounded-full";
+      "inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 text-xs font-semibold tabular-nums text-text-muted bg-surface-2 dark:bg-surface-2 border border-border-subtle rounded-full shrink-0 whitespace-nowrap";
     availableCount.dataset.sequenceui = "available-count";
 
     availableHeader.appendChild(availableTitle);
@@ -488,10 +532,10 @@ const SequenceUI = (function () {
 
     const availableHint = document.createElement("div");
     availableHint.className = "mt-2 text-xs leading-relaxed text-text-main dark:text-text-on-dark";
-    availableHint.textContent = wt("sequenceui.available_hint", "Сначала выберите элемент здесь, затем кликните по пустому слоту нужного уровня.");
+    availableHint.textContent = wt("sequenceui.available_hint", "Перетащите элемент в нужный слот или нажмите на него, а затем на слот.");
 
     const availableList = document.createElement("div");
-    availableList.className = "mt-3 min-h-0 flex-1 overflow-y-auto pr-1 sequenceui-scrollbar";
+    availableList.className = "mt-3 min-h-0 flex-1 overflow-y-auto pr-1 sequenceui-scrollbar seq-sidebar-scroll-mask";
     availableList.dataset.sequenceui = "available-list";
 
     const availableInner = document.createElement("div");
@@ -507,11 +551,14 @@ const SequenceUI = (function () {
 
     const levelsCard = document.createElement("div");
     levelsCard.className =
-      "flex min-h-[220px] flex-col rounded-xl border border-border-strong bg-surface-2 p-4 shadow-lg dark:border-border-strong dark:bg-surface-2";
+      "flex min-h-[220px] flex-col gap-3 bg-transparent border-0 shadow-none p-0";
     levelsCard.dataset.sequenceui = "levels-card";
 
     const levelsHeader = document.createElement("div");
-    levelsHeader.className = "flex items-start justify-between gap-3";
+    levelsHeader.className = "seq-levels-header flex items-start justify-between gap-3 p-3.5 rounded-xl border border-border-subtle bg-surface-1 dark:bg-surface-2 shadow-sm";
+
+    const levelsPromptCol = document.createElement("div");
+    levelsPromptCol.className = "min-w-0 flex-1";
 
     const levelsTitle = document.createElement("div");
     levelsTitle.className = "min-w-0 text-base font-bold leading-tight text-text-main dark:text-text-on-dark";
@@ -528,21 +575,19 @@ const SequenceUI = (function () {
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.className = "hidden items-center justify-center gap-1.5 px-3 py-1.5 border border-border-strong bg-surface-1 text-text-main hover:bg-bg-hover rounded text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover dark:focus-visible:ring-offset-surface-2";
-    clearBtn.setAttribute("aria-label", wt("sequenceui.clear_btn", "Очистить"));
+    clearBtn.setAttribute("aria-label", wt("sequenceui.clear_btn", "Сбросить всё"));
+    clearBtn.title = wt("sequenceui.clear_btn_tooltip", "Сбросить все заполненные слоты");
     clearBtn.dataset.sequenceui = "clear-button";
-    clearBtn.innerHTML = '<span class="material-symbols-outlined text-sm">backspace</span> ' + wt("sequenceui.clear_btn", "Очистить");
+    clearBtn.innerHTML = '<span class="material-symbols-outlined text-sm">restart_alt</span> ' + wt("sequenceui.clear_btn", "Сбросить всё");
 
     const levelsActions = document.createElement("div");
     levelsActions.className = "flex flex-wrap items-center justify-end gap-2";
     levelsActions.appendChild(clearBtn);
     levelsActions.appendChild(addLevelBtn);
 
-    levelsHeader.appendChild(levelsTitle);
-    levelsHeader.appendChild(levelsActions);
-
     const levelsHint = document.createElement("div");
-    levelsHint.className = "mt-2 text-xs leading-relaxed text-text-main dark:text-text-on-dark";
-    levelsHint.textContent = wt("sequenceui.levels_hint_d1", "Прочитайте формулировку выше, затем распределите элементы по подходящим уровням. Названия уровней подсказывают, куда именно нужно поместить каждый элемент.");
+    levelsHint.className = "mt-1.5 text-xs leading-relaxed text-text-secondary dark:text-text-on-dark";
+    levelsHint.textContent = wt("sequenceui.levels_hint_d1", "Распределите элементы по уровням с помощью перетаскивания или кликов. Для возврата элемента нажмите на него в слоте или перетащите обратно в список.");
     if (requiresBlockNames || difficulty === 3) {
       levelsHint.textContent = wt("sequenceui.levels_hint_d3", "Прочитайте формулировку выше, добавляйте слоты и вводите названия элементов прямо в нужные уровни.");
     }
@@ -561,6 +606,12 @@ const SequenceUI = (function () {
       strong.textContent = wt("sequenceui.order_levels_matters", "Порядок уровней тоже важен.");
       levelsHint.appendChild(strong);
     }
+
+    levelsPromptCol.appendChild(levelsTitle);
+    levelsPromptCol.appendChild(levelsHint);
+
+    levelsHeader.appendChild(levelsPromptCol);
+    levelsHeader.appendChild(levelsActions);
 
     const comparisonToolbar = document.createElement("div");
     comparisonToolbar.className = "mt-3 hidden flex-wrap items-center justify-between gap-3";
@@ -589,11 +640,10 @@ const SequenceUI = (function () {
     comparisonToolbar.appendChild(comparisonToggle);
 
     levelsCard.appendChild(levelsHeader);
-    levelsCard.appendChild(levelsHint);
     levelsCard.appendChild(comparisonToolbar);
 
     const levelsContainer = document.createElement("div");
-    levelsContainer.className = "mt-3 flex flex-col gap-4";
+    levelsContainer.className = "seq-levels-container mt-3 flex flex-col gap-4";
     levelsContainer.dataset.sequenceui = "levels-list";
 
     levelsCard.appendChild(levelsContainer);
@@ -990,14 +1040,9 @@ const SequenceUI = (function () {
       }
       const toReturn = placement && Array.isArray(placement.blocks) ? placement.blocks.filter((x) => x != null) : [];
       if (toReturn.length > 0) {
-        if (state.shuffleEnabled) {
-          toReturn.forEach((id) => {
-            const insertAt = Math.floor(Math.random() * (state.available.length + 1));
-            state.available.splice(insertAt, 0, id);
-          });
-        } else {
-          state.available.push(...toReturn);
-        }
+        toReturn.forEach((id) => {
+          restoreAvailableItem(id);
+        });
       }
 
       state.data.levels.splice(levelIndex, 1);
@@ -1110,6 +1155,184 @@ const SequenceUI = (function () {
       }
     }
 
+    function setupSequencePointerDrag(triggerEl, getDragConfig) {
+      if (!triggerEl || typeof getDragConfig !== "function") return;
+
+      triggerEl.addEventListener("pointerdown", (startEvt) => {
+        if (!canEdit() || isReferenceView() || state.locked) return;
+        if (startEvt.button !== 0 && startEvt.pointerType === "mouse") return;
+
+        const config = getDragConfig();
+        if (!config || !config.labelText) return;
+
+        const startX = startEvt.clientX;
+        const startY = startEvt.clientY;
+        let isDragging = false;
+        let dragAvatar = null;
+        let hoveredSlotTarget = null;
+
+        function onPointerMove(moveEvt) {
+          const dx = moveEvt.clientX - startX;
+          const dy = moveEvt.clientY - startY;
+
+          // Drag threshold (> 4px) to distinguish intentional drag from a simple click
+          if (!isDragging && Math.hypot(dx, dy) > 4) {
+            isDragging = true;
+
+            dragAvatar = document.createElement("div");
+            dragAvatar.className =
+              "fixed z-[999999] pointer-events-none select-none flex items-center justify-center";
+            dragAvatar.style.borderRadius = "10px";
+            dragAvatar.style.backgroundColor = "var(--color-primary, #6366f1)";
+            dragAvatar.style.color = "#ffffff";
+            dragAvatar.style.border = "1px solid rgba(255, 255, 255, 0.35)";
+            dragAvatar.style.boxShadow =
+              "0 12px 28px -4px rgba(99, 102, 241, 0.55), 0 8px 10px -6px rgba(0, 0, 0, 0.3)";
+            dragAvatar.style.backdropFilter = "blur(12px)";
+            dragAvatar.style.padding = "8px 14px";
+            dragAvatar.style.maxWidth = "320px";
+            dragAvatar.style.boxSizing = "border-box";
+            dragAvatar.style.willChange = "transform";
+            dragAvatar.style.top = "0px";
+            dragAvatar.style.left = "0px";
+
+            const dragAvatarText = document.createElement("div");
+            dragAvatarText.style.margin = "0";
+            dragAvatarText.style.padding = "0";
+            dragAvatarText.style.display = "-webkit-box";
+            dragAvatarText.style.webkitLineClamp = "2";
+            dragAvatarText.style.webkitBoxOrient = "vertical";
+            dragAvatarText.style.overflow = "hidden";
+            dragAvatarText.style.textOverflow = "ellipsis";
+            dragAvatarText.style.lineHeight = "1.3";
+            dragAvatarText.style.maxHeight = "2.6em";
+            dragAvatarText.style.fontSize = "12px";
+            dragAvatarText.style.fontWeight = "700";
+            dragAvatarText.style.textAlign = "center";
+            dragAvatarText.style.wordBreak = "break-word";
+            dragAvatarText.textContent = config.labelText;
+
+            dragAvatar.appendChild(dragAvatarText);
+            document.body.appendChild(dragAvatar);
+
+            if (config.originElement) {
+              config.originElement.style.opacity = "0.3";
+              config.originElement.style.transform = "scale(0.96)";
+              config.originElement.style.transition = "opacity 120ms ease, transform 120ms ease";
+            }
+          }
+
+          if (isDragging && dragAvatar) {
+            const w = dragAvatar.offsetWidth || 140;
+            const h = dragAvatar.offsetHeight || 36;
+            dragAvatar.style.transform = `translate3d(${moveEvt.clientX - w / 2}px, ${moveEvt.clientY - h / 2}px, 0) scale(1.05) rotate(1.5deg)`;
+
+            const targetUnderCursor = document.elementFromPoint(moveEvt.clientX, moveEvt.clientY);
+            let slotTarget = targetUnderCursor
+              ? targetUnderCursor.closest('[data-sequenceui-slot="true"]') ||
+                targetUnderCursor.closest('[data-sequenceui-placed-item="true"]')
+              : null;
+
+            if (slotTarget && config.originElement && slotTarget === config.originElement) {
+              slotTarget = null;
+            }
+
+            if (!slotTarget && targetUnderCursor) {
+              const levelPanel = targetUnderCursor.closest("[data-sequenceui-level-id]");
+              if (levelPanel) {
+                const emptySlot = levelPanel.querySelector('[data-sequenceui-slot="true"]');
+                if (emptySlot) {
+                  slotTarget = emptySlot;
+                }
+              }
+            }
+
+            if (hoveredSlotTarget && hoveredSlotTarget !== slotTarget) {
+              hoveredSlotTarget.classList.remove("seq-slot-hover");
+              hoveredSlotTarget = null;
+            }
+            if (slotTarget && slotTarget !== hoveredSlotTarget) {
+              hoveredSlotTarget = slotTarget;
+              hoveredSlotTarget.classList.add("seq-slot-hover");
+            }
+          }
+        }
+
+        function onPointerUp(upEvt) {
+          window.removeEventListener("pointermove", onPointerMove);
+          window.removeEventListener("pointerup", onPointerUp);
+          window.removeEventListener("pointercancel", onPointerUp);
+
+          if (hoveredSlotTarget) {
+            hoveredSlotTarget.classList.remove("seq-slot-hover");
+            hoveredSlotTarget = null;
+          }
+
+          if (isDragging && dragAvatar) {
+            if (typeof config.onDragEnd === "function") {
+              config.onDragEnd();
+            }
+
+            const dropX = upEvt.clientX;
+            const dropY = upEvt.clientY;
+            const w = dragAvatar.offsetWidth || 140;
+            const h = dragAvatar.offsetHeight || 36;
+            dragAvatar.remove();
+
+            const dropTarget = document.elementFromPoint(dropX, dropY);
+            let targetSlot = dropTarget
+              ? dropTarget.closest('[data-sequenceui-slot="true"]') ||
+                dropTarget.closest('[data-sequenceui-placed-item="true"]')
+              : null;
+
+            if (targetSlot && config.originElement && targetSlot === config.originElement) {
+              targetSlot = null;
+            }
+
+            if (!targetSlot && dropTarget) {
+              const levelPanel = dropTarget.closest("[data-sequenceui-level-id]");
+              if (levelPanel) {
+                const emptySlot = levelPanel.querySelector('[data-sequenceui-slot="true"]');
+                if (emptySlot) {
+                  targetSlot = emptySlot;
+                }
+              }
+            }
+
+            const isSidebarDrop = Boolean(
+              dropTarget &&
+                (dropTarget.closest("#available-inner") ||
+                  dropTarget.closest('[data-sequenceui="available-sidebar"]'))
+            );
+
+            if ((targetSlot || isSidebarDrop) && typeof config.onDrop === "function") {
+              config.onDrop(
+                targetSlot,
+                {
+                  left: dropX - w / 2,
+                  top: dropY - h / 2,
+                  width: w,
+                  height: h,
+                },
+                isSidebarDrop
+              );
+            } else {
+              // Cancelled / Dropped outside -> restore origin element
+              if (config.originElement) {
+                config.originElement.style.opacity = "";
+                config.originElement.style.transform = "";
+                config.originElement.style.transition = "";
+              }
+            }
+          }
+        }
+
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+        window.addEventListener("pointercancel", onPointerUp);
+      });
+    }
+
     function renderAvailable() {
       if (requiresBlockNames || difficulty === 3) {
         return;
@@ -1120,7 +1343,10 @@ const SequenceUI = (function () {
         ? buildAvailableFromPlacements(renderModel.placements)
         : state.available.slice();
       const groups = getAvailableGroups(ids);
-      availableCount.textContent = `${ids.length} ${pluralRu(ids.length, wt("sequenceui.plural_element_one", "элемент"), wt("sequenceui.plural_element_few", "элемента"), wt("sequenceui.plural_element_many", "элементов"))}`;
+      availableCount.textContent = String(ids.length);
+      const fullCountLabel = `${ids.length} ${pluralRu(ids.length, wt("sequenceui.plural_element_one", "элемент"), wt("sequenceui.plural_element_few", "элемента"), wt("sequenceui.plural_element_many", "элементов"))}`;
+      availableCount.title = fullCountLabel;
+      availableCount.setAttribute("aria-label", fullCountLabel);
 
       if (ids.length === 0) {
         const empty = document.createElement("div");
@@ -1139,8 +1365,9 @@ const SequenceUI = (function () {
         btn.type = "button";
         btn.setAttribute("aria-label", wt("sequenceui.select_element_aria", "Выбрать элемент: {label}").replace("{label}", label));
         btn.dataset.sequenceui = "available-item";
+        btn.dataset.sequenceuiElementId = representativeId;
         btn.className =
-          "w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 " +
+          "seq-available-item w-full text-left rounded-lg border px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 " +
           (isSelected
             ? "border-primary bg-primary-lighter dark:border-primary dark:bg-primary dark:text-primary-fg"
             : "border-border-strong bg-surface-1 hover:bg-bg-hover dark:border-border-strong dark:bg-surface-2 dark:hover:bg-bg-hover");
@@ -1149,14 +1376,18 @@ const SequenceUI = (function () {
         line.className = "flex items-start justify-between gap-2";
 
         const text = document.createElement("div");
-        text.className = `break-words leading-snug ${isSelected ? '!line-clamp-none' : 'line-clamp-3'} hover:line-clamp-none focus-within:line-clamp-none font-medium ${isSelected ? "text-text-main dark:text-primary-fg" : "text-text-main dark:text-text-on-dark"}`;
+        text.className = `break-words leading-snug ${isSelected ? '!line-clamp-none' : 'line-clamp-3'} font-medium ${isSelected ? "text-text-main dark:text-primary-fg" : "text-text-main dark:text-text-on-dark"}`;
         text.title = label;
         text.textContent = label;
         line.appendChild(text);
 
         if (group.ids.length > 1) {
           const countBadge = document.createElement("span");
-          countBadge.className = "shrink-0 rounded-full border border-border-strong bg-surface-1 px-2 py-0.5 text-[11px] font-semibold text-text-main dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark";
+          countBadge.className =
+            "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold self-start mt-0.5 transition-colors " +
+            (isSelected
+              ? "border border-white/40 bg-white/20 text-white"
+              : "border border-border-strong bg-surface-1 text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark");
           countBadge.dataset.sequenceui = "available-duplicate-count";
           countBadge.textContent = `x${group.ids.length}`;
           line.appendChild(countBadge);
@@ -1169,26 +1400,179 @@ const SequenceUI = (function () {
           btn.className += " opacity-60 cursor-default";
         }
 
+        let lastDragEndedAt = 0;
+
         btn.addEventListener("click", () => {
           if (!canEdit()) return;
+          if (Date.now() - lastDragEndedAt < 160) return;
           state.selectedAvailableId = isSelected ? null : representativeId;
           ensureModeByPlacements();
           renderAll();
         });
 
+        if (canEdit()) {
+          setupSequencePointerDrag(btn, () => ({
+            elemId: representativeId,
+            labelText: label,
+            originElement: btn,
+            onDragEnd: () => {
+              lastDragEndedAt = Date.now();
+            },
+            onDrop: (targetSlot, dropRect) => {
+              lastDragEndedAt = Date.now();
+              if (targetSlot) {
+                const levelIndex = parseInt(targetSlot.dataset.sequenceuiLevelIdx, 10);
+                const slotIndex = parseInt(targetSlot.dataset.sequenceuiSlotIdx, 10);
+                placeElementIntoLevel(levelIndex, slotIndex, representativeId, dropRect);
+              } else if (btn) {
+                btn.style.opacity = "";
+                btn.style.transform = "";
+              }
+            },
+          }));
+        }
+
         availableInner.appendChild(btn);
       });
     }
 
-    function placeSelectedIntoLevel(levelIndex, slotIndex) {
+    function isMotionReduced() {
+      return (
+        typeof window !== "undefined" &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    }
+
+    function findAvailableButton(elemId) {
+      if (!availableInner || !elemId) return null;
+      const buttons = availableInner.querySelectorAll('[data-sequenceui="available-item"]');
+      for (let idx = 0; idx < buttons.length; idx++) {
+        if (buttons[idx].dataset && buttons[idx].dataset.sequenceuiElementId === String(elemId)) {
+          return buttons[idx];
+        }
+      }
+      const targetElement = getElementById(elemId);
+      const targetLabel = targetElement ? targetElement.text : String(elemId);
+      for (let idx = 0; idx < buttons.length; idx++) {
+        const btn = buttons[idx];
+        const btnElement = getElementById(btn.dataset.sequenceuiElementId);
+        const btnLabel = btnElement ? btnElement.text : btn.dataset.sequenceuiElementId;
+        if (btnLabel === targetLabel) {
+          return btn;
+        }
+      }
+      return null;
+    }
+
+    function findPlacedButton(levelIndex, slotIndex) {
+      if (!levelsContainer) return null;
+      const buttons = levelsContainer.querySelectorAll('[data-sequenceui-placed-item="true"]');
+      for (let idx = 0; idx < buttons.length; idx++) {
+        const ds = buttons[idx].dataset;
+        if (
+          ds &&
+          ds.sequenceuiLevelIdx === String(levelIndex) &&
+          ds.sequenceuiSlotIdx === String(slotIndex)
+        ) {
+          return buttons[idx];
+        }
+      }
+      return null;
+    }
+
+    function animateFLIPSequencePlacement(fromOrigin, targetPlacedNode) {
+      if (isMotionReduced() || !targetPlacedNode) return;
+      if (typeof targetPlacedNode.animate !== "function") return;
+
+      let fromRect = null;
+      if (fromOrigin && typeof fromOrigin.getBoundingClientRect === "function") {
+        fromRect = fromOrigin.getBoundingClientRect();
+      } else if (fromOrigin && typeof fromOrigin.left === "number") {
+        fromRect = fromOrigin;
+      }
+      if (!fromRect || !fromRect.width || !fromRect.height) return;
+
+      const toRect = targetPlacedNode.getBoundingClientRect();
+      if (!toRect.width || !toRect.height) return;
+
+      const deltaX = (fromRect.left + fromRect.width / 2) - (toRect.left + toRect.width / 2);
+      const deltaY = (fromRect.top + fromRect.height / 2) - (toRect.top + toRect.height / 2);
+      const scaleX = Math.max(0.35, Math.min(2.2, fromRect.width / toRect.width));
+      const scaleY = Math.max(0.35, Math.min(2.2, fromRect.height / toRect.height));
+
+      // Animate placed node directly using Web Animations API (zero ghost DOM)
+      targetPlacedNode.animate(
+        [
+          {
+            transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`,
+            opacity: 0.85,
+            boxShadow: "0 8px 24px rgba(99, 102, 241, 0.35)",
+          },
+          {
+            transform: "translate3d(0, 0, 0) scale(1, 1)",
+            opacity: 1,
+            boxShadow: "none",
+          },
+        ],
+        {
+          duration: 220,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        }
+      );
+    }
+
+    function animateFLIPSequenceReturn(fromOrigin, targetAvailableNode) {
+      if (isMotionReduced() || !targetAvailableNode) return;
+      if (typeof targetAvailableNode.animate !== "function") return;
+
+      let fromRect = null;
+      if (fromOrigin && typeof fromOrigin.getBoundingClientRect === "function") {
+        fromRect = fromOrigin.getBoundingClientRect();
+      } else if (fromOrigin && typeof fromOrigin.left === "number") {
+        fromRect = fromOrigin;
+      }
+      if (!fromRect || !fromRect.width || !fromRect.height) return;
+
+      const toRect = targetAvailableNode.getBoundingClientRect();
+      if (!toRect.width || !toRect.height) return;
+
+      const deltaX = (fromRect.left + fromRect.width / 2) - (toRect.left + toRect.width / 2);
+      const deltaY = (fromRect.top + fromRect.height / 2) - (toRect.top + toRect.height / 2);
+      const scaleX = Math.max(0.35, Math.min(2.0, fromRect.width / toRect.width));
+      const scaleY = Math.max(0.35, Math.min(2.0, fromRect.height / toRect.height));
+
+      targetAvailableNode.animate(
+        [
+          {
+            transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`,
+            opacity: 0.85,
+            borderColor: "var(--color-primary, #6366f1)",
+          },
+          {
+            transform: "translate3d(0, 0, 0) scale(1, 1)",
+            opacity: 1,
+            borderColor: "",
+          },
+        ],
+        {
+          duration: 220,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        }
+      );
+    }
+
+    function placeElementIntoLevel(levelIndex, slotIndex, specificElemId = null, originRect = null) {
       if (!canEdit()) return;
-      const elemId = state.selectedAvailableId;
+      const elemId = specificElemId || state.selectedAvailableId;
       if (!elemId) return;
       const placement = state.placements[levelIndex];
       if (!placement) return;
 
       placement.blocks = Array.isArray(placement.blocks) ? placement.blocks : [];
       let targetIdx = -1;
+      let displacedElemId = null;
+      let displacedSlotRect = null;
 
       if (
         typeof slotIndex === "number" &&
@@ -1197,7 +1581,11 @@ const SequenceUI = (function () {
         slotIndex < placement.blocks.length
       ) {
         if (placement.blocks[slotIndex] != null) {
-          return;
+          displacedElemId = placement.blocks[slotIndex];
+          const occupiedNode = findPlacedButton(levelIndex, slotIndex);
+          if (occupiedNode && typeof occupiedNode.getBoundingClientRect === "function") {
+            displacedSlotRect = occupiedNode.getBoundingClientRect();
+          }
         }
         targetIdx = slotIndex;
       } else {
@@ -1212,15 +1600,47 @@ const SequenceUI = (function () {
           return;
         }
       }
+
+      let fromRect = originRect;
+      if (!fromRect && availableInner) {
+        const selectedBtn = findAvailableButton(elemId);
+        if (selectedBtn && typeof selectedBtn.getBoundingClientRect === "function") {
+          fromRect = selectedBtn.getBoundingClientRect();
+        }
+      }
+
       placement.blocks[targetIdx] = elemId;
 
       removeAvailableOccurrence(elemId);
-      state.selectedAvailableId = null;
+      if (displacedElemId) {
+        restoreAvailableItem(displacedElemId);
+      }
+      if (state.selectedAvailableId === elemId) {
+        state.selectedAvailableId = null;
+      }
       ensureModeByPlacements();
       renderAll();
+
+      if (fromRect && fromRect.width && fromRect.height) {
+        const placedNode = findPlacedButton(levelIndex, targetIdx);
+        if (placedNode) {
+          animateFLIPSequencePlacement(fromRect, placedNode);
+        }
+      }
+
+      if (displacedElemId && displacedSlotRect && displacedSlotRect.width && displacedSlotRect.height) {
+        const returnedNode = findAvailableButton(displacedElemId);
+        if (returnedNode) {
+          animateFLIPSequenceReturn(displacedSlotRect, returnedNode);
+        }
+      }
     }
 
-    function removeFromLevel(levelIndex, slotIndex) {
+    function placeSelectedIntoLevel(levelIndex, slotIndex, originRect = null) {
+      return placeElementIntoLevel(levelIndex, slotIndex, state.selectedAvailableId, originRect);
+    }
+
+    function removeFromLevel(levelIndex, slotIndex, originRect = null) {
       if (!canEdit()) return;
       const placement = state.placements[levelIndex];
       if (!placement) return;
@@ -1229,21 +1649,98 @@ const SequenceUI = (function () {
       if (slotIndex < 0 || slotIndex >= placement.blocks.length) return;
       const elemId = placement.blocks[slotIndex];
       if (!elemId) return;
+
+      let fromSlotRect = originRect;
+      if (!fromSlotRect) {
+        const clickedBtn = findPlacedButton(levelIndex, slotIndex);
+        if (clickedBtn && typeof clickedBtn.getBoundingClientRect === "function") {
+          fromSlotRect = clickedBtn.getBoundingClientRect();
+        }
+      }
+
       if (requiresBlockNames || difficulty === 3) {
         if (state.userBlockNames && typeof state.userBlockNames === "object") {
           state.userBlockNames[elemId] = "";
         }
       } else {
         placement.blocks[slotIndex] = null;
-        if (state.shuffleEnabled) {
-          const insertAt = Math.floor(Math.random() * (state.available.length + 1));
-          state.available.splice(insertAt, 0, elemId);
-        } else {
-          state.available.push(elemId);
-        }
+        restoreAvailableItem(elemId);
       }
       ensureModeByPlacements();
       renderAll();
+
+      if (fromSlotRect && fromSlotRect.width && fromSlotRect.height) {
+        const availableBtn = findAvailableButton(elemId);
+        if (availableBtn) {
+          animateFLIPSequenceReturn(fromSlotRect, availableBtn);
+        }
+      }
+    }
+
+    function movePlacedElement(sourceLevelIdx, sourceSlotIdx, targetLevelIdx, targetSlotIdx, originRect = null) {
+      if (!canEdit()) return;
+      if (sourceLevelIdx === targetLevelIdx && sourceSlotIdx === targetSlotIdx) {
+        return;
+      }
+      const sourcePlacement = state.placements[sourceLevelIdx];
+      const targetPlacement = state.placements[targetLevelIdx];
+      if (!sourcePlacement || !targetPlacement) return;
+
+      const sourceBlocks = Array.isArray(sourcePlacement.blocks) ? sourcePlacement.blocks : [];
+      const targetBlocks = Array.isArray(targetPlacement.blocks) ? targetPlacement.blocks : [];
+      if (sourceSlotIdx < 0 || sourceSlotIdx >= sourceBlocks.length) return;
+
+      const elemId = sourceBlocks[sourceSlotIdx];
+      if (!elemId) return;
+
+      let targetIdx = targetSlotIdx;
+      if (typeof targetIdx !== "number" || targetIdx < 0 || targetIdx >= targetBlocks.length) {
+        targetIdx = targetBlocks.findIndex((x) => x == null);
+      }
+      if (targetIdx < 0) {
+        if (userCreatesLevels) {
+          targetBlocks.push(null);
+          targetIdx = targetBlocks.length - 1;
+        } else {
+          return;
+        }
+      }
+
+      let fromRect = originRect;
+      if (!fromRect) {
+        const sourceBtn = findPlacedButton(sourceLevelIdx, sourceSlotIdx);
+        if (sourceBtn && typeof sourceBtn.getBoundingClientRect === "function") {
+          fromRect = sourceBtn.getBoundingClientRect();
+        }
+      }
+
+      const displacedElemId = targetBlocks[targetIdx];
+      let targetNodeRect = null;
+      if (displacedElemId) {
+        const targetBtn = findPlacedButton(targetLevelIdx, targetIdx);
+        if (targetBtn && typeof targetBtn.getBoundingClientRect === "function") {
+          targetNodeRect = targetBtn.getBoundingClientRect();
+        }
+      }
+
+      targetBlocks[targetIdx] = elemId;
+      sourceBlocks[sourceSlotIdx] = displacedElemId;
+
+      ensureModeByPlacements();
+      renderAll();
+
+      if (fromRect && fromRect.width && fromRect.height) {
+        const placedNode = findPlacedButton(targetLevelIdx, targetIdx);
+        if (placedNode) {
+          animateFLIPSequencePlacement(fromRect, placedNode);
+        }
+      }
+      if (displacedElemId && targetNodeRect && targetNodeRect.width && targetNodeRect.height) {
+        const swappedNode = findPlacedButton(sourceLevelIdx, sourceSlotIdx);
+        if (swappedNode) {
+          animateFLIPSequencePlacement(targetNodeRect, swappedNode);
+        }
+      }
     }
 
     function renderLevels() {
@@ -1630,17 +2127,18 @@ const SequenceUI = (function () {
 
         headerRow.appendChild(leftHeader);
         headerRow.appendChild(rightHeader);
+        headerRow.className = "seq-level-header-row flex items-center justify-between mb-3 border-b border-border-subtle/60 pb-2.5";
 
         const panel = document.createElement("div");
         panel.className =
-          "p-5 rounded-xl border bg-surface-2 dark:bg-surface-2 border-border-subtle dark:border-border-strong";
+          "seq-level-panel p-4 rounded-xl border border-border-subtle bg-surface-1 shadow-sm dark:border-border-strong dark:bg-surface-2 transition-all";
 
         // Подсветка уровня, если важен порядок уровней.
         const levelOrderVerdict = getLevelOrderVerdict(idx, lvl);
         const levelNameVerdict = getLevelNameVerdict(lvl);
         if (levelOrderVerdict === "correct") {
           panel.className =
-            "p-5 rounded-xl border bg-success-lighter dark:bg-success-light border-success-light dark:border-success-dark";
+            "seq-level-panel p-4 rounded-xl border bg-success-lighter dark:bg-success-light border-success-light dark:border-success-dark";
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-success-text dark:text-success-light";
           badge.appendChild(makeIconSvg("correct"));
@@ -1648,7 +2146,7 @@ const SequenceUI = (function () {
           headerRow.appendChild(badge);
         } else if (levelOrderVerdict === "incorrect") {
           panel.className =
-            "p-5 rounded-xl border bg-error-lighter dark:bg-error-light border-error-light dark:border-error-dark";
+            "seq-level-panel p-4 rounded-xl border bg-error-lighter dark:bg-error-light border-error-light dark:border-error-dark";
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-error-text dark:text-error-light";
           badge.appendChild(makeIconSvg("incorrect"));
@@ -1658,7 +2156,7 @@ const SequenceUI = (function () {
 
         if (levelOrderVerdict == null && levelNameVerdict === "correct") {
           panel.className =
-            "p-5 rounded-xl border bg-success-lighter dark:bg-success-light border-success-light dark:border-success-dark";
+            "seq-level-panel p-4 rounded-xl border bg-success-lighter dark:bg-success-light border-success-light dark:border-success-dark";
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-success-text dark:text-success-light";
           badge.appendChild(makeIconSvg("correct"));
@@ -1666,7 +2164,7 @@ const SequenceUI = (function () {
           headerRow.appendChild(badge);
         } else if (levelOrderVerdict == null && levelNameVerdict === "incorrect") {
           panel.className =
-            "p-5 rounded-xl border bg-error-lighter dark:bg-error-light border-error-light dark:border-error-dark";
+            "seq-level-panel p-4 rounded-xl border bg-error-lighter dark:bg-error-light border-error-light dark:border-error-dark";
           const badge = document.createElement("span");
           badge.className = "ml-2 inline-flex items-center gap-1 text-xs font-semibold text-error-text dark:text-error-light";
           badge.appendChild(makeIconSvg("incorrect"));
@@ -1690,7 +2188,6 @@ const SequenceUI = (function () {
           canEdit() &&
           !!state.selectedAvailableId &&
           emptySlotCount === 1;
-        const levelClickModeActive = levelClickable;
 
         if (allowClickOnLevel && canEdit() && !!state.selectedAvailableId) {
           if (levelHasEmptySlot) {
@@ -1701,9 +2198,10 @@ const SequenceUI = (function () {
           }
 
           panel.addEventListener("click", (ev) => {
-            // Do not steal clicks from actual slot/placed element buttons.
+            // Do not steal clicks from actual slot/placed element buttons or inputs.
             const t = ev.target;
-            if (t && t.closest && t.closest("button")) return;
+            if (t && t.closest && (t.closest("button") || t.closest("input"))) return;
+            if (t && t.closest && (t.closest('[data-sequenceui-placed-item="true"]') || t.closest('[data-sequenceui-slot="true"]'))) return;
             if (!levelClickable) return;
             placeSelectedIntoLevel(idx);
           });
@@ -1783,9 +2281,13 @@ const SequenceUI = (function () {
             const btn = document.createElement("button");
             btn.type = "button";
             btn.setAttribute("aria-label", wt("sequenceui.remove_element_aria", "Убрать элемент: {label}").replace("{label}", label));
+            btn.dataset.sequenceuiPlacedItem = "true";
+            btn.dataset.sequenceuiElementId = String(placedId);
+            btn.dataset.sequenceuiLevelIdx = String(idx);
+            btn.dataset.sequenceuiSlotIdx = String(i);
 
             const basePlaced =
-              "min-h-[3.5rem] h-auto flex-1 min-w-[180px] rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 relative overflow-hidden ";
+              "seq-element-entry seq-placed-item min-h-[3.5rem] h-auto flex-1 min-w-[180px] rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 relative overflow-hidden ";
 
             if (verdict === "correct") {
               btn.className =
@@ -1801,76 +2303,112 @@ const SequenceUI = (function () {
             } else {
               btn.className =
                 basePlaced +
-                "border border-border-strong bg-surface-1 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark seq-element-entry";
+                "border border-border-strong bg-surface-1 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:border-primary";
             }
 
             const row = document.createElement("div");
-            row.className = "flex items-center justify-center gap-2 w-full";
+            row.className = "flex items-center justify-between gap-1.5 w-full";
+
+            const gripIcon = document.createElement("span");
+            gripIcon.className = "material-symbols-outlined text-[16px] text-text-muted shrink-0 select-none cursor-grab";
+            gripIcon.textContent = "drag_indicator";
+            gripIcon.setAttribute("aria-hidden", "true");
 
             const t = document.createElement("div");
-            t.className = "break-words leading-snug line-clamp-3 hover:line-clamp-none focus-within:line-clamp-none text-center w-full";
+            t.className = "break-words leading-tight line-clamp-2 text-center grow text-xs font-semibold";
             t.title = label;
             t.textContent = label;
 
+            const removeIcon = document.createElement("span");
+            removeIcon.className = "material-symbols-outlined text-[16px] text-text-muted hover:text-error shrink-0 transition-colors cursor-pointer";
+            removeIcon.textContent = "close";
+            removeIcon.title = wt("sequenceui.remove_from_slot_tooltip", "Убрать из слота");
+            removeIcon.setAttribute("aria-hidden", "true");
+
             if (verdict === "correct" || verdict === "incorrect") {
               row.appendChild(makeIconSvg(verdict));
+              row.appendChild(t);
+            } else {
+              row.appendChild(gripIcon);
+              row.appendChild(t);
+              row.appendChild(removeIcon);
             }
-            row.appendChild(t);
             btn.appendChild(row);
 
-            if (levelClickModeActive) {
-              // When placing by clicking a whole level, do not allow removing elements by accident.
-              // Let clicks fall through to the level panel.
-              btn.disabled = true;
-              btn.className += " pointer-events-none";
-            } else if (!canEdit()) {
+            if (!canEdit()) {
               btn.disabled = true;
               btn.className += " cursor-default";
             } else {
+              let lastPlacedDragEndedAt = 0;
               btn.addEventListener("click", () => {
+                if (Date.now() - lastPlacedDragEndedAt < 160) return;
+                if (state.selectedAvailableId) {
+                  state.selectedAvailableId = null;
+                }
                 removeFromLevel(idx, i);
               });
+
+              setupSequencePointerDrag(btn, () => ({
+                elemId: placedId,
+                labelText: label,
+                originElement: btn,
+                onDragEnd: () => {
+                  lastPlacedDragEndedAt = Date.now();
+                },
+                onDrop: (targetSlot, dropRect, isSidebarDrop) => {
+                  lastPlacedDragEndedAt = Date.now();
+                  if (isSidebarDrop) {
+                    removeFromLevel(idx, i, dropRect);
+                    return;
+                  }
+                  if (targetSlot) {
+                    const targetLevelIdx = parseInt(targetSlot.dataset.sequenceuiLevelIdx, 10);
+                    const targetSlotIdx = parseInt(targetSlot.dataset.sequenceuiSlotIdx, 10);
+                    if (targetLevelIdx === idx && targetSlotIdx === i) {
+                      btn.style.opacity = "";
+                      btn.style.transform = "";
+                      return;
+                    }
+                    movePlacedElement(idx, i, targetLevelIdx, targetSlotIdx, dropRect);
+                    return;
+                  }
+                  btn.style.opacity = "";
+                  btn.style.transform = "";
+                },
+              }));
             }
 
             slotsWrap.appendChild(btn);
           } else {
             const slotBase =
-              "min-h-[3.5rem] h-auto flex-1 min-w-[180px] rounded-lg flex items-center justify-center text-xs font-medium tracking-wider transition-colors py-2 ";
+              "seq-slot-target min-h-[3.5rem] h-auto flex-1 min-w-[180px] rounded-lg flex items-center justify-center text-xs font-medium tracking-wider transition-colors py-2 ";
 
-            // In level-click mode, empty slots must NOT be buttons; otherwise they capture clicks
-            // and prevent placing by clicking the level panel.
-            if (levelClickModeActive) {
-              const slot = document.createElement("div");
-              slot.className =
-                slotBase +
-                "bg-surface-1 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted select-none pointer-events-none";
-              slot.textContent = wt("sequenceui.slot_empty_label", "[ Пусто ]");
-              slotsWrap.appendChild(slot);
+            const slot = document.createElement("button");
+            slot.type = "button";
+            slot.dataset.sequenceuiSlot = "true";
+            slot.dataset.sequenceuiLevelIdx = String(idx);
+            slot.dataset.sequenceuiSlotIdx = String(i);
+            slot.setAttribute("aria-label", wt("sequenceui.place_selected_element_aria", "Разместить выбранный элемент в этот слот"));
+            slot.className =
+              slotBase +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 ";
+
+            const editable = canEdit() && !!state.selectedAvailableId;
+            if (editable) {
+              slot.className +=
+                "bg-surface-2/60 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted cursor-pointer hover:border-primary hover:bg-primary-lighter";
+              slot.textContent = wt("sequenceui.place_btn", "Разместить");
+              slot.addEventListener("click", () => {
+                placeSelectedIntoLevel(idx, i);
+              });
             } else {
-              const slot = document.createElement("button");
-              slot.type = "button";
-              slot.setAttribute("aria-label", wt("sequenceui.place_selected_element_aria", "Разместить выбранный элемент в этот слот"));
-              slot.className =
-                slotBase +
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 dark:focus-visible:ring-offset-surface-2 ";
-
-              const editable = canEdit() && !!state.selectedAvailableId;
-              if (editable) {
-                slot.className +=
-                  "bg-surface-1 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted cursor-pointer hover:border-primary hover:bg-primary-lighter";
-                slot.textContent = wt("sequenceui.place_btn", "Разместить");
-                slot.addEventListener("click", () => {
-                  placeSelectedIntoLevel(idx, i);
-                });
-              } else {
-                slot.className +=
-                  "bg-surface-1 dark:bg-surface-2 border-2 border-dashed border-border-strong dark:border-border-strong text-text-muted cursor-default";
-                slot.disabled = true;
-                slot.textContent = wt("sequenceui.slot_empty_label", "[ Пусто ]");
-              }
-
-              slotsWrap.appendChild(slot);
+              slot.className +=
+                "bg-surface-2/30 dark:bg-surface-2/60 border-2 border-dashed border-border-subtle dark:border-border-strong text-text-muted cursor-default";
+              slot.disabled = true;
+              slot.textContent = wt("sequenceui.slot_empty_label", "[ Пусто ]");
             }
+
+            slotsWrap.appendChild(slot);
           }
         }
 
@@ -1893,9 +2431,9 @@ const SequenceUI = (function () {
           slotsWrap.appendChild(addSlotBtn);
         }
 
+        panel.appendChild(headerRow);
         panel.appendChild(slotsWrap);
 
-        wrap.appendChild(headerRow);
         wrap.appendChild(panel);
 
         if (state.mode === "checked_success" || state.mode === "final_review") {
@@ -2402,6 +2940,10 @@ const SequenceUI = (function () {
       cleanup() {
         window.removeEventListener("resize", onResize);
       },
+      movePlacedElement,
+      removeFromLevel,
+      placeElementIntoLevel,
+      placeSelectedIntoLevel,
     };
   }
 
@@ -2409,6 +2951,7 @@ const SequenceUI = (function () {
     __testHooks: {
       normalizeTaskData,
       resolveCheckedCorrectBlocksByLevel,
+      getCurrentInstance: () => currentInstance,
     },
     render(containerElement, task) {
       if (currentInstance && typeof currentInstance.cleanup === "function") {

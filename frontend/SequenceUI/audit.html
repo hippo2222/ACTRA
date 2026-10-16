@@ -11,6 +11,7 @@
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
   <link href="/assets/lightB-components.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
+  <script src="/assets/i18n.js"></script>
 </head>
 <body class="font-display bg-bg-main text-text-main antialiased selection:bg-primary-light selection:text-primary">
   <main class="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
@@ -20,5 +21,47 @@
   </main>
 
   <script src="/SequenceUI/SequenceUI.web.js"></script>
+  <script>
+    window.renderSequenceTask = function(customTask) {
+      const container = document.getElementById("task-content");
+      container.innerHTML = "";
+      const defaultTask = {
+        task_data: {
+          content: {
+            prompt: "Восстановите правильную последовательность этапов базовой сердечно-легочной реанимации (BLS)",
+            elements: [
+              { id: "step_1", text: "Оценка безопасности места происшествия и сознания пострадавшего" },
+              { id: "step_2", text: "Восстановление проходимости дыхательных путей и оценка дыхания (до 10 сек)" },
+              { id: "step_3", text: "Вызов скорой медицинской помощи (112 / 103) и доставка АНД" },
+              { id: "step_4", text: "30 компрессий грудной клетки на глубину 5–6 см с частотой 100–120 в мин" },
+              { id: "step_5", text: "2 искусственных вдоха с паузой для компрессий не более 10 секунд" },
+            ],
+            levels: [
+              { level_id: "lvl_1", label: "Этап 1: Первичный осмотр", blocks: ["slot_1"] },
+              { level_id: "lvl_2", label: "Этап 2: Дыхательные пути", blocks: ["slot_2"] },
+              { level_id: "lvl_3", label: "Этап 3: Активация экстренных служб", blocks: ["slot_3"] },
+              { level_id: "lvl_4", label: "Этап 4: Компрессии грудной клетки", blocks: ["slot_4"] },
+              { level_id: "lvl_5", label: "Этап 5: Искусственная вентиляция", blocks: ["slot_5"] },
+            ],
+            settings: {
+              difficulty: 1,
+              level_order_matters: true,
+              sequence_within_level_matters: true,
+              shuffle_elements: false,
+            },
+          },
+        },
+      };
+      const task = customTask || defaultTask;
+      SequenceUI.render(container, task);
+      return SequenceUI;
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!window.__skipAutoRender) {
+        window.renderSequenceTask();
+      }
+    });
+  </script>
 </body>
 </html>
