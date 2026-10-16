@@ -639,4 +639,40 @@ describe("SequenceUI runtime panel", () => {
     expect(availableList.scrollTop).toBe(12);
     expect(levelsList.scrollTop).toBe(18);
   });
+
+  it("strictly preserves authored top-to-bottom level sequence on init and renders numeric index badges", () => {
+    renderSequence({
+      task_data: {
+        content: {
+          prompt: "Расположите элементы по уровням",
+          elements: [
+            { id: "e1", text: "Шаг 1" },
+            { id: "e2", text: "Шаг 2" },
+            { id: "e3", text: "Шаг 3" },
+          ],
+          levels: [
+            { level_id: "lvl_alpha", label: "Этап Альфа", blocks: ["slot_1"] },
+            { level_id: "lvl_beta", label: "Этап Бета", blocks: ["slot_1"] },
+            { level_id: "lvl_gamma", label: "Этап Гамма", blocks: ["slot_1"] },
+          ],
+          settings: {
+            difficulty: 1,
+            level_order_matters: true,
+          },
+        },
+      },
+    });
+
+    const levelCards = Array.from(document.querySelectorAll("[data-sequenceui-level-id]"));
+    expect(levelCards.map((el) => el.getAttribute("data-sequenceui-level-id"))).toEqual([
+      "lvl_alpha",
+      "lvl_beta",
+      "lvl_gamma",
+    ]);
+
+    const badges = Array.from(document.querySelectorAll('[data-sequenceui="level-index-badge"]'));
+    expect(badges).toHaveLength(3);
+    expect(badges.map((b) => b.textContent?.trim())).toEqual(["1", "2", "3"]);
+  });
 });
+

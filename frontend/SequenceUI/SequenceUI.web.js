@@ -462,22 +462,27 @@ const SequenceUI = (function () {
       ".dark .sequenceui-scrollbar{scrollbar-color:rgba(156,163,175,0.5) rgba(255,255,255,0.05);} " +
       ".seq-level-entry,.seq-element-entry{transform:translateZ(0);backface-visibility:hidden;}" +
       ".seq-level-entry[data-reordering='true']{will-change:transform;}" +
-      ".seq-available-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;cursor:grab;touch-action:manipulation;}" +
+      ".seq-available-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;cursor:grab;touch-action:manipulation;overflow-wrap:anywhere!important;word-break:break-word!important;}" +
       ".seq-available-item:active:not(:disabled){transform:scale(0.97)!important;cursor:grabbing;}" +
       ".seq-available-item:disabled{cursor:default;}" +
+      ".seq-placed-item,.seq-drag-avatar{overflow-wrap:anywhere!important;word-break:break-word!important;}" +
       ".seq-slot-target{transition:border-color 140ms ease,box-shadow 140ms ease,background-color 140ms ease,transform 140ms ease;touch-action:manipulation;}" +
-      ".seq-slot-target.seq-slot-hover{border-style:solid!important;border-color:var(--color-primary,#6366f1)!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 12%,transparent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 25%,transparent)!important;transform:scale(1.015);}" +
+      ".seq-slot-target.seq-slot-hover{border-style:dashed!important;border-width:2px!important;border-color:var(--color-primary,#6366f1)!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 6%,transparent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 15%,transparent)!important;transform:scale(1.01);}" +
       ".seq-element-entry{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease;touch-action:manipulation;}" +
       ".seq-element-entry:active:not(:disabled):not([disabled]){transform:scale(0.97)!important;}" +
       ".seq-placed-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;touch-action:manipulation;}" +
       ".seq-placed-item:not([disabled]):not(:disabled){cursor:grab;}" +
       ".seq-placed-item:active:not([disabled]):not(:disabled){cursor:grabbing;transform:scale(0.97)!important;}" +
-      ".seq-placed-item.seq-slot-hover{outline:2px solid var(--color-primary,#6366f1)!important;outline-offset:2px!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 15%,transparent)!important;transform:scale(1.02);}" +
+      ".seq-placed-item.seq-slot-hover{outline:2px solid var(--color-primary,#6366f1)!important;outline-offset:2px!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 10%,transparent)!important;transform:scale(1.015);}" +
+      ".seq-drag-avatar{background:var(--color-surface-1,#ffffff)!important;color:var(--color-text-main,#111827)!important;border:1.5px solid color-mix(in srgb,var(--color-primary,#6366f1) 60%,var(--color-border-strong,#d1d5db) 40%)!important;box-shadow:0 14px 28px -4px rgba(15,23,42,0.16),0 6px 14px -2px rgba(15,23,42,0.08),0 0 0 1px color-mix(in srgb,var(--color-primary,#6366f1) 20%,transparent)!important;border-radius:0.5rem!important;}" +
+      ".dark .seq-drag-avatar,[data-theme^='dark'] .seq-drag-avatar{background:var(--color-surface-2,#1f2937)!important;color:var(--color-text-on-dark,#f9fafb)!important;border-color:color-mix(in srgb,var(--color-primary-light,#818cf8) 60%,var(--color-border-strong,#374151) 40%)!important;box-shadow:0 18px 32px -4px rgba(0,0,0,0.55),0 8px 16px -4px rgba(0,0,0,0.35),0 0 0 1px color-mix(in srgb,var(--color-primary-light,#818cf8) 25%,transparent)!important;}" +
       "@media (max-height:768px){" +
       ".seq-levels-container{gap:0.375rem!important;margin-top:0.375rem!important;}" +
       ".seq-level-panel{padding:0.45rem 0.625rem!important;}" +
       ".seq-level-header-row{margin-bottom:0.2rem!important;padding-bottom:0.2rem!important;}" +
       ".seq-slot-target,.seq-placed-item{min-height:2.15rem!important;padding-top:0.2rem!important;padding-bottom:0.2rem!important;}" +
+      ".seq-level-index{background:color-mix(in srgb,var(--color-surface-1,#ffffff) 94%,white 6%);border:1px solid color-mix(in srgb,var(--color-border-strong,#d1d5db) 74%,var(--color-primary-light,#818cf8) 26%);color:color-mix(in srgb,var(--color-accent-dark,#4338ca) 78%,var(--color-text-main,#111827) 22%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);}" +
+      ".dark .seq-level-index,[data-theme^='dark'] .seq-level-index{background:color-mix(in srgb,var(--color-surface-1,#1f2937) 74%,white 26%);border-color:color-mix(in srgb,var(--color-primary-light,#818cf8) 54%,white 46%);color:var(--color-text-main,#f9fafb);box-shadow:none;}" +
       ".seq-level-entry{margin-bottom:0.25rem!important;}" +
       ".seq-levels-header{padding:0.45rem 0.75rem!important;margin-bottom:0.25rem!important;}" +
       ".seq-levels-header .text-base{font-size:0.875rem!important;}" +
@@ -1160,25 +1165,10 @@ const SequenceUI = (function () {
       return swapLevels(index, index + 1);
     }
 
-    // Для difficulty=1 + level_order_matters: по умолчанию уровни должны быть
-    // перемешаны, чтобы задача пользователя была восстановить правильный порядок.
+    // Последовательность уровней строго определяется сверху вниз (как в редакторе).
+    // Порядок уровней не перемешивается при инициализации.
     function maybeShuffleLevelsOnInit() {
-      try {
-        if (!(difficulty === 1 && levelOrderMatters)) return;
-        if (!Array.isArray(state.data.levels) || state.data.levels.length < 2) return;
-        if (!Array.isArray(state.placements) || state.placements.length !== state.data.levels.length) return;
-
-        const order = Array.from({ length: state.data.levels.length }, (_, i) => i);
-        shuffleInPlace(order);
-
-        const newLevels = order.map((i) => state.data.levels[i]);
-        const newPlacements = order.map((i) => state.placements[i]);
-
-        state.data.levels = newLevels;
-        state.placements = newPlacements;
-      } catch (e) {
-        // Defensive: initial shuffle must never break UI
-      }
+      // Intentional no-op: level sequence is strictly top-to-bottom everywhere.
     }
 
     function setupSequencePointerDrag(triggerEl, getDragConfig) {
@@ -1207,35 +1197,22 @@ const SequenceUI = (function () {
 
             dragAvatar = document.createElement("div");
             dragAvatar.className =
-              "fixed z-[999999] pointer-events-none select-none flex items-center justify-center";
-            dragAvatar.style.borderRadius = "10px";
-            dragAvatar.style.backgroundColor = "var(--color-primary, #6366f1)";
-            dragAvatar.style.color = "#ffffff";
-            dragAvatar.style.border = "1px solid rgba(255, 255, 255, 0.35)";
-            dragAvatar.style.boxShadow =
-              "0 12px 28px -4px rgba(99, 102, 241, 0.55), 0 8px 10px -6px rgba(0, 0, 0, 0.3)";
-            dragAvatar.style.backdropFilter = "blur(12px)";
-            dragAvatar.style.padding = "8px 14px";
+              "seq-drag-avatar fixed z-[999999] pointer-events-none select-none flex items-center justify-start rounded-lg px-3 py-2 text-sm";
             dragAvatar.style.maxWidth = "320px";
             dragAvatar.style.boxSizing = "border-box";
             dragAvatar.style.willChange = "transform";
             dragAvatar.style.top = "0px";
             dragAvatar.style.left = "0px";
+            if (config.originElement) {
+              const origRect = config.originElement.getBoundingClientRect();
+              if (origRect.width > 0) {
+                dragAvatar.style.width = `${Math.min(360, Math.max(260, Math.round(origRect.width)))}px`;
+              }
+            }
 
             const dragAvatarText = document.createElement("div");
-            dragAvatarText.style.margin = "0";
-            dragAvatarText.style.padding = "0";
-            dragAvatarText.style.display = "-webkit-box";
-            dragAvatarText.style.webkitLineClamp = "2";
-            dragAvatarText.style.webkitBoxOrient = "vertical";
-            dragAvatarText.style.overflow = "hidden";
-            dragAvatarText.style.textOverflow = "ellipsis";
-            dragAvatarText.style.lineHeight = "1.3";
-            dragAvatarText.style.maxHeight = "2.6em";
-            dragAvatarText.style.fontSize = "12px";
-            dragAvatarText.style.fontWeight = "700";
-            dragAvatarText.style.textAlign = "center";
-            dragAvatarText.style.wordBreak = "break-word";
+            dragAvatarText.className =
+              "break-words leading-snug text-text-main dark:text-text-on-dark font-medium text-xs sm:text-sm text-left grow";
             dragAvatarText.textContent = config.labelText;
 
             dragAvatar.appendChild(dragAvatarText);
@@ -1251,7 +1228,7 @@ const SequenceUI = (function () {
           if (isDragging && dragAvatar) {
             const w = dragAvatar.offsetWidth || 140;
             const h = dragAvatar.offsetHeight || 36;
-            dragAvatar.style.transform = `translate3d(${moveEvt.clientX - w / 2}px, ${moveEvt.clientY - h / 2}px, 0) scale(1.05) rotate(1.5deg)`;
+            dragAvatar.style.transform = `translate3d(${moveEvt.clientX - w / 2}px, ${moveEvt.clientY - h / 2}px, 0) scale(1.02) rotate(1deg)`;
 
             const targetUnderCursor = document.elementFromPoint(moveEvt.clientX, moveEvt.clientY);
             let slotTarget = targetUnderCursor
@@ -2011,7 +1988,14 @@ const SequenceUI = (function () {
         headerRow.className = "flex items-center justify-between mb-3";
 
         const leftHeader = document.createElement("div");
-        leftHeader.className = "flex items-center gap-2";
+        leftHeader.className = "flex items-center gap-2.5 min-w-0";
+
+        const indexBadge = document.createElement("div");
+        indexBadge.className =
+          "seq-level-index w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 select-none";
+        indexBadge.dataset.sequenceui = "level-index-badge";
+        indexBadge.textContent = String(idx + 1);
+        leftHeader.appendChild(indexBadge);
 
         if (userCreatesLevels && !referenceView) {
           if (canEdit()) {
@@ -2342,7 +2326,7 @@ const SequenceUI = (function () {
             gripIcon.setAttribute("aria-hidden", "true");
 
             const t = document.createElement("div");
-            t.className = "break-words leading-tight line-clamp-2 text-center grow text-xs font-semibold";
+            t.className = "break-words leading-tight line-clamp-4 text-center grow text-xs font-semibold";
             t.title = label;
             t.textContent = label;
 
