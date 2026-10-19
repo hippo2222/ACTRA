@@ -462,20 +462,22 @@ const SequenceUI = (function () {
       ".dark .sequenceui-scrollbar{scrollbar-color:rgba(156,163,175,0.5) rgba(255,255,255,0.05);} " +
       ".seq-level-entry,.seq-element-entry{transform:translateZ(0);backface-visibility:hidden;}" +
       ".seq-level-entry[data-reordering='true']{will-change:transform;}" +
-      ".seq-available-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;cursor:grab;touch-action:manipulation;overflow-wrap:anywhere!important;word-break:break-word!important;}" +
+      ".seq-available-item{transition:transform 140ms cubic-bezier(0.16,1,0.3,1),box-shadow 140ms ease,border-color 140ms ease,background-color 140ms ease;cursor:grab;touch-action:manipulation;overflow-wrap:anywhere!important;word-break:break-word!important;}" +
       ".seq-available-item:active:not(:disabled){transform:scale(0.97)!important;cursor:grabbing;}" +
       ".seq-available-item:disabled{cursor:default;}" +
       ".seq-placed-item,.seq-drag-avatar{overflow-wrap:anywhere!important;word-break:break-word!important;}" +
-      ".seq-slot-target{transition:border-color 140ms ease,box-shadow 140ms ease,background-color 140ms ease,transform 140ms ease;touch-action:manipulation;}" +
-      ".seq-slot-target.seq-slot-hover{border-style:dashed!important;border-width:2px!important;border-color:var(--color-primary,#6366f1)!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 6%,transparent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 15%,transparent)!important;transform:scale(1.01);}" +
-      ".seq-element-entry{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease;touch-action:manipulation;}" +
+      ".seq-slot-target{transition:border-color 150ms ease,box-shadow 150ms ease,background-color 150ms ease,transform 150ms cubic-bezier(0.16,1,0.3,1);touch-action:manipulation;}" +
+      ".seq-slot-target.seq-slot-hover{border-style:dashed!important;border-width:2px!important;border-color:var(--color-primary,#6366f1)!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 8%,transparent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--color-primary,#6366f1) 18%,transparent)!important;transform:scale(1.02);}" +
+      ".seq-element-entry{transition:transform 140ms cubic-bezier(0.16,1,0.3,1),box-shadow 140ms ease,border-color 140ms ease;touch-action:manipulation;}" +
       ".seq-element-entry:active:not(:disabled):not([disabled]){transform:scale(0.97)!important;}" +
-      ".seq-placed-item{transition:transform 120ms cubic-bezier(0.23,1,0.32,1),box-shadow 120ms cubic-bezier(0.23,1,0.32,1),border-color 120ms ease,background-color 120ms ease;touch-action:manipulation;}" +
+      ".seq-placed-item{transition:transform 140ms cubic-bezier(0.16,1,0.3,1),box-shadow 140ms ease,border-color 140ms ease,background-color 140ms ease;touch-action:manipulation;}" +
       ".seq-placed-item:not([disabled]):not(:disabled){cursor:grab;}" +
       ".seq-placed-item:active:not([disabled]):not(:disabled){cursor:grabbing;transform:scale(0.97)!important;}" +
-      ".seq-placed-item.seq-slot-hover{outline:2px solid var(--color-primary,#6366f1)!important;outline-offset:2px!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 10%,transparent)!important;transform:scale(1.015);}" +
-      ".seq-drag-avatar{background:var(--color-surface-1,#ffffff)!important;color:var(--color-text-main,#111827)!important;border:1.5px solid color-mix(in srgb,var(--color-primary,#6366f1) 60%,var(--color-border-strong,#d1d5db) 40%)!important;box-shadow:0 14px 28px -4px rgba(15,23,42,0.16),0 6px 14px -2px rgba(15,23,42,0.08),0 0 0 1px color-mix(in srgb,var(--color-primary,#6366f1) 20%,transparent)!important;border-radius:0.5rem!important;}" +
+      ".seq-placed-item.seq-slot-hover{outline:2px solid var(--color-primary,#6366f1)!important;outline-offset:2px!important;background-color:color-mix(in srgb,var(--color-primary,#6366f1) 12%,transparent)!important;transform:scale(1.02);}" +
+      ".seq-drag-avatar{background:var(--color-surface-1,#ffffff)!important;color:var(--color-text-main,#111827)!important;border:1.5px solid color-mix(in srgb,var(--color-primary,#6366f1) 60%,var(--color-border-strong,#d1d5db) 40%)!important;box-shadow:0 14px 28px -4px rgba(15,23,42,0.16),0 6px 14px -2px rgba(15,23,42,0.08),0 0 0 1px color-mix(in srgb,var(--color-primary,#6366f1) 20%,transparent)!important;border-radius:0.5rem!important;transition:box-shadow 140ms ease,border-color 140ms ease;}" +
+      ".seq-drag-avatar.seq-avatar-snapping{border-color:var(--color-primary,#6366f1)!important;box-shadow:0 18px 36px -4px rgba(99,102,241,0.38),0 8px 16px -2px rgba(99,102,241,0.22),0 0 0 2px var(--color-primary,#6366f1)!important;}" +
       ".dark .seq-drag-avatar,[data-theme^='dark'] .seq-drag-avatar{background:var(--color-surface-2,#1f2937)!important;color:var(--color-text-on-dark,#f9fafb)!important;border-color:color-mix(in srgb,var(--color-primary-light,#818cf8) 60%,var(--color-border-strong,#374151) 40%)!important;box-shadow:0 18px 32px -4px rgba(0,0,0,0.55),0 8px 16px -4px rgba(0,0,0,0.35),0 0 0 1px color-mix(in srgb,var(--color-primary-light,#818cf8) 25%,transparent)!important;}" +
+      ".dark .seq-drag-avatar.seq-avatar-snapping,[data-theme^='dark'] .seq-drag-avatar.seq-avatar-snapping{border-color:var(--color-primary-light,#818cf8)!important;box-shadow:0 20px 38px -4px rgba(129,140,248,0.45),0 10px 18px -2px rgba(129,140,248,0.25),0 0 0 2px var(--color-primary-light,#818cf8)!important;}" +
       "@media (max-height:768px){" +
       ".seq-levels-container{gap:0.375rem!important;margin-top:0.375rem!important;}" +
       ".seq-level-panel{padding:0.45rem 0.625rem!important;}" +
@@ -497,7 +499,7 @@ const SequenceUI = (function () {
       "transition:--mask-top-size 150ms ease,--mask-bottom-size 150ms ease;" +
       "}" +
       "@media (prefers-reduced-motion:reduce){" +
-      ".seq-available-item,.seq-slot-target,.seq-element-entry,.seq-level-entry{transition:none!important;transform:none!important;}" +
+      ".seq-available-item,.seq-slot-target,.seq-element-entry,.seq-level-entry,.seq-drag-avatar,.seq-placed-item{transition:none!important;transform:none!important;}" +
       "}";
     root.appendChild(style);
 
@@ -1228,7 +1230,6 @@ const SequenceUI = (function () {
           if (isDragging && dragAvatar) {
             const w = dragAvatar.offsetWidth || 140;
             const h = dragAvatar.offsetHeight || 36;
-            dragAvatar.style.transform = `translate3d(${moveEvt.clientX - w / 2}px, ${moveEvt.clientY - h / 2}px, 0) scale(1.02) rotate(1deg)`;
 
             const targetUnderCursor = document.elementFromPoint(moveEvt.clientX, moveEvt.clientY);
             let slotTarget = targetUnderCursor
@@ -1258,6 +1259,16 @@ const SequenceUI = (function () {
               hoveredSlotTarget = slotTarget;
               hoveredSlotTarget.classList.add("seq-slot-hover");
             }
+
+            const isOverTarget = Boolean(slotTarget);
+            const avatarScale = isOverTarget ? 0.98 : 1.02;
+            const avatarRotate = isOverTarget ? "0deg" : "1deg";
+            dragAvatar.style.transform = `translate3d(${moveEvt.clientX - w / 2}px, ${moveEvt.clientY - h / 2}px, 0) scale(${avatarScale}) rotate(${avatarRotate})`;
+            if (isOverTarget) {
+              dragAvatar.classList.add("seq-avatar-snapping");
+            } else {
+              dragAvatar.classList.remove("seq-avatar-snapping");
+            }
           }
         }
 
@@ -1280,7 +1291,6 @@ const SequenceUI = (function () {
             const dropY = upEvt.clientY;
             const w = dragAvatar.offsetWidth || 140;
             const h = dragAvatar.offsetHeight || 36;
-            dragAvatar.remove();
 
             const dropTarget = document.elementFromPoint(dropX, dropY);
             let targetSlot = dropTarget
@@ -1308,19 +1318,22 @@ const SequenceUI = (function () {
                   dropTarget.closest('[data-sequenceui="available-sidebar"]'))
             );
 
+            const dropRect = {
+              left: dropX - w / 2,
+              top: dropY - h / 2,
+              width: w,
+              height: h,
+            };
+
             if ((targetSlot || isSidebarDrop) && typeof config.onDrop === "function") {
+              dragAvatar.remove();
               config.onDrop(
                 targetSlot,
-                {
-                  left: dropX - w / 2,
-                  top: dropY - h / 2,
-                  width: w,
-                  height: h,
-                },
+                dropRect,
                 isSidebarDrop
               );
             } else {
-              // Cancelled / Dropped outside -> restore origin element
+              dragAvatar.remove();
               if (config.originElement) {
                 config.originElement.style.opacity = "";
                 config.originElement.style.transform = "";
@@ -1502,16 +1515,24 @@ const SequenceUI = (function () {
 
       const deltaX = (fromRect.left + fromRect.width / 2) - (toRect.left + toRect.width / 2);
       const deltaY = (fromRect.top + fromRect.height / 2) - (toRect.top + toRect.height / 2);
-      const scaleX = Math.max(0.35, Math.min(2.2, fromRect.width / toRect.width));
-      const scaleY = Math.max(0.35, Math.min(2.2, fromRect.height / toRect.height));
+      const scaleX = Math.max(0.35, Math.min(2.5, fromRect.width / toRect.width));
+      const scaleY = Math.max(0.35, Math.min(2.5, fromRect.height / toRect.height));
 
-      // Animate placed node directly using Web Animations API (zero ghost DOM)
-      targetPlacedNode.animate(
+      targetPlacedNode.style.transformOrigin = "50% 50%";
+      targetPlacedNode.style.willChange = "transform, opacity";
+
+      const anim = targetPlacedNode.animate(
         [
           {
             transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`,
-            opacity: 0.85,
-            boxShadow: "0 8px 24px rgba(99, 102, 241, 0.35)",
+            opacity: 0.88,
+            boxShadow: "0 12px 28px -4px rgba(99, 102, 241, 0.35), 0 4px 10px -2px rgba(99, 102, 241, 0.2)",
+          },
+          {
+            transform: "translate3d(0, 0, 0) scale(1.02, 0.98)",
+            opacity: 1,
+            boxShadow: "0 4px 12px -2px rgba(99, 102, 241, 0.15)",
+            offset: 0.72,
           },
           {
             transform: "translate3d(0, 0, 0) scale(1, 1)",
@@ -1524,6 +1545,13 @@ const SequenceUI = (function () {
           easing: "cubic-bezier(0.22, 1, 0.36, 1)",
         }
       );
+
+      if (anim && typeof anim.addEventListener === "function") {
+        anim.addEventListener("finish", () => {
+          targetPlacedNode.style.willChange = "";
+          targetPlacedNode.style.transformOrigin = "";
+        });
+      }
     }
 
     function animateFLIPSequenceReturn(fromOrigin, targetAvailableNode) {
@@ -1543,20 +1571,32 @@ const SequenceUI = (function () {
 
       const deltaX = (fromRect.left + fromRect.width / 2) - (toRect.left + toRect.width / 2);
       const deltaY = (fromRect.top + fromRect.height / 2) - (toRect.top + toRect.height / 2);
-      const scaleX = Math.max(0.35, Math.min(2.0, fromRect.width / toRect.width));
-      const scaleY = Math.max(0.35, Math.min(2.0, fromRect.height / toRect.height));
+      const scaleX = Math.max(0.35, Math.min(2.5, fromRect.width / toRect.width));
+      const scaleY = Math.max(0.35, Math.min(2.5, fromRect.height / toRect.height));
 
-      targetAvailableNode.animate(
+      targetAvailableNode.style.transformOrigin = "50% 50%";
+      targetAvailableNode.style.willChange = "transform, opacity";
+
+      const anim = targetAvailableNode.animate(
         [
           {
             transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`,
-            opacity: 0.85,
+            opacity: 0.88,
             borderColor: "var(--color-primary, #6366f1)",
+            boxShadow: "0 10px 24px -2px rgba(99, 102, 241, 0.3)",
+          },
+          {
+            transform: "translate3d(0, 0, 0) scale(1.02, 0.98)",
+            opacity: 1,
+            borderColor: "var(--color-primary, #6366f1)",
+            boxShadow: "0 4px 10px -2px rgba(99, 102, 241, 0.15)",
+            offset: 0.72,
           },
           {
             transform: "translate3d(0, 0, 0) scale(1, 1)",
             opacity: 1,
             borderColor: "",
+            boxShadow: "none",
           },
         ],
         {
@@ -1564,6 +1604,94 @@ const SequenceUI = (function () {
           easing: "cubic-bezier(0.22, 1, 0.36, 1)",
         }
       );
+
+      if (anim && typeof anim.addEventListener === "function") {
+        anim.addEventListener("finish", () => {
+          targetAvailableNode.style.willChange = "";
+          targetAvailableNode.style.transformOrigin = "";
+        });
+      }
+    }
+
+    function findEmptySlot(levelIndex, slotIndex) {
+      if (!levelsContainer) return null;
+      const slots = levelsContainer.querySelectorAll('[data-sequenceui-slot="true"]');
+      for (let idx = 0; idx < slots.length; idx++) {
+        const ds = slots[idx].dataset;
+        if (
+          ds &&
+          ds.sequenceuiLevelIdx === String(levelIndex) &&
+          ds.sequenceuiSlotIdx === String(slotIndex)
+        ) {
+          return slots[idx];
+        }
+      }
+      return null;
+    }
+
+    function animateEmptySlotEntry(levelIndex, slotIndex) {
+      if (isMotionReduced()) return;
+      const slotNode = findEmptySlot(levelIndex, slotIndex);
+      if (!slotNode || typeof slotNode.animate !== "function") return;
+      slotNode.animate(
+        [
+          {
+            transform: "scale(0.95)",
+            opacity: 0.45,
+            borderColor: "color-mix(in srgb, var(--color-primary, #6366f1) 50%, var(--color-border-subtle, #e5e7eb) 50%)",
+          },
+          {
+            transform: "scale(1)",
+            opacity: 1,
+            borderColor: "",
+          },
+        ],
+        {
+          duration: 180,
+          easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+        }
+      );
+    }
+
+    function captureAvailableItemRects() {
+      const map = new Map();
+      if (!availableInner) return map;
+      const items = availableInner.querySelectorAll('[data-sequenceui="available-item"]');
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const id = item.dataset.sequenceuiElementId;
+        if (id && typeof item.getBoundingClientRect === "function") {
+          map.set(id, item.getBoundingClientRect());
+        }
+      }
+      return map;
+    }
+
+    function animateFLIPAvailableList(prevRects, skipElementId = null) {
+      if (isMotionReduced() || !availableInner || !prevRects || prevRects.size === 0) return;
+      const items = availableInner.querySelectorAll('[data-sequenceui="available-item"]');
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const id = item.dataset.sequenceuiElementId;
+        if (!id || id === skipElementId) continue;
+        const prevRect = prevRects.get(id);
+        if (!prevRect) continue;
+        if (typeof item.getBoundingClientRect !== "function") continue;
+        const currentRect = item.getBoundingClientRect();
+        const dy = (prevRect.top + prevRect.height / 2) - (currentRect.top + currentRect.height / 2);
+        if (Math.abs(dy) > 2 && typeof item.animate === "function") {
+          item.animate(
+            [
+              { transform: `translate3d(0, ${dy}px, 0)` },
+              { transform: "translate3d(0, 0, 0)" },
+            ],
+            {
+              duration: 200,
+              easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+            }
+          );
+        }
+      }
     }
 
     function placeElementIntoLevel(levelIndex, slotIndex, specificElemId = null, originRect = null) {
@@ -1613,6 +1741,8 @@ const SequenceUI = (function () {
         }
       }
 
+      const prevAvailableRects = captureAvailableItemRects();
+
       placement.blocks[targetIdx] = elemId;
 
       removeAvailableOccurrence(elemId);
@@ -1638,6 +1768,8 @@ const SequenceUI = (function () {
           animateFLIPSequenceReturn(displacedSlotRect, returnedNode);
         }
       }
+
+      animateFLIPAvailableList(prevAvailableRects, elemId);
     }
 
     function placeSelectedIntoLevel(levelIndex, slotIndex, originRect = null) {
@@ -1662,6 +1794,8 @@ const SequenceUI = (function () {
         }
       }
 
+      const prevAvailableRects = captureAvailableItemRects();
+
       if (requiresBlockNames || difficulty === 3) {
         if (state.userBlockNames && typeof state.userBlockNames === "object") {
           state.userBlockNames[elemId] = "";
@@ -1673,12 +1807,29 @@ const SequenceUI = (function () {
       ensureModeByPlacements();
       renderAll();
 
+      animateEmptySlotEntry(levelIndex, slotIndex);
+
       if (fromSlotRect && fromSlotRect.width && fromSlotRect.height) {
         const availableBtn = findAvailableButton(elemId);
         if (availableBtn) {
           animateFLIPSequenceReturn(fromSlotRect, availableBtn);
+          const badge = availableBtn.querySelector('[data-sequenceui="available-duplicate-count"]');
+          if (badge && typeof badge.animate === "function" && !isMotionReduced()) {
+            badge.animate(
+              [
+                { transform: "scale(1.35)" },
+                { transform: "scale(1)" },
+              ],
+              {
+                duration: 200,
+                easing: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+              }
+            );
+          }
         }
       }
+
+      animateFLIPAvailableList(prevAvailableRects, elemId);
     }
 
     function movePlacedElement(sourceLevelIdx, sourceSlotIdx, targetLevelIdx, targetSlotIdx, originRect = null) {
@@ -1744,6 +1895,8 @@ const SequenceUI = (function () {
         if (swappedNode) {
           animateFLIPSequencePlacement(targetNodeRect, swappedNode);
         }
+      } else if (!displacedElemId) {
+        animateEmptySlotEntry(sourceLevelIdx, sourceSlotIdx);
       }
     }
 

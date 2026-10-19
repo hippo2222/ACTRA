@@ -700,4 +700,95 @@ describe("SequenceUI render stability", () => {
     expect(document.querySelector('[data-sequenceui-placed-item="true"]')).toBeNull();
     expect(document.querySelector(`[data-sequenceui="available-item"][data-sequenceui-element-id="${elemId}"]`)).toBeTruthy();
   });
+  it("animates empty slot placeholder entry when an item is removed from a slot", () => {
+    const origAnimate = window.Element.prototype.animate;
+    const animateCalls = [];
+    window.Element.prototype.animate = function(keyframes, options) {
+      animateCalls.push({ element: this, keyframes, options });
+      return { cancel: () => {}, finish: () => {} };
+    };
+
+    try {
+      renderSequence();
+      const availableItem = document.querySelector('[data-sequenceui="available-item"]');
+      availableItem.click();
+      const placeSlot = document.querySelector('[data-sequenceui-slot="true"]');
+      placeSlot.click();
+
+      // Clear calls from placement
+      animateCalls.length = 0;
+
+      const placedBtn = document.querySelector('[data-sequenceui-placed-item="true"]');
+      placedBtn.click();
+
+      const emptySlotCall = animateCalls.find(c => c.element.dataset?.sequenceuiSlot === "true");
+      expect(emptySlotCall).toBeDefined();
+      expect(emptySlotCall.options.duration).toBe(180);
+      expect(emptySlotCall.keyframes[0].transform).toBe("scale(0.95)");
+    } finally {
+      window.Element.prototype.animate = origAnimate;
+    }
+  });
+
+  it("toggles seq-avatar-snapping on drag avatar when hovering over slot targets", () => {
+    const origElementFromPoint = document.elementFromPoint;
+    const origAnimate = window.Element.prototype.animate;
+    window.Element.prototype.animate = () => ({ cancel: () => {}, finish: () => {} });
+
+    try {
+      renderSequence();
+      const availableItem = document.querySelector('[data-sequenceui="available-item"]');
+      const emptySlot = document.querySelector('[data-sequenceui-slot="true"]');
+
+      availableItem.dispatchEvent(new window.PointerEvent("pointerdown", {
+        clientX: 50,
+        clientY: 50,
+        button: 0,
+        bubbles: true,
+      }));
+
+      // Move over empty space
+      document.elementFromPoint = () => null;
+      window.dispatchEvent(new window.PointerEvent("pointermove", {
+        clientX: 100,
+        clientY: 100,
+        bubbles: true,
+      }));
+
+      const dragAvatar = document.querySelector(".fixed.z-\\[999999\\]");
+      expect(dragAvatar).toBeTruthy();
+      expect(dragAvatar.classList.contains("seq-avatar-snapping")).toBe(false);
+
+      // Move over slot
+      document.elementFromPoint = () => emptySlot;
+      window.dispatchEvent(new window.PointerEvent("pointermove", {
+        clientX: 200,
+        clientY: 200,
+        bubbles: true,
+      }));
+
+      expect(dragAvatar.classList.contains("seq-avatar-snapping")).toBe(true);
+
+      // Move away
+      document.elementFromPoint = () => null;
+      window.dispatchEvent(new window.PointerEvent("pointermove", {
+        clientX: 300,
+        clientY: 300,
+        bubbles: true,
+      }));
+
+      expect(dragAvatar.classList.contains("seq-avatar-snapping")).toBe(false);
+
+      // Cleanup
+      window.dispatchEvent(new window.PointerEvent("pointerup", {
+        clientX: 300,
+        clientY: 300,
+        bubbles: true,
+      }));
+    } finally {
+      document.elementFromPoint = origElementFromPoint;
+      window.Element.prototype.animate = origAnimate;
+    }
+  });
 });
+
