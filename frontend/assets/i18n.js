@@ -4,7 +4,7 @@
     var SUPPORTED = ['ru', 'en', 'uk'];
     var DEFAULT_LANG = 'ru';
     var STORAGE_KEY = 'actra_lang';
-    var LOCALE_VERSION = '2026.09.23.2';
+    var LOCALE_VERSION = '2026.10.19.1';
     var VERSION_KEY = 'actra_locale_version';
 
     var _locale = {};
@@ -344,6 +344,18 @@
             window.i18n.setLang(lang);
         }
     });
+
+    try {
+        var initialLang = getLang();
+        _lang = initialLang;
+        var initialStoredVersion = typeof localStorage !== 'undefined' ? localStorage.getItem(VERSION_KEY) : null;
+        if (initialStoredVersion === LOCALE_VERSION && typeof localStorage !== 'undefined') {
+            var initialCached = localStorage.getItem('actra_locale_' + initialLang);
+            if (initialCached) {
+                _locale = JSON.parse(initialCached) || {};
+            }
+        }
+    } catch (_) {}
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init, { once: true });

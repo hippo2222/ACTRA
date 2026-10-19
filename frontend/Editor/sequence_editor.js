@@ -154,6 +154,16 @@ class SequenceEditor extends BaseEditor {
         }
     }
 
+    buildSettingsHelpKey({
+        orderInside = false,
+        levelOrder = false,
+    } = {}) {
+        if (levelOrder && orderInside) return 'se.k004';
+        if (levelOrder && !orderInside) return 'se.k005';
+        if (!levelOrder && orderInside) return 'se.k006';
+        return 'se.k007';
+    }
+
     buildSettingsHelpHtml({
         orderInside = false,
         levelOrder = false,
@@ -178,6 +188,11 @@ class SequenceEditor extends BaseEditor {
         const isOrderInside = Boolean(orderInside?.checked);
         const isLevelOrder = Boolean(levelOrder?.checked);
 
+        const helpKey = this.buildSettingsHelpKey({
+            orderInside: isOrderInside,
+            levelOrder: isLevelOrder,
+        });
+        helpText.setAttribute('data-i18n', helpKey);
         helpText.innerHTML = this.buildSettingsHelpHtml({
             orderInside: isOrderInside,
             levelOrder: isLevelOrder,
@@ -186,24 +201,32 @@ class SequenceEditor extends BaseEditor {
         const modeBadge = document.querySelector('#settings-mode-badge');
         const modeIcon = document.querySelector('#settings-mode-icon');
 
+        let badgeKey = '';
         let badgeText = '';
         let iconName = '';
 
         if (isLevelOrder && isOrderInside) {
+            badgeKey = 'se.mode_strict';
             badgeText = wt('se.mode_strict', 'Строгий порядок');
             iconName = 'verified';
         } else if (isLevelOrder && !isOrderInside) {
+            badgeKey = 'se.mode_levels_only';
             badgeText = wt('se.mode_levels_only', 'Порядок уровней');
             iconName = 'low_priority';
         } else if (!isLevelOrder && isOrderInside) {
+            badgeKey = 'se.mode_steps_only';
             badgeText = wt('se.mode_steps_only', 'Порядок элементов');
             iconName = 'checklist';
         } else {
+            badgeKey = 'se.mode_grouping_only';
             badgeText = wt('se.mode_grouping_only', 'Только группировка');
             iconName = 'folder_shared';
         }
 
-        if (modeBadge) modeBadge.textContent = badgeText;
+        if (modeBadge) {
+            modeBadge.setAttribute('data-i18n', badgeKey);
+            modeBadge.textContent = badgeText;
+        }
         if (modeIcon) modeIcon.textContent = iconName;
 
         const orderInsideCard = orderInside?.closest('.settings-toggle-card');
@@ -336,6 +359,9 @@ class SequenceEditor extends BaseEditor {
         this.levels = this.parseLevels(this.task.task_data.content);
         this.ensureDefaultStructure();
         this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn('[SequenceEditor] difficulty authoring preview refresh failed', error);
+        });
         this.hasUnsavedChanges = false;
         this.updateSaveStatus();
     }
@@ -358,6 +384,9 @@ class SequenceEditor extends BaseEditor {
         };
         this.levels = [this.createEmptyLevel()];
         this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn('[SequenceEditor] difficulty authoring reset refresh failed', error);
+        });
         this.hasUnsavedChanges = false;
         this.updateSaveStatus();
     }
@@ -392,6 +421,9 @@ class SequenceEditor extends BaseEditor {
         this.task = this.cloneSequenceOnboardingValue(snapshot.task);
         this.levels = this.cloneSequenceOnboardingValue(snapshot.levels) || [];
         this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn('[SequenceEditor] difficulty authoring restore refresh failed', error);
+        });
         this.hasUnsavedChanges = Boolean(snapshot.hasUnsavedChanges);
         this.updateSaveStatus();
     }
@@ -415,7 +447,10 @@ class SequenceEditor extends BaseEditor {
     }
 
     getDifficultyAuthoringMountPoint() {
-        return document.querySelector('aside .p-6.space-y-8');
+        return document.querySelector('#editor-difficulty-authoring-mount')
+            || document.querySelector('#sequence-sidebar-content')
+            || document.querySelector('aside .p-5.space-y-6')
+            || document.querySelector('aside .p-6.space-y-8');
     }
 
     getDifficultyAuthoringLayoutVariant() {
@@ -432,6 +467,12 @@ class SequenceEditor extends BaseEditor {
      * Called after task is loaded from backend (BaseEditor hook)
      */
     onTaskLoaded() {
+        if (this.task?.task_data && !this.task.task_data.type) {
+            this.task.task_data.type = this.task.task_data.task_type
+                || this.task.metadata?.type
+                || this.taskTypeParam
+                || 'sequence_assembly';
+        }
         const content = this.task.task_data.content || {};
         this.levels = this.parseLevels(content);
         this.ensureDefaultStructure();
@@ -581,15 +622,15 @@ class SequenceEditor extends BaseEditor {
                         ${lIndex + 1}
                     </div>
                     <input class="level-title-input flex-1 min-w-[140px]" 
-                           type="text" placeholder="${wt('se.k008', 'Название уровня')}"/>
+                           type="text" data-i18n-placeholder="se.k008" placeholder="${wt('se.k008', 'Название уровня')}"/>
                     <span class="sequence-level-title-onboarding-anchor absolute pointer-events-none" aria-hidden="true"></span>
                     <span class="sequence-level-title-onboarding-edge absolute pointer-events-none" aria-hidden="true"></span>
                 </div>
                 <div class="sequence-level-actions flex items-center gap-1 transition-opacity">
-                    <button class="move-up icon-button-muted disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isFirstLevel || isSingleLevel ? 'disabled' : ''} title="${wt('se.k009', 'Переместить вверх')}" aria-label="${wt('se.k009', 'Переместить вверх')} (${wt('se.k008', 'Уровень')} ${lIndex + 1})"><span class="material-symbols-outlined text-[18px]">arrow_upward</span></button>
-                    <button class="move-down icon-button-muted disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isLastLevel || isSingleLevel ? 'disabled' : ''} title="${wt('se.k010', 'Переместить вниз')}" aria-label="${wt('se.k010', 'Переместить вниз')} (${wt('se.k008', 'Уровень')} ${lIndex + 1})"><span class="material-symbols-outlined text-[18px]">arrow_downward</span></button>
+                    <button class="move-up icon-button-muted disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isFirstLevel || isSingleLevel ? 'disabled' : ''} data-i18n-title="se.k009" title="${wt('se.k009', 'Переместить вверх')}" aria-label="${wt('se.k009', 'Переместить вверх')} (${wt('se.k008', 'Уровень')} ${lIndex + 1})"><span class="material-symbols-outlined text-[18px]">arrow_upward</span></button>
+                    <button class="move-down icon-button-muted disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isLastLevel || isSingleLevel ? 'disabled' : ''} data-i18n-title="se.k010" title="${wt('se.k010', 'Переместить вниз')}" aria-label="${wt('se.k010', 'Переместить вниз')} (${wt('se.k008', 'Уровень')} ${lIndex + 1})"><span class="material-symbols-outlined text-[18px]">arrow_downward</span></button>
                     <div class="w-px h-5 bg-border-subtle mx-1"></div>
-                    <button class="delete-level icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isSingleLevel ? 'disabled' : ''} title="${wt('se.k011', 'Удалить уровень')}" aria-label="${wt('se.k011', 'Удалить уровень')} ${lIndex + 1}"><span class="material-symbols-outlined text-[18px]">close</span></button>
+                    <button class="delete-level icon-button-muted border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isSingleLevel ? 'disabled' : ''} data-i18n-title="se.k011" title="${wt('se.k011', 'Удалить уровень')}" aria-label="${wt('se.k011', 'Удалить уровень')} ${lIndex + 1}"><span class="material-symbols-outlined text-[18px]">close</span></button>
                 </div>
             </div>
             <div class="sequence-items-grid items-container"></div>
@@ -646,12 +687,14 @@ class SequenceEditor extends BaseEditor {
 
         const addButton = document.createElement('button');
         addButton.className = 'sequence-add-block-btn empty-state-card empty-state-card--compact empty-state-card--icon-only rounded-xl border-2 border-dashed border-border-strong hover:border-primary hover:bg-primary-lighter/40 flex flex-col items-center justify-center gap-1.5 p-4 min-h-[140px] text-text-muted hover:text-primary transition-all duration-200 cursor-pointer';
+        addButton.setAttribute('data-i18n-title', 'se.k012');
         addButton.title = wt('se.k012', 'Добавить шаг в этот уровень');
+        addButton.setAttribute('data-i18n-aria', 'se.k013');
         addButton.setAttribute('aria-label', wt('se.k013', 'Добавить блок'));
         if (lIndex === 0) {
             addButton.setAttribute('data-onboarding-target', 'sequence-first-level-add-step');
         }
-        addButton.innerHTML = '<span class="material-symbols-outlined text-[28px]">add</span><span class="text-xs font-semibold tracking-wide">' + wt('se.k012', 'Добавить шаг') + '</span>';
+        addButton.innerHTML = '<span class="material-symbols-outlined text-[28px]">add</span><span class="text-xs font-semibold tracking-wide" data-i18n="seq_editor.add_step_btn">' + wt('seq_editor.add_step_btn', 'Добавить шаг') + '</span>';
         addButton.onclick = () => this.addBlock(lIndex);
         itemsContainer.appendChild(addButton);
 
@@ -764,34 +807,34 @@ class SequenceEditor extends BaseEditor {
                     <span class="sequence-block-badge text-[11px] font-bold text-text-muted bg-surface-2/90 px-1.5 py-0.5 rounded border border-border-subtle/80 leading-none shrink-0">
                         ${stepNumber}
                     </span>
-                    <button type="button" class="sequence-block-expand-trigger inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-primary bg-primary-lighter/60 hover:bg-primary-lighter border border-primary/25 rounded cursor-pointer transition-colors" title="${wt('seq_editor.expand_step_full', 'Развернуть шаг')}" aria-label="${wt('seq_editor.expand_step_full', 'Развернуть шаг')}">
+                    <button type="button" class="sequence-block-expand-trigger inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-primary bg-primary-lighter/60 hover:bg-primary-lighter border border-primary/25 rounded cursor-pointer transition-colors" data-i18n-title="seq_editor.expand_step_full" data-i18n-aria="seq_editor.expand_step_full" title="${wt('seq_editor.expand_step_full', 'Развернуть шаг')}" aria-label="${wt('seq_editor.expand_step_full', 'Развернуть шаг')}">
                         <span class="material-symbols-outlined text-[13px]">expand_more</span>
-                        <span>${wt('seq_editor.expand_step', 'Развернуть')}</span>
+                        <span data-i18n="seq_editor.expand_step">${wt('seq_editor.expand_step', 'Развернуть')}</span>
                     </button>
-                    <button type="button" class="sequence-block-header-collapse-btn hidden inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-primary bg-primary-lighter/60 hover:bg-primary-lighter border border-primary/25 rounded cursor-pointer transition-colors" title="${wt('seq_editor.collapse_step_full', 'Свернуть шаг')}" aria-label="${wt('seq_editor.collapse_step_full', 'Свернуть шаг')}">
+                    <button type="button" class="sequence-block-header-collapse-btn hidden inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold text-primary bg-primary-lighter/60 hover:bg-primary-lighter border border-primary/25 rounded cursor-pointer transition-colors" data-i18n-title="seq_editor.collapse_step_full" data-i18n-aria="seq_editor.collapse_step_full" title="${wt('seq_editor.collapse_step_full', 'Свернуть шаг')}" aria-label="${wt('seq_editor.collapse_step_full', 'Свернуть шаг')}">
                         <span class="material-symbols-outlined text-[13px]">expand_less</span>
-                        <span>${wt('seq_editor.collapse_step', 'Свернуть')}</span>
+                        <span data-i18n="seq_editor.collapse_step">${wt('seq_editor.collapse_step', 'Свернуть')}</span>
                     </button>
                 </div>
-                <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error shrink-0" title="${wt('se.k014', 'Удалить элемент')}" aria-label="${wt('se.k014', 'Удалить элемент')} ${stepNumber}">
+                <button class="delete-block sequence-block-delete icon-button-muted icon-button-muted--xs border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error shrink-0" data-i18n-title="se.k014" title="${wt('se.k014', 'Удалить элемент')}" aria-label="${wt('se.k014', 'Удалить элемент')} ${stepNumber}">
                     <span class="material-symbols-outlined text-[16px]">close</span>
                 </button>
             </div>
             <textarea class="block-title-input sequence-block-title w-full flex-1 text-sm font-medium border border-transparent bg-transparent hover:border-border-subtle hover:bg-surface-2/30 focus:border-primary focus:bg-surface-1 focus:ring-2 focus:ring-primary/20 rounded-md text-text-main placeholder-text-disabled resize-none transition-colors py-1 px-1.5 text-left leading-snug break-words outline-none" 
-                   rows="2" placeholder="${wt('se.k015', 'Опишите элемент...')}"></textarea>
+                   rows="2" data-i18n-placeholder="se.k015" placeholder="${wt('se.k015', 'Опишите элемент...')}"></textarea>
             <div class="sequence-block-actions grid grid-cols-2 gap-2 text-[11px] font-bold select-none">
                 <button class="move-left sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isFirstItem || isSingleItem ? 'disabled' : ''} aria-label="${wt('se.k016', 'Влево')} (${stepNumber})">
                     <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                    ${wt('se.k016', 'Влево')}
+                    <span data-i18n="se.k016">${wt('se.k016', 'Влево')}</span>
                 </button>
                 <button class="move-right sequence-block-move-btn btn-secondary btn-secondary--compact inline-flex items-center justify-center gap-1 w-full min-w-0 rounded-md transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none" ${isLastItem || isSingleItem ? 'disabled' : ''} aria-label="${wt('se.k017', 'Вправо')} (${stepNumber})">
-                    ${wt('se.k017', 'Вправо')}
+                    <span data-i18n="se.k017">${wt('se.k017', 'Вправо')}</span>
                     <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                 </button>
             </div>
-            <button type="button" class="sequence-block-collapse-btn btn-secondary btn-secondary--compact w-full items-center justify-center gap-1 py-1 px-2 text-xs font-bold text-primary hover:text-primary-dark bg-primary-lighter/50 hover:bg-primary-lighter border border-primary/30 rounded-md transition-all cursor-pointer shadow-xs select-none" title="${wt('seq_editor.collapse_step', 'Свернуть')}">
+            <button type="button" class="sequence-block-collapse-btn btn-secondary btn-secondary--compact w-full items-center justify-center gap-1 py-1 px-2 text-xs font-bold text-primary hover:text-primary-dark bg-primary-lighter/50 hover:bg-primary-lighter border border-primary/30 rounded-md transition-all cursor-pointer shadow-xs select-none" data-i18n-title="seq_editor.collapse_step" title="${wt('seq_editor.collapse_step', 'Свернуть')}">
                 <span class="material-symbols-outlined text-[16px]">expand_less</span>
-                <span>${wt('seq_editor.collapse_step', 'Свернуть')}</span>
+                <span data-i18n="seq_editor.collapse_step">${wt('seq_editor.collapse_step', 'Свернуть')}</span>
             </button>
         `;
 
@@ -969,6 +1012,51 @@ class SequenceEditor extends BaseEditor {
         }
     }
 
+    updateLocalizedControlAttributes() {
+        const backBtn = document.querySelector('#back-to-dashboard');
+        if (backBtn) {
+            backBtn.title = wt('se.k025', 'Вернуться к редактору заданий');
+            backBtn.setAttribute('aria-label', backBtn.title);
+        }
+
+        const clearAllBtn = document.querySelector('#clear-all-btn');
+        if (clearAllBtn) {
+            clearAllBtn.title = wt('se.k026', 'Очистить всю текущую структуру');
+        }
+
+        const addLevelBtn = document.querySelector('#add-level-btn');
+        if (addLevelBtn) {
+            addLevelBtn.title = wt('se.k031', 'Добавить новый уровень');
+        }
+
+        const saveBtn = document.querySelector('#save-task-btn');
+        if (saveBtn) {
+            saveBtn.title = wt('se.k032', 'Сохранить задание');
+        }
+    }
+
+    onLocaleChanged() {
+        if ((this.sequenceOnboardingPreview || this.sequenceOnboardingDemoActive) && !this.sequenceOnboardingFinished) {
+            this.applySequenceOnboardingPreviewState();
+            this.updateLocalizedControlAttributes();
+            return;
+        }
+
+        this.updateTaskTitleDisplay();
+        this.updateSettingsHelpText();
+        this.updateLocalizedControlAttributes();
+        this.updateSaveStatus();
+
+        const levelsContainer = document.querySelector('#levels-container');
+        const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        const isEditingInLevels = Boolean(levelsContainer && activeEl && levelsContainer.contains(activeEl));
+        if (!isEditingInLevels) {
+            this.renderLevels();
+        } else if (typeof window !== 'undefined' && window.i18n && typeof window.i18n.updateDOM === 'function') {
+            window.i18n.updateDOM();
+        }
+    }
+
     setupEventListeners() {
         const titleDisplay = document.querySelector('#task-title-display');
         if (titleDisplay) {
@@ -978,16 +1066,15 @@ class SequenceEditor extends BaseEditor {
             this.updateTaskTitleDisplay();
         }
 
+        this.updateLocalizedControlAttributes();
+
         const backBtn = document.querySelector('#back-to-dashboard');
         if (backBtn) {
-            backBtn.title = wt('se.k025', 'Вернуться к редактору заданий');
-            backBtn.setAttribute('aria-label', backBtn.title);
             backBtn.onclick = () => this.goBack();
         }
 
         const clearAllBtn = document.querySelector('#clear-all-btn');
         if (clearAllBtn) {
-            clearAllBtn.title = wt('se.k026', 'Очистить всю текущую структуру');
             clearAllBtn.onclick = async () => {
                 const confirmed = await this.confirmAction({
                     title: wt('se.k027', 'Очистить все уровни?'),
@@ -1009,13 +1096,11 @@ class SequenceEditor extends BaseEditor {
 
         const addLevelBtn = document.querySelector('#add-level-btn');
         if (addLevelBtn) {
-            addLevelBtn.title = wt('se.k031', 'Добавить новый уровень');
             addLevelBtn.onclick = () => this.addLevel();
         }
 
         const saveBtn = document.querySelector('#save-task-btn');
         if (saveBtn) {
-            saveBtn.title = wt('se.k032', 'Сохранить задание');
             saveBtn.onclick = () => this.saveTask();
         }
 

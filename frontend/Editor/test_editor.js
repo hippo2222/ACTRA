@@ -1727,7 +1727,9 @@ class TestEditor extends BaseEditor {
     }
 
     getDifficultyAuthoringMountPoint() {
-        return document.querySelector('aside .p-6.space-y-8');
+        return document.querySelector('aside .test-editor-inspector__content')
+            || document.querySelector('aside .p-6.space-y-8')
+            || document.querySelector('aside .p-6.space-y-7');
     }
 
     getDifficultyAuthoringLayoutVariant() {

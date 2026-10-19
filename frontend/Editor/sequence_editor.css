@@ -79,6 +79,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
+    font-size: 0.9375rem;
 }
 
 #prompt-textarea::placeholder,
@@ -390,6 +391,11 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 .sortable-ghost {
     opacity: 0.3;
     background: var(--color-primary-lighter) !important;
+}
+
+#editor-difficulty-authoring {
+    border-top: 1px solid var(--color-border-subtle);
+    padding-top: 1.25rem;
 }
 
 .difficulty-authoring[data-blocking="true"] > *,

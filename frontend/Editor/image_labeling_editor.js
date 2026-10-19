@@ -363,6 +363,9 @@ class ImageLabelingEditor extends BaseEditor {
         }
 
         this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn('[ImageLabelingEditor] difficulty authoring refresh failed', error);
+        });
     }
 
     renderUI() {

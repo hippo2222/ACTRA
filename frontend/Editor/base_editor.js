@@ -84,6 +84,32 @@ class BaseEditor {
         };
 
         this.setupNavigationGuards();
+        this.setupLocaleChangeBridge();
+    }
+
+    setupLocaleChangeBridge() {
+        if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
+        if (window.__ACTIVE_BASE_EDITOR_I18N_CHANGED__) {
+            window.removeEventListener('i18n:changed', window.__ACTIVE_BASE_EDITOR_I18N_CHANGED__);
+        }
+        window.__ACTIVE_BASE_EDITOR_I18N_CHANGED__ = () => this.handleBaseLocaleChanged();
+        window.addEventListener('i18n:changed', window.__ACTIVE_BASE_EDITOR_I18N_CHANGED__);
+    }
+
+    handleBaseLocaleChanged() {
+        if (this.difficultyAuthoring?.activeMeta) {
+            this.renderDifficultyAuthoringControls();
+        }
+        this.updateSaveStatus();
+        if (this.task && typeof this.renderTheoryGroundingBeacon === 'function') {
+            this.renderTheoryGroundingBeacon();
+        }
+        if (this.theoryGrounding?.panelOpen && typeof this.renderTheoryGroundingPanel === 'function') {
+            this.renderTheoryGroundingPanel();
+        }
+        if (typeof this.onLocaleChanged === 'function') {
+            this.onLocaleChanged();
+        }
     }
 
     // ===== TASK CONTEXT =====
@@ -530,6 +556,8 @@ class BaseEditor {
     _getDifficultyAuthoringTaskType(taskData = this.task?.task_data) {
         return String(
             taskData?.type
+            || taskData?.task_type
+            || taskData?.content?.type
             || this.taskTypeParam
             || this.task?.metadata?.type
             || ''
@@ -945,11 +973,35 @@ class BaseEditor {
     }
 
     getDifficultyAuthoringUiCopy() {
+        const taskType = this._getDifficultyAuthoringTaskType(this.task?.task_data);
+        const copyByType = {
+            sequence: {
+                intro: wt('editor_base.difficulty.sequence.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это задание на последовательность.'),
+                allDescription: wt('editor_base.difficulty.sequence.all_description', 'Показывать задание на всех 3 уровнях последовательности.'),
+            },
+            sequence_assembly: {
+                intro: wt('editor_base.difficulty.sequence.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это задание на последовательность.'),
+                allDescription: wt('editor_base.difficulty.sequence.all_description', 'Показывать задание на всех 3 уровнях последовательности.'),
+            },
+            draw: {
+                intro: wt('editor_base.difficulty.draw.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это задание на обведение.'),
+                allDescription: wt('editor_base.difficulty.draw.all_description', 'Показывать задание на обоих уровнях обведения.'),
+            },
+            test: {
+                intro: wt('editor_base.difficulty.test.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это тестовое задание.'),
+                allDescription: wt('editor_base.difficulty.test.all_description', 'Показывать задание на обоих уровнях теста.'),
+            },
+            image_labeling: {
+                intro: wt('editor_base.difficulty.image_labeling.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это задание с подписями.'),
+                allDescription: wt('editor_base.difficulty.image_labeling.all_description', 'Показывать задание на обоих уровнях подписей.'),
+            },
+        };
+        const typeCopy = copyByType[taskType] || {};
         return {
             title: wt('editor_base.difficulty.title', 'Доступные уровни сложности'),
-            intro: wt('editor_base.difficulty.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это Click-задание.'),
+            intro: typeCopy.intro || wt('editor_base.difficulty.intro', 'В стандартном комплексе 3 итерации. Выберите, на каких из них появится это Click-задание.'),
             allTitle: wt('editor_base.difficulty.all_title', 'Все уровни типа'),
-            allDescription: wt('editor_base.difficulty.all_description', 'Показывать задание на всех 3 итерациях Click.'),
+            allDescription: typeCopy.allDescription || wt('editor_base.difficulty.all_description', 'Показывать задание на всех 3 итерациях Click.'),
             customTitle: wt('editor_base.difficulty.custom_title', 'Только выбранные уровни'),
             customDescription: wt('editor_base.difficulty.custom_description', 'Показывать задание только на выбранных итерациях.'),
             warning: wt('editor_base.difficulty.warning', 'Нужно оставить хотя бы один уровень, иначе задание нельзя будет сохранить.'),
@@ -987,6 +1039,10 @@ class BaseEditor {
                 1: wt('editor_base.difficulty.sequence.1', 'Пользователь раскладывает элементы по уровням или группам.'),
                 2: wt('editor_base.difficulty.sequence.2', 'Пользователь раскладывает элементы и подписывает уровни.'),
                 3: wt('editor_base.difficulty.sequence.3', 'Пользователь раскладывает элементы и подписывает и уровни, и элементы.'),
+            },
+            image_labeling: {
+                1: wt('editor_base.difficulty.image_labeling.1', 'Подписи на рисунке: сопоставление из пула вариантов.'),
+                2: wt('editor_base.difficulty.image_labeling.2', 'Подписи на рисунке: ввод ответов вручную.'),
             },
         };
 
@@ -1654,6 +1710,7 @@ class BaseEditor {
 
         dot.classList.add('status-cluster__dot');
         text.classList.add('status-cluster__label');
+        text.removeAttribute('data-i18n');
         if (detail) detail.classList.add('status-cluster__detail');
 
         text.textContent = this.getSaveStatusMessage(type, resolvedOptions);
@@ -2567,7 +2624,7 @@ class BaseEditor {
     _theoryGroundingCurrentTaskType() {
         const taskType = String(this.taskType || this.taskTypeParam || this.task?.task_data?.type || '').trim().toLowerCase();
         if (taskType === 'open_answer') return 'OPEN_ANSWER';
-        if (taskType === 'sequence') return 'SEQUENCE';
+        if (taskType === 'sequence' || taskType === 'sequence_assembly') return 'SEQUENCE';
         if (taskType === 'test') return 'TEST';
         if (taskType === 'draw' || this.isDrawTask) return 'DRAW';
         if (taskType === 'click') {
