@@ -3004,12 +3004,12 @@ class TaskEvaluatorService:
             logger.debug(f"[LevelNamesEval] Используем level_mapping для уровня 3: {level_mapping}")
             for correct_level in correct_levels:
                 correct_level_id = correct_level.get('level_id', '')
-                correct_name = correct_level.get('level_name', '')
+                correct_name = str(correct_level.get('level_name') or correct_level.get('label') or '').strip()
                 
                 if correct_level_id in level_mapping:
                     user_idx = level_mapping[correct_level_id]
                     user_level = user_levels[user_idx]
-                    user_name = user_level.get('level_name', '').strip()
+                    user_name = str(user_level.get('level_name') or user_level.get('label') or '').strip()
                     user_level_id = user_level.get('level_id', '')
                     
                     # Проверяем название
@@ -3053,7 +3053,7 @@ class TaskEvaluatorService:
             # Существующая логика для уровня 2
             for correct_level in correct_levels:
                 correct_blocks = correct_level.get('blocks', [])
-                correct_name = correct_level.get('level_name', '')
+                correct_name = str(correct_level.get('level_name') or correct_level.get('label') or '').strip()
                 correct_level_id = correct_level.get('level_id', '')
                 
                 logger.debug(f"[LevelNamesEval] Проверяем correct_level: level_id={correct_level_id}, "
@@ -3100,7 +3100,7 @@ class TaskEvaluatorService:
                         else:
                             logger.debug(f"[LevelNamesEval] Блоки не совпадают или пустые, проверяем только название для user_level[{idx}]")
                         
-                        user_name = user_level.get('level_name', '').strip()
+                        user_name = str(user_level.get('level_name') or user_level.get('label') or '').strip()
                         user_level_id = user_level.get('level_id', '')
                         
                         # Проверяем название
@@ -5416,73 +5416,540 @@ class TaskEvaluatorService:
     # Извлечено из trainer.py::check_sequence_levels (строки 2303-2396)
     # =========================================================================
     
+    def _evaluate_hierarchy_nodes(
+        self,
+        *,
+        user_nodes: List[Dict[str, Any]],
+        correct_nodes_ref: List[Dict[str, Any]],
+        user_levels: List[Dict[str, Any]],
+        correct_levels_ref: List[Dict[str, Any]],
+        element_text_map: Dict[str, str],
+        sequence_blocks_match,
+        count_sequence_block_matches,
+        collect_matching_user_block_ids,
+        sequence_matters: bool,
+        level_order_matters: bool,
+        requires_level_names: bool,
+        requires_block_names: bool,
+    ) -> Dict[str, Any]:
+        """
+        Реляционная проверка узлов (nodes) для режима display_mode == 'hierarchy'.
+        Поддерживает:
+        - Древовидные классификации (множества/подмножества) и листовые контейнеры-группы (Вариант Б)
+        - Сравнительные параметрические таблицы (Таблицы 5.1 и 5.2)
+        - Независимый порядок ветвей/колонок (level_order_matters = False) через DP + максимальное двудольное паросочетание поддеревьев
+        - Сложности 1, 2 и 3 (включая слепой ввод текста узлов с толерантностью на Сложности 3)
+        """
+        ref_nodes: Dict[str, Dict[str, Any]] = {}
+        ref_children: Dict[str, List[str]] = {}
+        ref_roots: List[str] = []
+        for raw in correct_nodes_ref or []:
+            if not isinstance(raw, dict):
+                continue
+            nid = str(raw.get("node_id") or "").strip()
+            if not nid:
+                continue
+            ref_nodes[nid] = raw
+            ref_children.setdefault(nid, [])
+
+        for nid, raw in ref_nodes.items():
+            pid = str(raw.get("parent_id") or "").strip()
+            if pid and pid in ref_nodes:
+                ref_children.setdefault(pid, []).append(nid)
+            else:
+                ref_roots.append(nid)
+
+        user_nodes_map: Dict[str, Dict[str, Any]] = {}
+        user_children: Dict[str, List[str]] = {}
+        user_roots: List[str] = []
+        for idx, raw in enumerate(user_nodes or []):
+            if not isinstance(raw, dict):
+                continue
+            nid = str(raw.get("node_id") or f"user_node_{idx + 1}").strip()
+            user_nodes_map[nid] = raw
+            user_children.setdefault(nid, [])
+
+        for nid, raw in user_nodes_map.items():
+            pid = str(raw.get("parent_id") or "").strip()
+            if pid and pid in user_nodes_map:
+                user_children.setdefault(pid, []).append(nid)
+            else:
+                user_roots.append(nid)
+
+        total_blocks_in_levels = sum(
+            len([b for b in (n.get("blocks") or []) if b is not None])
+            for n in ref_nodes.values()
+        )
+
+        pair_memo: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+        def match_node_lists(r_ids: List[str], u_ids: List[str]) -> Dict[str, Any]:
+            if not r_ids or not u_ids:
+                return {"correct_blocks": 0, "correct_nodes": 0, "pairs": []}
+
+            if level_order_matters:
+                pairs: List[Tuple[str, str]] = []
+                c_blocks = 0
+                c_nodes = 0
+                for idx, r_id in enumerate(r_ids):
+                    if idx >= len(u_ids):
+                        break
+                    u_id = u_ids[idx]
+                    r_lvl = str(ref_nodes[r_id].get("level_id") or "")
+                    u_lvl = str(user_nodes_map[u_id].get("level_id") or "")
+                    if r_lvl and u_lvl and r_lvl != u_lvl:
+                        continue
+                    sub = evaluate_pair(r_id, u_id)
+                    c_blocks += sub["subtree_correct_blocks"]
+                    c_nodes += sub["subtree_correct_nodes"]
+                    pairs.append((r_id, u_id))
+                return {"correct_blocks": c_blocks, "correct_nodes": c_nodes, "pairs": pairs}
+
+            m_len = len(r_ids)
+            k_len = len(u_ids)
+            if max(m_len, k_len) <= 10:
+                dp_memo: Dict[Tuple[int, int], Any] = {}
+
+                def solve_dp(r_idx: int, mask: int):
+                    if r_idx >= m_len:
+                        return (0, 0, 0, [])
+                    state = (r_idx, mask)
+                    if state in dp_memo:
+                        return dp_memo[state]
+
+                    best = solve_dp(r_idx + 1, mask)
+                    r_id = r_ids[r_idx]
+                    r_lvl = str(ref_nodes[r_id].get("level_id") or "")
+                    r_col_title = str(ref_nodes[r_id].get("column_title") or "").strip().lower()
+
+                    for u_idx in range(k_len):
+                        if mask & (1 << u_idx):
+                            continue
+                        u_id = u_ids[u_idx]
+                        u_lvl = str(user_nodes_map[u_id].get("level_id") or "")
+                        if r_lvl and u_lvl and r_lvl != u_lvl:
+                            continue
+                        u_col_title = str(user_nodes_map[u_id].get("column_title") or "").strip().lower()
+                        if r_col_title:
+                            if u_col_title:
+                                if u_col_title != r_col_title:
+                                    continue
+                            else:
+                                if r_id != u_id:
+                                    continue
+                        elif u_col_title:
+                            if r_id != u_id:
+                                continue
+                        sub = evaluate_pair(r_id, u_id)
+                        rem_blocks, rem_nodes, rem_same, rem_pairs = solve_dp(r_idx + 1, mask | (1 << u_idx))
+                        cand = (
+                            sub["subtree_correct_blocks"] + rem_blocks,
+                            sub["subtree_correct_nodes"] + rem_nodes,
+                            (1 if r_id == u_id else 0) + rem_same,
+                            [(r_id, u_id)] + rem_pairs,
+                        )
+                        if cand[:3] > best[:3]:
+                            best = cand
+
+                    dp_memo[state] = best
+                    return best
+
+                best_blocks, best_nodes, _, best_pairs = solve_dp(0, 0)
+                return {"correct_blocks": best_blocks, "correct_nodes": best_nodes, "pairs": best_pairs}
+
+            candidates = []
+            for r_id in r_ids:
+                r_lvl = str(ref_nodes[r_id].get("level_id") or "")
+                r_col_title = str(ref_nodes[r_id].get("column_title") or "").strip().lower()
+                for u_id in u_ids:
+                    u_lvl = str(user_nodes_map[u_id].get("level_id") or "")
+                    if r_lvl and u_lvl and r_lvl != u_lvl:
+                        continue
+                    u_col_title = str(user_nodes_map[u_id].get("column_title") or "").strip().lower()
+                    if r_col_title:
+                        if u_col_title:
+                            if u_col_title != r_col_title:
+                                continue
+                        else:
+                            if r_id != u_id:
+                                continue
+                    elif u_col_title:
+                        if r_id != u_id:
+                            continue
+                    sub = evaluate_pair(r_id, u_id)
+                    candidates.append((
+                        sub["subtree_correct_blocks"],
+                        sub["subtree_correct_nodes"],
+                        1 if r_id == u_id else 0,
+                        r_id,
+                        u_id,
+                    ))
+            candidates.sort(reverse=True)
+            used_r = set()
+            used_u = set()
+            pairs = []
+            c_blocks = 0
+            c_nodes = 0
+            for b_cnt, n_cnt, _, r_id, u_id in candidates:
+                if r_id in used_r or u_id in used_u:
+                    continue
+                used_r.add(r_id)
+                used_u.add(u_id)
+                pairs.append((r_id, u_id))
+                c_blocks += b_cnt
+                c_nodes += n_cnt
+            return {"correct_blocks": c_blocks, "correct_nodes": c_nodes, "pairs": pairs}
+
+        def evaluate_pair(r_id: str, u_id: str) -> Dict[str, Any]:
+            key = (r_id, u_id)
+            if key in pair_memo:
+                return pair_memo[key]
+
+            r_node = ref_nodes[r_id]
+            u_node = user_nodes_map[u_id]
+            r_level_id = str(r_node.get("level_id") or "")
+            r_blocks = [b for b in (r_node.get("blocks") or []) if b is not None]
+            u_blocks = [b for b in (u_node.get("blocks") or []) if b is not None]
+            u_block_names = u_node.get("block_names") if isinstance(u_node.get("block_names"), dict) else {}
+            r_block_names = r_node.get("block_names") if isinstance(r_node.get("block_names"), dict) else {}
+
+            own_correct = 0
+            own_exact = False
+            own_matched_ids: List[Any] = []
+            own_matched_names: List[Tuple[str, str, str, str]] = []
+            own_unmatched_names: List[Tuple[str, str, str, str]] = []
+            own_tolerance_matches: List[Dict[str, Any]] = []
+
+            if not requires_block_names:
+                own_correct = count_sequence_block_matches(
+                    u_blocks, r_blocks, sequence_matters, u_block_names, r_block_names
+                )
+                own_exact = sequence_blocks_match(
+                    u_blocks, r_blocks, sequence_matters, u_block_names, r_block_names
+                )
+                own_matched_ids = collect_matching_user_block_ids(
+                    u_blocks, r_blocks, sequence_matters, u_block_names, r_block_names
+                )
+            else:
+                ref_slots: List[Tuple[str, str]] = []
+                for b_id in r_blocks:
+                    b_key = str(b_id)
+                    c_text = str(r_block_names.get(b_key) or element_text_map.get(b_key, "") or "").strip()
+                    ref_slots.append((b_key, c_text))
+
+                user_slots: List[Tuple[str, str]] = []
+                if u_blocks:
+                    for idx, b_id in enumerate(u_blocks):
+                        b_key = str(b_id)
+                        u_text = u_block_names.get(b_key)
+                        if u_text is None:
+                            u_text = u_block_names.get(str(idx))
+                        user_slots.append((b_key, str(u_text or "").strip()))
+                elif u_block_names:
+                    for k_slot, v_text in u_block_names.items():
+                        user_slots.append((str(k_slot), str(v_text or "").strip()))
+
+                if sequence_matters:
+                    own_matched_ids = [None] * len(ref_slots)
+                    limit = min(len(user_slots), len(ref_slots))
+                    for idx in range(limit):
+                        u_slot_id, u_text = user_slots[idx]
+                        r_slot_id, c_text = ref_slots[idx]
+                        tol = self._compare_named_text(u_text, c_text) if (u_text and c_text) else None
+                        if tol is not None:
+                            own_correct += 1
+                            own_matched_ids[idx] = u_slot_id
+                            own_matched_names.append((r_level_id, u_slot_id, u_text, c_text))
+                            if tol.get("type") != "exact" or tol.get("normalized_kinds"):
+                                own_tolerance_matches.append({
+                                    "level_id": r_level_id,
+                                    "node_id": u_id,
+                                    "block_id": u_slot_id,
+                                    "type": tol.get("type", "exact"),
+                                    "user_answer": u_text,
+                                    "correct_answer": c_text,
+                                    "normalized_kinds": list(tol.get("normalized_kinds") or []),
+                                })
+                        else:
+                            own_unmatched_names.append((r_level_id, u_slot_id, u_text, c_text))
+                    for idx in range(limit, len(ref_slots)):
+                        own_unmatched_names.append((r_level_id, ref_slots[idx][0], "", ref_slots[idx][1]))
+                    for idx in range(limit, len(user_slots)):
+                        own_unmatched_names.append((r_level_id, user_slots[idx][0], user_slots[idx][1], ""))
+                else:
+                    used_ref_indices = set()
+                    used_user_indices = set()
+                    # Проход 1: точные совпадения
+                    for u_idx, (u_slot_id, u_text) in enumerate(user_slots):
+                        if not u_text:
+                            continue
+                        for r_idx, (r_slot_id, c_text) in enumerate(ref_slots):
+                            if r_idx in used_ref_indices or not c_text:
+                                continue
+                            tol = self._compare_named_text(u_text, c_text)
+                            if tol is not None and tol.get("type") == "exact" and not tol.get("normalized_kinds"):
+                                used_ref_indices.add(r_idx)
+                                used_user_indices.add(u_idx)
+                                own_correct += 1
+                                own_matched_ids.append(u_slot_id)
+                                own_matched_names.append((r_level_id, u_slot_id, u_text, c_text))
+                                break
+                    # Проход 2: совпадения с толерантностью (опечатки/окончания/раскладка/регистр)
+                    for u_idx, (u_slot_id, u_text) in enumerate(user_slots):
+                        if u_idx in used_user_indices or not u_text:
+                            continue
+                        for r_idx, (r_slot_id, c_text) in enumerate(ref_slots):
+                            if r_idx in used_ref_indices or not c_text:
+                                continue
+                            tol = self._compare_named_text(u_text, c_text)
+                            if tol is not None:
+                                used_ref_indices.add(r_idx)
+                                used_user_indices.add(u_idx)
+                                own_correct += 1
+                                own_matched_ids.append(u_slot_id)
+                                own_matched_names.append((r_level_id, u_slot_id, u_text, c_text))
+                                if tol.get("type") != "exact" or tol.get("normalized_kinds"):
+                                    own_tolerance_matches.append({
+                                        "level_id": r_level_id,
+                                        "node_id": u_id,
+                                        "block_id": u_slot_id,
+                                        "type": tol.get("type", "exact"),
+                                        "user_answer": u_text,
+                                        "correct_answer": c_text,
+                                        "normalized_kinds": list(tol.get("normalized_kinds") or []),
+                                    })
+                                break
+                    for u_idx, (u_slot_id, u_text) in enumerate(user_slots):
+                        if u_idx not in used_user_indices:
+                            own_unmatched_names.append((r_level_id, u_slot_id, u_text, ""))
+                    for r_idx, (r_slot_id, c_text) in enumerate(ref_slots):
+                        if r_idx not in used_ref_indices:
+                            own_unmatched_names.append((r_level_id, r_slot_id, "", c_text))
+
+                own_exact = (
+                    own_correct == len(ref_slots)
+                    and len(user_slots) == len(ref_slots)
+                    and len(own_unmatched_names) == 0
+                )
+
+            r_col_title = str(r_node.get("column_title") or "").strip().lower()
+            u_col_title = str(u_node.get("column_title") or "").strip().lower()
+            if r_col_title:
+                if u_col_title:
+                    col_title_ok = (u_col_title == r_col_title)
+                else:
+                    col_title_ok = (r_id == u_id)
+            elif u_col_title:
+                col_title_ok = (r_id == u_id)
+            else:
+                col_title_ok = True
+
+            if not col_title_ok:
+                own_exact = False
+
+            children_res = match_node_lists(ref_children.get(r_id, []), user_children.get(u_id, []))
+            res = {
+                "own_correct_blocks": own_correct,
+                "own_exact": own_exact,
+                "own_matched_ids": own_matched_ids,
+                "own_matched_names": own_matched_names,
+                "own_unmatched_names": own_unmatched_names,
+                "own_tolerance_matches": own_tolerance_matches,
+                "subtree_correct_blocks": own_correct + children_res["correct_blocks"],
+                "subtree_correct_nodes": (1 if own_exact else 0) + children_res["correct_nodes"],
+                "child_pairs": children_res["pairs"],
+            }
+            pair_memo[key] = res
+            return res
+
+        root_res = match_node_lists(ref_roots, user_roots)
+        total_correct_blocks = root_res["correct_blocks"]
+
+        node_mapping: Dict[str, str] = {}
+        correct_nodes: List[str] = []
+        incorrect_nodes: List[str] = []
+        correct_blocks_by_node: Dict[str, List[Any]] = {}
+        all_matched_block_names: List[Tuple[str, str, str, str]] = []
+        all_unmatched_block_names: List[Tuple[str, str, str, str]] = []
+        all_block_tolerance_matches: List[Dict[str, Any]] = []
+
+        def collect_pairs(pairs: List[Tuple[str, str]]):
+            for r_id, u_id in pairs:
+                node_mapping[r_id] = u_id
+                pair_info = evaluate_pair(r_id, u_id)
+                correct_blocks_by_node[u_id] = list(pair_info["own_matched_ids"])
+                if pair_info["own_exact"]:
+                    correct_nodes.append(u_id)
+                else:
+                    incorrect_nodes.append(u_id)
+                if requires_block_names:
+                    all_matched_block_names.extend(pair_info["own_matched_names"])
+                    all_unmatched_block_names.extend(pair_info["own_unmatched_names"])
+                    all_block_tolerance_matches.extend(pair_info["own_tolerance_matches"])
+                collect_pairs(pair_info["child_pairs"])
+
+        collect_pairs(root_res["pairs"])
+
+        for r_id, r_node in ref_nodes.items():
+            if r_id not in node_mapping:
+                incorrect_nodes.append(r_id)
+                correct_blocks_by_node.setdefault(r_id, [])
+                if requires_block_names:
+                    r_lvl = str(r_node.get("level_id") or "")
+                    r_block_names = r_node.get("block_names") if isinstance(r_node.get("block_names"), dict) else {}
+                    for b_id in (r_node.get("blocks") or []):
+                        if b_id is None:
+                            continue
+                        b_key = str(b_id)
+                        c_text = str(r_block_names.get(b_key) or element_text_map.get(b_key, "") or "").strip()
+                        if c_text:
+                            all_unmatched_block_names.append((r_lvl, b_key, "", c_text))
+
+        matched_user_ids = set(node_mapping.values())
+        for u_id in user_nodes_map:
+            if u_id not in matched_user_ids and u_id not in incorrect_nodes:
+                incorrect_nodes.append(u_id)
+
+        # Агрегируем статистику по этажам (levels) для обратной совместимости и UI
+        level_names_map: Dict[str, str] = {}
+        correct_level_ids: List[str] = []
+        incorrect_level_ids: List[str] = []
+        correct_blocks_by_level: Dict[str, List[Any]] = {}
+
+        for cl in correct_levels_ref or []:
+            cid = str(cl.get("level_id") or "")
+            if not cid:
+                continue
+            lname = str(cl.get("level_name") or cl.get("label") or "")
+            if lname:
+                level_names_map[cid] = lname
+            tier_ref_node_ids = [nid for nid, rn in ref_nodes.items() if str(rn.get("level_id") or "") == cid]
+            tier_matched_blocks: List[Any] = []
+            tier_all_exact = True
+            for rn_id in tier_ref_node_ids:
+                u_id = node_mapping.get(rn_id)
+                if not u_id or u_id not in correct_nodes:
+                    tier_all_exact = False
+                if u_id and u_id in correct_blocks_by_node:
+                    tier_matched_blocks.extend(
+                        [b for b in correct_blocks_by_node[u_id] if b is not None]
+                    )
+            correct_blocks_by_level[cid] = tier_matched_blocks
+            if tier_ref_node_ids and tier_all_exact:
+                correct_level_ids.append(cid)
+            else:
+                incorrect_level_ids.append(cid)
+
+        # На Сложности 2 сопоставляем этажи 1-к-1 по level_id или индексу этажа
+        level_mapping: Dict[str, int] = {}
+        user_level_idx_by_id = {
+            str(ul.get("level_id") or ""): idx
+            for idx, ul in enumerate(user_levels or [])
+            if isinstance(ul, dict) and ul.get("level_id")
+        }
+        for c_idx, cl in enumerate(correct_levels_ref or []):
+            cid = str(cl.get("level_id") or "")
+            if not cid:
+                continue
+            if cid in user_level_idx_by_id:
+                level_mapping[cid] = user_level_idx_by_id[cid]
+            elif c_idx < len(user_levels or []):
+                level_mapping[cid] = c_idx
+
+        block_names_result = None
+        if requires_block_names:
+            matched_cnt = len(all_matched_block_names)
+            b_success = (
+                matched_cnt == total_blocks_in_levels
+                and len(all_unmatched_block_names) == 0
+                and total_blocks_in_levels > 0
+            )
+            if b_success:
+                b_msg = f"✅ Все названия блоков правильные ({matched_cnt}/{total_blocks_in_levels})"
+            else:
+                b_msg = f"❌ Не все названия блоков правильные ({matched_cnt}/{total_blocks_in_levels})"
+            b_score = (matched_cnt / total_blocks_in_levels * 100.0) if total_blocks_in_levels > 0 else 0.0
+            tol_summary = self._summarize_tolerance_matches(all_block_tolerance_matches)
+            block_names_result = {
+                "success": b_success,
+                "score": b_score,
+                "message": b_msg,
+                "matched_blocks": all_matched_block_names,
+                "unmatched_blocks": all_unmatched_block_names,
+                "tolerance_matches": tol_summary.get("matches", []),
+                "tolerance_type": tol_summary.get("tolerance_type"),
+                "normalization_kinds": tol_summary.get("normalization_kinds", []),
+                "tolerance_explanation": self._build_tolerance_explanation("Название", tol_summary),
+            }
+
+        sequence_success = (
+            len(correct_nodes) == len(ref_nodes)
+            and len(user_nodes_map) == len(ref_nodes)
+            and len(incorrect_nodes) == 0
+            and len(ref_nodes) > 0
+        )
+        levels_order_info = len(user_nodes_map) == len(ref_nodes)
+
+        return {
+            "sequence_success": sequence_success,
+            "levels_order_info": levels_order_info,
+            "correct_level_ids": correct_level_ids,
+            "incorrect_level_ids": incorrect_level_ids,
+            "level_names_map": level_names_map,
+            "level_mapping": level_mapping,
+            "total_correct_blocks": total_correct_blocks,
+            "total_blocks_in_levels": total_blocks_in_levels,
+            "correct_blocks_by_level": correct_blocks_by_level,
+            "correct_nodes": correct_nodes,
+            "incorrect_nodes": incorrect_nodes,
+            "correct_blocks_by_node": correct_blocks_by_node,
+            "node_mapping": node_mapping,
+            "block_names_result": block_names_result,
+        }
+
     def evaluate_sequence_task(self, user_input: Dict[str, Any],
                               answer_key: Dict[str, Any],
                               task_data: Optional[Dict[str, Any]] = None) -> EvaluationResult:
         """
-        Оценка Sequence Assembly задания (сборка последовательностей).
-        
-        Поддерживает уровни сложности через поля из DifficultyManager:
-        - Уровень 1: только сборка последовательности (базовая логика)
-        - Уровень 2: сборка + проверка названий уровней (content.requires_level_names = True)
-        - Уровень 3: сборка + проверка названий уровней + названий блоков (content.requires_block_names = True)
-        
-        Args:
-            user_input: {
-                'levels': [
-                    {
-                        'level_id': str,
-                        'blocks': [str, ...],  # ID элементов
-                        'level_name': str,  # название уровня (уровень 2-3)
-                        'block_names': {block_id: str, ...}  # названия блоков (уровень 3)
-                    },
-                    ...
-                ]
-            }
-            answer_key: {
-                'levels': [
-                    {
-                        'level_id': str,
-                        'blocks': [str, ...],
-                        'level_name': str,  # правильное название уровня (уровень 2-3)
-                        'block_names': {block_id: str, ...}  # правильные названия блоков (уровень 3)
-                    },
-                    ...
-                ],
-                'sequence_within_level_matters': bool,
-                'level_order_matters': bool
-            }
-            task_data: Данные задания
-                     Может содержать поля из DifficultyManager:
-                     - content.requires_level_names: требуется проверка названий уровней (level >= 2)
-                     - content.requires_block_names: требуется проверка названий блоков (level >= 3)
-        
-        Returns:
-            EvaluationResult с детальными результатами по уровням:
-            - Уровень 1: только результат последовательности
-            - Уровень 2: комбинация последовательности (70%) + названия уровней (15%)
-            - Уровень 3: комбинация последовательности (70%) + названия уровней (15%) + названия блоков (15%)
-        
-        Логика делегируется в SequenceAssemblyTaskEvaluator (строки 2378-2396)
+        Оценка Sequence Assembly задания (сборка последовательностей и иерархий/классификаций).
         """
         try:
             from task_system.types.sequence_assembly_task import SequenceAssemblyTaskEvaluator
             
             # Нормализация формата, как в легаси: если данные лежат в content,
-            # поднимем ключи на верхний уровень (levels/correct_sequence/настройки)
+            # поднимем ключи на верхний уровень (levels/nodes/correct_sequence/настройки)
             normalized = dict(answer_key or {})
             
             # Извлекаем из content если есть
             if isinstance(normalized.get('content'), dict):
                 content = normalized['content']
-                for k in ('levels', 'correct_sequence', 'sequence_within_level_matters', 'level_order_matters'):
+                for k in (
+                    'levels',
+                    'nodes',
+                    'display_mode',
+                    'color_differentiation',
+                    'correct_sequence',
+                    'sequence_within_level_matters',
+                    'level_order_matters',
+                ):
                     if k in content and k not in normalized:
                         normalized[k] = content[k]
+
+            if task_data and isinstance(task_data.get('content'), dict):
+                td_content = task_data['content']
+                for k in ('levels', 'nodes', 'display_mode', 'color_differentiation'):
+                    if k in td_content and k not in normalized:
+                        normalized[k] = td_content[k]
             
             # Извлекаем настройки из settings если есть
             if task_data and isinstance(task_data.get('settings'), dict):
                 settings = task_data['settings']
-                for k in ('sequence_within_level_matters', 'level_order_matters'):
+                for k in (
+                    'sequence_within_level_matters',
+                    'level_order_matters',
+                    'display_mode',
+                    'color_differentiation',
+                ):
                     if k in settings and k not in normalized:
                         normalized[k] = settings[k]
             
@@ -5493,11 +5960,23 @@ class TaskEvaluatorService:
             show_level_labels = content.get('show_level_labels', True)
             show_block_labels = content.get('show_block_labels', True)
 
+            display_mode = str(normalized.get('display_mode') or content.get('display_mode') or 'linear').strip().lower()
+            if display_mode not in ('linear', 'hierarchy'):
+                display_mode = 'linear'
+            correct_nodes_ref = normalized.get('nodes') or []
+            user_nodes = (user_input or {}).get('nodes') or []
+            is_hierarchy_mode = bool(correct_nodes_ref) and (display_mode == 'hierarchy' or bool(user_nodes))
+
+            # В режиме иерархии на Сложности 3 названия этажей слева всегда открыты (ось координат),
+            # поэтому проверка названий этажей не требуется.
+            if is_hierarchy_mode and requires_block_names:
+                requires_level_names = False
+
             # Отладка: логируем обнаруженные уровни/последовательность
             try:
                 dbg_levels = normalized.get('levels')
                 dbg_seq = normalized.get('correct_sequence')
-                logger.debug(f"[SequenceEval] levels_present={bool(dbg_levels)} seq_present={bool(dbg_seq)}")
+                logger.debug(f"[SequenceEval] levels_present={bool(dbg_levels)} seq_present={bool(dbg_seq)} is_hierarchy={is_hierarchy_mode}")
                 if dbg_levels:
                     logger.debug(f"[SequenceEval] levels_count={len(dbg_levels)}")
             except Exception:
@@ -5685,7 +6164,33 @@ class TaskEvaluatorService:
             total_blocks_in_levels = 0
             correct_blocks_by_level = {}  # {level_id: set of correct block IDs} - для визуализации уровня 1
             levels_order_info = False  # Информация о правильности порядка уровней (для сообщения)
-            if correct_levels_ref:
+            hierarchy_eval_res = None
+
+            if is_hierarchy_mode:
+                hierarchy_eval_res = self._evaluate_hierarchy_nodes(
+                    user_nodes=user_nodes,
+                    correct_nodes_ref=correct_nodes_ref,
+                    user_levels=user_levels,
+                    correct_levels_ref=correct_levels_ref,
+                    element_text_map=element_text_map,
+                    sequence_blocks_match=sequence_blocks_match,
+                    count_sequence_block_matches=count_sequence_block_matches,
+                    collect_matching_user_block_ids=collect_matching_user_block_ids,
+                    sequence_matters=sequence_matters,
+                    level_order_matters=level_order_matters,
+                    requires_level_names=requires_level_names,
+                    requires_block_names=requires_block_names,
+                )
+                sequence_success = hierarchy_eval_res["sequence_success"]
+                levels_order_info = hierarchy_eval_res["levels_order_info"]
+                correct_level_ids = hierarchy_eval_res["correct_level_ids"]
+                incorrect_level_ids = hierarchy_eval_res["incorrect_level_ids"]
+                level_names_map = hierarchy_eval_res["level_names_map"]
+                level_mapping = hierarchy_eval_res["level_mapping"]
+                total_correct_blocks = hierarchy_eval_res["total_correct_blocks"]
+                total_blocks_in_levels = hierarchy_eval_res["total_blocks_in_levels"]
+                correct_blocks_by_level = hierarchy_eval_res["correct_blocks_by_level"]
+            elif correct_levels_ref:
                 # Для уровня 2-3 (requires_level_names = True): сопоставляем по содержимому или block_names
                 if requires_level_names:
                     # Для уровня 3 (requires_block_names): сопоставляем по block_names, а не по ID блоков
@@ -6186,7 +6691,9 @@ class TaskEvaluatorService:
             
             # УРОВЕНЬ 3: проверка названий блоков
             block_names_result = None
-            if requires_block_names:
+            if is_hierarchy_mode and hierarchy_eval_res is not None:
+                block_names_result = hierarchy_eval_res.get("block_names_result")
+            elif requires_block_names:
                 # Обогащаем correct_levels_ref правильными названиями блоков из elements
                 if element_text_map:
                     logger.debug(f"[BlockNamesEval] Обогащаем correct_levels правильными названиями блоков")
@@ -6234,7 +6741,15 @@ class TaskEvaluatorService:
             )
             
             # Формируем сообщение
-            if combined_success:
+            if is_hierarchy_mode and hierarchy_eval_res is not None:
+                total_placed_blocks = sum(len(n.get('blocks') or n.get('slots') or []) for n in user_nodes) if user_nodes else 0
+                if combined_success:
+                    message = f"✅ Клинический алгоритм собран абсолютно верно (все {total_blocks_in_levels} элементов на своих местах)."
+                elif total_placed_blocks < total_blocks_in_levels:
+                    message = f"⚠️ Схема заполнена частично: размещено {total_placed_blocks} из {total_blocks_in_levels} элементов ({total_correct_blocks} верно). Заполните все этапы алгоритма перед повторной проверкой."
+                else:
+                    message = f"❌ В алгоритме есть ошибки: верно сопоставлено {total_correct_blocks} из {total_blocks_in_levels} элементов. Проверьте выделенные блоки."
+            elif combined_success:
                 message = "✅ Правильно! Все уровни собраны корректно"
                 if level_names_result:
                     message += f". {level_names_result['message']}"
@@ -6304,7 +6819,9 @@ class TaskEvaluatorService:
 
             # Определяем levels_order_correct для передачи в details
             levels_order_correct_value = None
-            if level_order_matters:
+            if is_hierarchy_mode:
+                levels_order_correct_value = levels_order_info
+            elif level_order_matters:
                 # Для level_order_matters=True: levels_order_correct уже определен выше
                 if 'levels_order_correct' in locals():
                     levels_order_correct_value = levels_order_correct
@@ -6314,6 +6831,7 @@ class TaskEvaluatorService:
                     levels_order_correct_value = all_levels_present
             
             details = {
+                'display_mode': display_mode,
                 'correct_levels': correct_level_ids,
                 'incorrect_levels': incorrect_level_ids,
                 'level_names_map': level_names_map,  # Карта для отображения названий
@@ -6322,6 +6840,57 @@ class TaskEvaluatorService:
                 'sequence_success': sequence_success,  # Информация о последовательности
                 'levels_order_correct': levels_order_correct_value  # ДОБАВЛЕНО: Информация о правильности порядка уровней
             }
+
+            if is_hierarchy_mode and hierarchy_eval_res is not None:
+                details['correct_nodes'] = hierarchy_eval_res['correct_nodes']
+                details['incorrect_nodes'] = hierarchy_eval_res['incorrect_nodes']
+                details['correct_blocks_by_node'] = hierarchy_eval_res['correct_blocks_by_node']
+                details['node_mapping'] = hierarchy_eval_res['node_mapping']
+                if requires_block_names and element_text_map:
+                    enriched_nodes_for_viz = []
+                    for r_node in correct_nodes_ref:
+                        if not isinstance(r_node, dict):
+                            continue
+                        n_copy = dict(r_node)
+                        n_blocks = n_copy.get('blocks', []) or []
+                        n_bnames = {}
+                        for b_id in n_blocks:
+                            if b_id in element_text_map:
+                                n_bnames[b_id] = element_text_map[b_id]
+                        n_copy['block_names'] = n_bnames
+                        enriched_nodes_for_viz.append(n_copy)
+                    details['correct_nodes_data'] = enriched_nodes_for_viz
+                else:
+                    details['correct_nodes_data'] = correct_nodes_ref
+                details['user_nodes_data'] = user_nodes
+                total_placed_blocks = sum(len(n.get('blocks') or n.get('slots') or []) for n in user_nodes) if user_nodes else 0
+                if combined_success:
+                    details['message_key'] = 'player.sequence.hierarchy_eval_perfect'
+                elif total_placed_blocks < total_blocks_in_levels:
+                    details['message_key'] = 'player.sequence.hierarchy_eval_incomplete'
+                else:
+                    details['message_key'] = 'player.sequence.hierarchy_eval_errors'
+                details['message_params'] = {
+                    'placed_blocks': total_placed_blocks,
+                    'correct_blocks': total_correct_blocks,
+                    'total_blocks': total_blocks_in_levels,
+                    'correct_nodes': len(hierarchy_eval_res['correct_nodes']),
+                    'total_nodes': len(correct_nodes_ref),
+                    'correct_levels': len(correct_level_ids),
+                    'total_levels': len(correct_levels_ref),
+                }
+            else:
+                details['message_key'] = (
+                    'player.sequence.eval_perfect'
+                    if combined_success
+                    else 'player.sequence.eval_partial'
+                )
+                details['message_params'] = {
+                    'correct_blocks': total_correct_blocks,
+                    'total_blocks': total_blocks_in_levels,
+                    'correct_levels': len(correct_level_ids),
+                    'total_levels': len(correct_levels_ref),
+                }
             
             # Для уровня 1-2 добавляем информацию о правильно размещенных блоках
             if total_blocks_in_levels > 0:
@@ -6438,7 +7007,12 @@ class TaskEvaluatorService:
                 
                 # Проверяем уровни пользователя
                 for user_level in user_levels:
-                    user_blocks = user_level.get('blocks', [])
+                    user_blocks = list(user_level.get('blocks', []) or [])
+                    if is_hierarchy_mode and not user_blocks:
+                        ul_id = str(user_level.get('level_id') or '')
+                        for un in (user_nodes or []):
+                            if isinstance(un, dict) and str(un.get('level_id') or '') == ul_id:
+                                user_blocks.extend(un.get('blocks') or [])
                     user_name = user_level.get('level_name', '').strip()
                     
                     # Если блоки пустые И название правильное
@@ -6458,11 +7032,16 @@ class TaskEvaluatorService:
                 level_names_item_score = (level_names_result['score'] * 0.3) if level_names_result else 0.0
                 score = block_score + level_names_item_score
             else: # level == 3
-                # 70% блоки, 15% названия уровней, 15% названия блоков
-                block_pos_score = (total_correct_blocks / total_blocks_in_levels * 70.0) if total_blocks_in_levels > 0 else 0.0
-                level_names_item_score = (level_names_result['score'] * 0.15) if level_names_result else 0.0
-                block_names_item_score = (block_names_result['score'] * 0.15) if block_names_result else 0.0
-                score = block_pos_score + level_names_item_score + block_names_item_score
+                if is_hierarchy_mode or not requires_level_names:
+                    # В режиме иерархии на Сложности 3 названия этажей открыты,
+                    # поэтому 100% оценки формируется из реляционно проверенных текстовых узлов/групп.
+                    score = (total_correct_blocks / total_blocks_in_levels * 100.0) if total_blocks_in_levels > 0 else 0.0
+                else:
+                    # 70% блоки, 15% названия уровней, 15% названия блоков (линейный режим)
+                    block_pos_score = (total_correct_blocks / total_blocks_in_levels * 70.0) if total_blocks_in_levels > 0 else 0.0
+                    level_names_item_score = (level_names_result['score'] * 0.15) if level_names_result else 0.0
+                    block_names_item_score = (block_names_result['score'] * 0.15) if block_names_result else 0.0
+                    score = block_pos_score + level_names_item_score + block_names_item_score
 
             return EvaluationResult(
                 success=combined_success,

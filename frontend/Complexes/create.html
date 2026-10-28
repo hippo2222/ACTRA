@@ -15,6 +15,8 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
 
   <title data-i18n="page.complex_create">Создание комплекса</title>
+  <link href="/assets/PageBoot.css" rel="stylesheet" />
+  <script src="/assets/PageBoot.js"></script>
 
   <link href="/assets/tailwind.css?v=1.2" rel="stylesheet" />
   <link href="/assets/onboarding-tour.css?v=complex-editor-onboarding-5" rel="stylesheet" />
@@ -2985,7 +2987,12 @@
 </head>
 
 <body
-  class="font-display bg-bg-main text-text-main h-screen flex flex-col overflow-hidden selection:bg-primary-light selection:text-primary antialiased">
+  class="actra-page-booting font-display bg-bg-main text-text-main h-screen flex flex-col overflow-hidden selection:bg-primary-light selection:text-primary antialiased">
+  <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+    <div class="actra-page-boot-card">
+      <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+    </div>
+  </div>
 
   <header class="cx-editor-header bg-surface-1 border-b border-border-subtle shrink-0 flex justify-between z-50"
     data-onboarding-target="complex-editor-header">
@@ -10799,6 +10806,7 @@
     }
 
       document.addEventListener('DOMContentLoaded', async () => {
+      try {
 
       document.getElementById('name')?.addEventListener('input', markDirty);
 
@@ -11314,6 +11322,9 @@
 
       syncCatalogTreeSelectionFromSelect();
       startComplexAutosaveLoop();
+      } finally {
+        window.PageBoot?.ready();
+      }
 
     });
 

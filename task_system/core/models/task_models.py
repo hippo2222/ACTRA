@@ -914,6 +914,18 @@ class SequenceLevelBlock(BaseModel):
         extra = "allow"
 
 
+class SequenceHierarchyNode(BaseModel):
+    """Hierarchy node or leaf container-group for sequence assembly tasks."""
+
+    node_id: str = Field(..., description="Unique node identifier")
+    level_id: str = Field(..., description="Tier/level identifier this node belongs to")
+    parent_id: Optional[str] = Field(None, description="Parent node identifier (None for root tier nodes)")
+    blocks: List[str] = Field(default_factory=list, description="Element IDs inside this node/group")
+
+    class Config:
+        extra = "allow"
+
+
 class SequenceAssemblyTaskContent(BaseModel):
     """Content model for sequence assembly tasks."""
     
@@ -926,6 +938,18 @@ class SequenceAssemblyTaskContent(BaseModel):
     levels: Optional[List[Union[SequenceLevelBlock, Dict[str, Any]]]] = Field(
         None,
         description="Canonical level structure [{level_id, blocks, level_name?}]"
+    )
+    nodes: Optional[List[Union[SequenceHierarchyNode, Dict[str, Any]]]] = Field(
+        None,
+        description="Hierarchical tree/table nodes [{node_id, level_id, parent_id, blocks}]"
+    )
+    display_mode: Optional[str] = Field(
+        "linear",
+        description="Display mode: 'linear' or 'hierarchy'"
+    )
+    color_differentiation: Optional[bool] = Field(
+        False,
+        description="Whether to apply auto-palette color differentiation to levels/branches"
     )
     sequence: Optional[List[Dict[str, Any]]] = Field(
         None,
@@ -973,6 +997,23 @@ class SequenceAssemblyTaskContent(BaseModel):
             if isinstance(item, dict):
                 try:
                     converted.append(SequenceLevelBlock(**item))
+                except Exception:
+                    converted.append(item)
+            else:
+                converted.append(item)
+        return converted
+
+    @validator('nodes', pre=True)
+    def convert_nodes(cls, v):
+        """Convert dict nodes to SequenceHierarchyNode objects while maintaining backward compatibility."""
+        if v is None or not isinstance(v, list):
+            return v
+
+        converted = []
+        for item in v:
+            if isinstance(item, dict):
+                try:
+                    converted.append(SequenceHierarchyNode(**item))
                 except Exception:
                     converted.append(item)
             else:

@@ -1,0 +1,170 @@
+{
+  "id": "task_5_2_pneumothorax_differentiation",
+  "type": "sequence_assembly",
+  "meta": {
+    "task_schema_version": "1.2",
+    "name": "Таблица 5.2: Дифференциация синдрома затенения и просветления гемиторакса",
+    "title": "Дифференциация синдрома затенения и просветления гемиторакса",
+    "module": "neotlozhnye_sostoyaniya_pulmonologiya_i_kardiologiya",
+    "topic": "differentsialnaya_diagnostika_i_stratifikatsiya_riska"
+  },
+  "content": {
+    "prompt": "Дифференцируйте ведущие причины острой дыхательной недостаточности и патологии плевральной полости, сопоставив механизм, рентгенологическую картину и протокол экстренной помощи:",
+    "display_mode": "hierarchy",
+    "color_differentiation": true,
+    "elements": [
+      {
+        "id": "elem_tension_ptx",
+        "text": "Напряженный клапанный пневмоторакс: прогрессирующее накопление воздуха в плевральной полости с формированием положительного внутриплеврального давления и коллапсом легкого"
+      },
+      {
+        "id": "elem_obstr_atelectasis",
+        "text": "Тотальный обтурационный ателектаз легкого: полная окклюзия просвета главного бронха эндобронхиальной опухолью или аспирированным инородным телом с резорбцией альвеолярного газа"
+      },
+      {
+        "id": "elem_pleural_effusion",
+        "text": "Массивный плевральный выпот (гемоторакс / гидроторакс): скопление более 1500–2000 мл несжимаемой жидкости в плевральной полости с компрессионным ателектазом базальных сегментов"
+      },
+      {
+        "id": "elem_rad_tension",
+        "text": "Гиперпрозрачность пораженного гемиторакса, отсутствие легочного рисунка, резкое контралатеральное смещение средостения и уплощение/инверсия купола диафрагмы"
+      },
+      {
+        "id": "elem_rad_atelectasis",
+        "text": "Гомогенное интенсивное затемнение всего гемиторакса с резким ипсилатеральным смещением трахеи, тени сердца и средостения в сторону поражения и сужением межреберий"
+      },
+      {
+        "id": "elem_rad_effusion",
+        "text": "Тотальное или субтотальное гомогенное затемнение гемиторакса с косой верхней границей (линия Эллиса-Дамуазо-Соколова) и смещением средостения в противоположную сторону"
+      },
+      {
+        "id": "elem_tx_needle",
+        "text": "Немедленная пункционная декомпрессия толстой иглой (14–16G) во 2-м межреберье по среднеключичной линии или в 4–5-м межреберье по передней подмышечной линии с дренированием по Бюлау"
+      },
+      {
+        "id": "elem_tx_bronch",
+        "text": "Срочная лечебно-диагностическая фибробронхоскопия с санацией трахеобронхиального дерева, экстракцией обтурирующего субстрата или реканализацией просвета дыхательных путей"
+      },
+      {
+        "id": "elem_tx_drain",
+        "text": "Ультразвук-ассистированный торакоцентез и дренирование плевральной полости во 2–3-й зоне безопасности с эвакуацией содержимого под контролем показателей гемодинамики"
+      }
+    ],
+    "levels": [
+      {
+        "level_id": "tier_pathology",
+        "label": "Ведущий патологический синдром",
+        "level_name": "Ведущий патологический синдром",
+        "blocks": [
+          "elem_tension_ptx",
+          "elem_obstr_atelectasis",
+          "elem_pleural_effusion"
+        ]
+      },
+      {
+        "level_id": "tier_radiology",
+        "label": "Рентгенологические признаки",
+        "level_name": "Рентгенологические признаки",
+        "blocks": [
+          "elem_rad_tension",
+          "elem_rad_atelectasis",
+          "elem_rad_effusion"
+        ]
+      },
+      {
+        "level_id": "tier_intervention",
+        "label": "Экстренное вмешательство",
+        "level_name": "Экстренное вмешательство",
+        "blocks": [
+          "elem_tx_needle",
+          "elem_tx_bronch",
+          "elem_tx_drain"
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "node_id": "node_ptx_syndrome",
+        "level_id": "tier_pathology",
+        "parent_id": null,
+        "blocks": [
+          "elem_tension_ptx"
+        ]
+      },
+      {
+        "node_id": "node_ptx_rad",
+        "level_id": "tier_radiology",
+        "parent_id": "node_ptx_syndrome",
+        "blocks": [
+          "elem_rad_tension"
+        ]
+      },
+      {
+        "node_id": "node_ptx_tx",
+        "level_id": "tier_intervention",
+        "parent_id": "node_ptx_rad",
+        "blocks": [
+          "elem_tx_needle"
+        ]
+      },
+      {
+        "node_id": "node_atel_syndrome",
+        "level_id": "tier_pathology",
+        "parent_id": null,
+        "blocks": [
+          "elem_obstr_atelectasis"
+        ]
+      },
+      {
+        "node_id": "node_atel_rad",
+        "level_id": "tier_radiology",
+        "parent_id": "node_atel_syndrome",
+        "blocks": [
+          "elem_rad_atelectasis"
+        ]
+      },
+      {
+        "node_id": "node_atel_tx",
+        "level_id": "tier_intervention",
+        "parent_id": "node_atel_rad",
+        "blocks": [
+          "elem_tx_bronch"
+        ]
+      },
+      {
+        "node_id": "node_eff_syndrome",
+        "level_id": "tier_pathology",
+        "parent_id": null,
+        "blocks": [
+          "elem_pleural_effusion"
+        ]
+      },
+      {
+        "node_id": "node_eff_rad",
+        "level_id": "tier_radiology",
+        "parent_id": "node_eff_syndrome",
+        "blocks": [
+          "elem_rad_effusion"
+        ]
+      },
+      {
+        "node_id": "node_eff_tx",
+        "level_id": "tier_intervention",
+        "parent_id": "node_eff_rad",
+        "blocks": [
+          "elem_tx_drain"
+        ]
+      }
+    ]
+  },
+  "settings": {
+    "difficulty": 1,
+    "display_mode": "hierarchy",
+    "color_differentiation": true,
+    "sequence_within_level_matters": false,
+    "level_order_matters": false,
+    "shuffle_elements": true
+  },
+  "name": "Таблица 5.2: Дифференциация синдрома затенения и просветления гемиторакса",
+  "task_schema_version": "1.2"
+}

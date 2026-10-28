@@ -7,6 +7,8 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="page.reference">ACTRA — Справочник</title>
+    <link href="/assets/PageBoot.css" rel="stylesheet" />
+    <script src="/assets/PageBoot.js"></script>
     <link href="/assets/tailwind.css" rel="stylesheet" />
     <link href="/assets/fonts.css" rel="stylesheet" />
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
@@ -15,7 +17,12 @@
     <link href="/reference/reference.css" rel="stylesheet" />
 </head>
 
-<body class="reference-page" data-app-section="reference">
+<body class="actra-page-booting reference-page" data-app-section="reference">
+    <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+        <div class="actra-page-boot-card">
+            <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
     <div data-global-header data-app-section="reference"></div>
 
     <main class="reference-shell" data-reference-root>

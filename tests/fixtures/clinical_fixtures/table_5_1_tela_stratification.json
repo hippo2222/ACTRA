@@ -1,0 +1,160 @@
+{
+  "type": "sequence_assembly",
+  "meta": {
+    "name": "Таблица 5.1: Стратификация риска и реперфузия при ТЭЛА",
+    "title": "Стратификация риска и реперфузия при ТЭЛА"
+  },
+  "content": {
+    "prompt": "Классифицируйте категории риска острой тромбоэмболии легочной артерии (ТЭЛА), сопоставив биомаркеры, томографические признаки и алгоритм реперфузионной терапии:",
+    "display_mode": "hierarchy",
+    "color_differentiation": true,
+    "elements": [
+      {
+        "id": "elem_high_risk",
+        "text": "ТЭЛА высокого риска: кардиогенный шок, систолическое АД < 90 мм рт.ст. или падение давления на ≥ 40 мм рт.ст. длительностью более 15 минут, не связанное с аритмией или сепсисом"
+      },
+      {
+        "id": "elem_non_high_risk",
+        "text": "ТЭЛА невысокого (промежуточного/низкого) риска: нормотензия, стабильные показатели гемодинамики, индекс тяжести PESI I–II класса или sPESI = 0 баллов без признаков гипоперфузии органов"
+      },
+      {
+        "id": "elem_high_markers",
+        "text": "Выраженный подъем уровня сердечного тропонина I/T и NT-proBNP в сочетании с лактатацидозом и клиническими признаками острой правожелудочковой недостаточности"
+      },
+      {
+        "id": "elem_non_high_markers",
+        "text": "Отсутствие признаков некроза миокарда (нормальный тропонин) либо изолированное умеренное повышение биомаркеров без признаков систолической дисфункции правого желудочка"
+      },
+      {
+        "id": "elem_high_ct",
+        "text": "Массивный седловидный тромбоз ствола и главных ветвей легочной артерии с дилатацией ПЖ (отношение ПЖ/ЛЖ > 1.0) и парадоксальным движением межжелудочковой перегородки"
+      },
+      {
+        "id": "elem_non_high_ct",
+        "text": "Субсегментарные или сегментарные дефекты наполнения периферического сосудистого русла без признаков дилатации правых камер сердца и легочной гипертензии"
+      },
+      {
+        "id": "elem_high_tx",
+        "text": "Немедленная системная тромболитическая терапия (альтеплаза / стрептокиназа) или катетерная тромбэктомия / хирургическая эмболэктомия при наличии абсолютных противопоказаний к лизису"
+      },
+      {
+        "id": "elem_non_high_tx",
+        "text": "Инициация терапевтической антикоагулянтной терапии прямыми оральными антикоагулянтами (ПОАК) или низкомолекулярным гепарином (НМГ) с мониторингом в профильном отделении"
+      }
+    ],
+    "levels": [
+      {
+        "level_id": "tier_hemodynamics",
+        "label": "Клинико-гемодинамический статус",
+        "level_name": "Клинико-гемодинамический статус",
+        "blocks": [
+          "elem_high_risk",
+          "elem_non_high_risk"
+        ]
+      },
+      {
+        "level_id": "tier_biomarkers",
+        "label": "Лабораторные маркеры",
+        "level_name": "Лабораторные маркеры",
+        "blocks": [
+          "elem_high_markers",
+          "elem_non_high_markers"
+        ]
+      },
+      {
+        "level_id": "tier_imaging",
+        "label": "КТ-ангиография и ЭхоКГ",
+        "level_name": "КТ-ангиография и ЭхоКГ",
+        "blocks": [
+          "elem_high_ct",
+          "elem_non_high_ct"
+        ]
+      },
+      {
+        "level_id": "tier_reperfusion",
+        "label": "Терапевтическая стратегия",
+        "level_name": "Терапевтическая стратегия",
+        "blocks": [
+          "elem_high_tx",
+          "elem_non_high_tx"
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "node_id": "node_high_phe",
+        "level_id": "tier_hemodynamics",
+        "parent_id": null,
+        "blocks": [
+          "elem_high_risk"
+        ],
+        "column_title": "ТЭЛА высокого риска"
+      },
+      {
+        "node_id": "node_high_bio",
+        "level_id": "tier_biomarkers",
+        "parent_id": "node_high_phe",
+        "blocks": [
+          "elem_high_markers"
+        ]
+      },
+      {
+        "node_id": "node_high_img",
+        "level_id": "tier_imaging",
+        "parent_id": "node_high_bio",
+        "blocks": [
+          "elem_high_ct"
+        ]
+      },
+      {
+        "node_id": "node_high_strategy",
+        "level_id": "tier_reperfusion",
+        "parent_id": "node_high_img",
+        "blocks": [
+          "elem_high_tx"
+        ]
+      },
+      {
+        "node_id": "node_non_high_phe",
+        "level_id": "tier_hemodynamics",
+        "parent_id": null,
+        "blocks": [
+          "elem_non_high_risk"
+        ],
+        "column_title": "ТЭЛА невысокого риска"
+      },
+      {
+        "node_id": "node_non_high_bio",
+        "level_id": "tier_biomarkers",
+        "parent_id": "node_non_high_phe",
+        "blocks": [
+          "elem_non_high_markers"
+        ]
+      },
+      {
+        "node_id": "node_non_high_img",
+        "level_id": "tier_imaging",
+        "parent_id": "node_non_high_bio",
+        "blocks": [
+          "elem_non_high_ct"
+        ]
+      },
+      {
+        "node_id": "node_non_high_strategy",
+        "level_id": "tier_reperfusion",
+        "parent_id": "node_non_high_img",
+        "blocks": [
+          "elem_non_high_tx"
+        ]
+      }
+    ]
+  },
+  "settings": {
+    "difficulty": 1,
+    "display_mode": "hierarchy",
+    "color_differentiation": true,
+    "sequence_within_level_matters": false,
+    "level_order_matters": false,
+    "shuffle_elements": true
+  }
+}

@@ -850,6 +850,11 @@
         renderHostedThemeOptions(getCurrentThemeId());
 
         try {
+            if (window.GlobalHeader && typeof window.GlobalHeader.clearUserCache === 'function') {
+                window.GlobalHeader.clearUserCache();
+            } else {
+                try { window.sessionStorage?.removeItem('actra_header_user_cache'); } catch (_) {}
+            }
             const response = await fetch('/api/auth/logout', { method: 'POST' });
             const data = await response.json().catch(() => null);
             if (!response.ok || !data?.ok) {
@@ -876,6 +881,9 @@
         if (token !== menuLoadToken) return;
 
         if (hostedUser) {
+            if (window.GlobalHeader && typeof window.GlobalHeader.setCachedUser === 'function') {
+                window.GlobalHeader.setCachedUser(hostedUser);
+            }
             await loadHostedMenu(token, hostedUser);
             return;
         }
@@ -928,6 +936,11 @@
             const data = await response.json();
 
             if (data.ok) {
+                if (window.GlobalHeader && typeof window.GlobalHeader.clearUserCache === 'function') {
+                    window.GlobalHeader.clearUserCache();
+                } else {
+                    try { window.sessionStorage?.removeItem('actra_header_user_cache'); } catch (_) {}
+                }
                 closeProfileMenu();
                 showToast(wt('profile_modal.toast_profile_switched', 'Профиль переключен'), 'success', 1500);
                 setTimeout(() => window.location.reload(), 400);

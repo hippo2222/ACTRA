@@ -507,7 +507,10 @@ const StatisticsApp = {
     },
 
     getCurrentUserQuery() {
-        const userId = this.state.currentUser?.user_id;
+        const cachedUser = window.GlobalHeader && typeof window.GlobalHeader.getCachedUser === 'function'
+            ? window.GlobalHeader.getCachedUser()
+            : null;
+        const userId = this.state.currentUser?.user_id || cachedUser?.userId || cachedUser?.user_id;
         return userId ? `user_id=${encodeURIComponent(userId)}` : '';
     },
 
@@ -535,11 +538,21 @@ const StatisticsApp = {
     async init() {
         console.log('[Statistics] Initializing...');
         try {
+            const cachedUser = window.GlobalHeader && typeof window.GlobalHeader.getCachedUser === 'function'
+                ? window.GlobalHeader.getCachedUser()
+                : null;
+            if (cachedUser && !this.state.currentUser) {
+                this.state.currentUser = {
+                    user_id: cachedUser.userId || cachedUser.user_id,
+                    name: cachedUser.name,
+                    avatar_seed: cachedUser.avatarSeed || cachedUser.avatar_seed
+                };
+                this.updateUserDisplay();
+            }
             this.initGlobalTooltip();
             this.bindEvents();
             this.setupStatisticsOnboardingDemoObserver();
-            await this.loadUserProfile();
-            await this.loadData();
+            await Promise.all([this.loadUserProfile(), this.loadData()]);
             console.log('[Statistics] Init complete. State:', JSON.stringify(this.state, null, 2));
         } finally {
             window.PageBoot?.ready();

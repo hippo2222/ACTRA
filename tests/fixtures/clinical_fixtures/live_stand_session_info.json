@@ -1,0 +1,12 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "complexId": "clinical_hierarchy_complex",
+  "sessionId": "session_user_80833ee21ce7_1792920246.646944",
+  "completedSessionId": "session_user_80833ee21ce7_1792920245.715095",
+  "userId": "user_80833ee21ce7",
+  "sessionUrl": "http://127.0.0.1:8000/session/session_user_80833ee21ce7_1792920246.646944",
+  "cookies": {
+    "actra_session": ".eJyrVoovSC3KTcxLzStRsiopKk3VUUosLcmIz8lPz8yLTwQKKhkZGJnpGhroGpmGGBpaGZlYGRhFKUGVlRanFsVnpgBVgVkWBhbGxqmpRobJqeZKtQCOqh0e.at3m1g.cTTUC7zM9M8hn1aJEerYpZs0ylk"
+  },
+  "cookieHeader": "actra_session=.eJyrVoovSC3KTcxLzStRsiopKk3VUUosLcmIz8lPz8yLTwQKKhkZGJnpGhroGpmGGBpaGZlYGRhFKUGVlRanFsVnpgBVgVkWBhbGxqmpRobJqeZKtQCOqh0e.at3m1g.cTTUC7zM9M8hn1aJEerYpZs0ylk"
+}

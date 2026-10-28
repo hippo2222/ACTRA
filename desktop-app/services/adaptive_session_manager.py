@@ -559,6 +559,22 @@ class AdaptiveSessionManager:
         if not complex_obj:
             raise ValueError(f"Complex not found: {complex_id}")
         
+        # Очищаем предыдущие активные/паузированные сессии для этого комплекса и пользователя
+        try:
+            if hasattr(self.session_repository, "delete_session"):
+                self.session_repository.delete_session(complex_id, user_id)
+            to_remove = [
+                sid for sid, s in self._active_sessions.items()
+                if getattr(s, "complex_id", None) == complex_id and (getattr(s, "user_id", None) or user_id) == user_id
+            ]
+            for sid in to_remove:
+                self._active_sessions.pop(sid, None)
+        except Exception:
+            logger.warning(
+                f"[start_session] Failed to clean up prior sessions for complex_id={complex_id}, user_id={user_id}",
+                exc_info=True,
+            )
+
         # Создаем новую сессию
         session_id = f"session_{user_id}_{datetime.utcnow().timestamp()}"
         session = ComplexSession(
@@ -850,9 +866,16 @@ class AdaptiveSessionManager:
             try:
                 if hasattr(self.session_repository, "delete_session_by_session_id"):
                     self.session_repository.delete_session_by_session_id(session_id, sess_user_id)
-                else:
+                # Очищаем все остальные дублирующие сессии для этого комплекса и пользователя
+                if hasattr(self.session_repository, "delete_session"):
                     self.session_repository.delete_session(complex_id, sess_user_id)
-                logger.info(f"[cancel_session] Удалена сессия {session_id} (complex_id={complex_id}, user_id={sess_user_id})")
+                to_remove = [
+                    sid for sid, s in self._active_sessions.items()
+                    if getattr(s, "complex_id", None) == complex_id and (getattr(s, "user_id", None) or sess_user_id) == sess_user_id
+                ]
+                for sid in to_remove:
+                    self._active_sessions.pop(sid, None)
+                logger.info(f"[cancel_session] Удалена сессия {session_id} и очищены сессии для complex_id={complex_id}, user_id={sess_user_id})")
             except Exception:
                 logger.exception(
                     f"[cancel_session] Не удалось удалить файл сессии для complex_id={complex_id}, user_id={sess_user_id}"

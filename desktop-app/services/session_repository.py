@@ -763,3 +763,29 @@ class HostedSessionRepository(HostedShadowFallbackMixin, SessionRepository):
             self._guard_shadow_write_fallback("delete_session_by_session_id", exc)
             return super().delete_session_by_session_id(clean_session_id, clean_user_id)
 
+    def delete_session(self, complex_id: str, user_id: str) -> bool:
+        clean_user_id = str(user_id or "").strip()
+        clean_complex_id = str(complex_id or "").strip()
+        if not clean_user_id or not clean_complex_id:
+            return True
+
+        try:
+            self.ensure_persistence_ready()
+            self._get_hosted_repository().delete_sessions_for_complex(
+                user_id=clean_user_id,
+                complex_id=clean_complex_id,
+            )
+            try:
+                super().delete_session(clean_complex_id, clean_user_id)
+            except Exception:
+                self.logger.debug(
+                    "[HostedSessionRepository] Failed to delete shadow sessions for complex: %s",
+                    clean_complex_id,
+                    exc_info=True,
+                )
+            return True
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("delete_session", exc)
+            return super().delete_session(clean_complex_id, clean_user_id)
+
+

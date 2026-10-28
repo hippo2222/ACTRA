@@ -23,7 +23,32 @@ class WebSequenceLevel(BaseModel):
     )
 
 
+class WebSequenceHierarchyNode(BaseModel):
+    node_id: str = Field(..., description="Unique node ID (e.g. 'node_1')")
+    level_id: str = Field(..., description="ID of the horizontal tier/level this node sits on")
+    parent_id: Optional[str] = Field(
+        None,
+        description="Parent node ID on the preceding tier (None for root nodes)",
+    )
+    slots: List[str] = Field(
+        default_factory=list,
+        description="Correct element IDs for this node/group (answer key)",
+    )
+    column_title: Optional[str] = Field(
+        None,
+        description="Optional column header title for root nodes (e.g. 'Пневмоторакс')",
+    )
+
+
 class WebSequenceSettings(BaseModel):
+    display_mode: str = Field(
+        "linear",
+        description="Visual & structural layout mode: 'linear' or 'hierarchy'",
+    )
+    color_differentiation: bool = Field(
+        False,
+        description="Whether auto-palette color differentiation is enabled",
+    )
     level_order_matters: bool = Field(
         False,
         description="Whether the order of levels is important for evaluation",
@@ -54,11 +79,23 @@ class WebSequenceTaskData(BaseModel):
     """
 
     prompt: str = Field(..., description="Task instruction shown to the user")
+    display_mode: str = Field(
+        "linear",
+        description="Visual & structural layout mode: 'linear' or 'hierarchy'",
+    )
+    color_differentiation: bool = Field(
+        False,
+        description="Whether auto-palette color differentiation is enabled",
+    )
     elements: List[WebSequenceElement] = Field(
         ..., min_items=2, description="All available elements user can place",
     )
     levels: List[WebSequenceLevel] = Field(
         ..., min_items=1, description="Correct structure of levels and their elements",
+    )
+    nodes: Optional[List[WebSequenceHierarchyNode]] = Field(
+        None,
+        description="Hierarchy tree/table nodes when display_mode == 'hierarchy'",
     )
     settings: WebSequenceSettings = Field(
         default_factory=WebSequenceSettings,
@@ -85,16 +122,48 @@ class WebSequenceAnswerLevel(BaseModel):
     )
 
 
+class WebSequenceAnswerNode(BaseModel):
+    node_id: str = Field(..., description="ID of hierarchy node/group")
+    level_id: Optional[str] = Field(
+        None,
+        description="ID of tier/level this node belongs to",
+    )
+    parent_id: Optional[str] = Field(
+        None,
+        description="Optional parent node ID",
+    )
+    blocks: List[str] = Field(
+        default_factory=list,
+        description="Actual user element IDs in this node/group",
+    )
+    block_names: Optional[Dict[str, str]] = Field(
+        None,
+        description="Optional mapping: slot_key/element_id -> user-provided element text (difficulty == 3)",
+    )
+    column_title: Optional[str] = Field(
+        None,
+        description="Optional column header title for root nodes",
+    )
+
+
 class WebSequenceAnswer(BaseModel):
     """User answer payload for sequence_assembly tasks.
 
-    For web we expect the levels-based format. The legacy flat "sequence"
-    field is kept only for backward compatibility and should not be used
-    by new clients.
+    For web we expect the levels-based format (or nodes-based in hierarchy mode).
+    The legacy flat "sequence" field is kept only for backward compatibility.
     """
 
     levels: List[WebSequenceAnswerLevel] = Field(
-        ..., min_items=1, description="User layout of elements per level",
+        default_factory=list,
+        description="User layout of elements per level",
+    )
+    nodes: Optional[List[WebSequenceAnswerNode]] = Field(
+        None,
+        description="User layout of elements per hierarchy node/group",
+    )
+    display_mode: Optional[str] = Field(
+        None,
+        description="Optional display mode ('linear' | 'hierarchy')",
     )
     sequence: Optional[List[str]] = Field(
         None,
@@ -151,6 +220,18 @@ class WebSequenceResultDetails(BaseModel):
     user_levels_data: Optional[List[Dict[str, Any]]] = None
     elements_data: Optional[List[Dict[str, Any]]] = None
     names_correct_but_blocks_empty: Optional[List[str]] = None
+
+    # Hierarchy mode result fields
+    display_mode: Optional[str] = None
+    correct_nodes: Optional[List[str]] = None
+    incorrect_nodes: Optional[List[str]] = None
+    correct_blocks_by_node: Optional[Dict[str, Any]] = None
+    node_mapping: Optional[Dict[str, str]] = None
+    correct_nodes_data: Optional[List[Dict[str, Any]]] = None
+    user_nodes_data: Optional[List[Dict[str, Any]]] = None
+    message_key: Optional[str] = None
+    message_params: Optional[Dict[str, Any]] = None
+
     task_type: Optional[str] = Field(
         None,
         description="Redundant marker preserved for compatibility with existing details",

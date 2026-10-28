@@ -43,6 +43,12 @@ body.actra-page-booting .actra-page-boot-screen {
   padding: 1.25rem;
   background: var(--color-surface-1, #ffffff);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+  opacity: 0;
+  transition: opacity 200ms ease 150ms;
+}
+
+body.actra-page-booting .actra-page-boot-card {
+  opacity: 1;
 }
 
 .actra-page-boot-logo {
@@ -52,7 +58,8 @@ body.actra-page-booting .actra-page-boot-screen {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .actra-page-boot-screen {
+  .actra-page-boot-screen,
+  .actra-page-boot-card {
     transition: none;
   }
 }

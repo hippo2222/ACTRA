@@ -516,6 +516,13 @@ class DifficultyManager:
         content = task_data.get("content", {})
         content.pop("show_options", None)
         content.pop("requires_text_input", None)
+        settings = task_data.get("settings") if isinstance(task_data.get("settings"), dict) else {}
+        display_mode = str(
+            content.get("display_mode")
+            or task_data.get("display_mode")
+            or settings.get("display_mode")
+            or "linear"
+        ).strip().lower()
 
         if level == 1:
             content["show_level_labels"] = True
@@ -528,10 +535,16 @@ class DifficultyManager:
             content["requires_level_names"] = True
             content["requires_block_names"] = False
         elif level >= 3:
-            content["show_level_labels"] = False
-            content["show_block_labels"] = False
-            content["requires_level_names"] = True
-            content["requires_block_names"] = True
+            if display_mode == "hierarchy":
+                content["show_level_labels"] = True
+                content["show_block_labels"] = False
+                content["requires_level_names"] = False
+                content["requires_block_names"] = True
+            else:
+                content["show_level_labels"] = False
+                content["show_block_labels"] = False
+                content["requires_level_names"] = True
+                content["requires_block_names"] = True
 
         task_data["content"] = content
         return task_data

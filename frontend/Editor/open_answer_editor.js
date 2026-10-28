@@ -276,9 +276,33 @@ class OpenAnswerEditor extends BaseEditor {
         // Initialize multi-question state
         this.initQuestionsFromContent();
 
+        // Apply URL initial_mode / subtype override
+        this.applyInitialModeFromUrl();
+
         // Render UI
         this.renderUI();
         this.updateSaveStatus();
+    }
+
+    applyInitialModeFromUrl() {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location.search || '');
+        const modeParam = (params.get('initial_mode') || params.get('subtype') || '').toLowerCase().trim();
+        if (!modeParam) return;
+
+        const resolvedSubtype = (modeParam === 'sequential' || modeParam === 'questions_sequential') ? 'sequential' : 'keywords';
+        this.subtype = resolvedSubtype;
+        this.displayMode = resolvedSubtype === 'sequential' ? 'sequential' : 'simultaneous';
+
+        if (!this.task) this.task = {};
+        if (!this.task.task_data) this.task.task_data = {};
+        this.task.task_data.subtype = resolvedSubtype;
+        if (!this.task.task_data.content) this.task.task_data.content = {};
+        this.task.task_data.content.display_mode = this.displayMode;
+        this.task.task_data.content.subtype = resolvedSubtype;
+        if (this.task.metadata) {
+            this.task.metadata.subtype = resolvedSubtype;
+        }
     }
 
     initQuestionsFromContent() {
@@ -1479,6 +1503,9 @@ class OpenAnswerEditor extends BaseEditor {
 
         // Multi-question fields
         content.case_text = (this.caseText || '').trim();
+        const subtype = this.displayMode === 'sequential' ? 'sequential' : 'keywords';
+        this.task.task_data.subtype = subtype;
+        content.subtype = subtype;
         content.display_mode = this.displayMode === 'sequential' ? 'sequential' : 'simultaneous';
         content.questions = questionsPayload;
 

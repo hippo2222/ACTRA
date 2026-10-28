@@ -38,6 +38,80 @@
       transform: translateY(-8px);
     }
 
+    /* Streamlined compact layout for interactive boards (maintains Fold Clearance) */
+    body:has(.seqh-shell) #task-context {
+      margin-bottom: 0.35rem !important;
+    }
+    body:has(.seqh-shell) #task-title {
+      font-size: 1.125rem !important;
+      line-height: 1.25 !important;
+    }
+    body:has(.seqh-shell) #task-description {
+      font-size: 0.8125rem !important;
+      line-height: 1.35 !important;
+      margin-top: 0.2rem !important;
+    }
+    body:has(.seqh-shell) #task-content {
+      gap: 0.35rem !important;
+    }
+
+    /* Streamlined compact horizontal result strip for interactive boards (maintains Fold Clearance & eliminates CLS) */
+    body:has(.seqh-shell) #result-box {
+      margin-bottom: 0.35rem !important;
+    }
+    body:has(.seqh-shell) #result-inner {
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      border-radius: 0.5rem !important;
+      padding: 0.25rem 0.65rem !important;
+      min-height: 32px !important;
+      gap: 0.5rem !important;
+    }
+    body:has(.seqh-shell) #result-header {
+      padding: 0 !important;
+      gap: 0.35rem !important;
+      border-bottom: none !important;
+      flex-shrink: 0 !important;
+    }
+    body:has(.seqh-shell) #result-icon-wrap {
+      width: 1.25rem !important;
+      height: 1.25rem !important;
+      min-width: 1.25rem !important;
+    }
+    body:has(.seqh-shell) #result-icon {
+      font-size: 14px !important;
+    }
+    body:has(.seqh-shell) #result-title {
+      font-size: 0.75rem !important;
+      line-height: 1.2 !important;
+      white-space: nowrap !important;
+    }
+    body:has(.seqh-shell) #result-body {
+      padding: 0 !important;
+      gap: 0.35rem !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+    body:has(.seqh-shell) #result-message {
+      font-size: 0.75rem !important;
+      line-height: 1.2 !important;
+      margin: 0 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    body:has(.seqh-shell) #result-details {
+      display: none !important;
+    }
+    body:has(.seqh-shell) [data-sequenceui="comparison-toolbar"] {
+      margin-top: 0.25rem !important;
+      margin-bottom: 0.25rem !important;
+      padding: 0.25rem 0.5rem !important;
+    }
+
     /* Page entrance */
     .s1-page-enter {
       animation: a-fade-in 0.25s ease-out both;
@@ -94,7 +168,7 @@
     }
 
     .s1-toolbar-main {
-      flex: 0 1 clamp(320px, 38vw, 560px);
+      flex: 1 1 auto;
       align-items: center;
       gap: 0.75rem;
       min-width: 0;
@@ -134,9 +208,9 @@
     }
 
     .s1-progress-cluster {
-      flex: 1 1 360px;
-      min-width: min(250px, 100%);
-      max-width: none;
+      flex: 0 0 auto;
+      min-width: min(150px, 100%);
+      max-width: 220px;
       padding: 0.45rem 0.65rem;
       border-radius: 0.8rem;
       border: 1px solid var(--color-border-subtle);
@@ -156,14 +230,14 @@
     @media (min-width: 1024px) {
       .s1-toolbar {
         display: grid !important;
-        grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.95fr) auto;
+        grid-template-columns: minmax(0, 1fr) auto auto;
         align-items: center;
         column-gap: 0.9rem;
         row-gap: 0.6rem;
       }
 
       .s1-toolbar-main {
-        flex: 0 1 auto;
+        flex: 1 1 auto;
         min-width: 0;
         width: auto;
         max-width: none;
@@ -174,10 +248,10 @@
       }
 
       .s1-progress-cluster {
-        justify-self: stretch;
+        justify-self: end;
         width: auto;
-        min-width: min(320px, 100%);
-        max-width: none;
+        min-width: 215px;
+        max-width: 240px;
       }
 
       .s1-toolbar-primary {
@@ -185,8 +259,31 @@
       }
 
       .s1-toolbar[data-force-submit-active="true"] .s1-progress-cluster {
-        min-width: min(272px, 100%);
-        flex-basis: 312px;
+        min-width: min(180px, 100%);
+        flex-basis: 180px;
+      }
+    }
+
+    @media (min-width: 1024px) and (max-width: 1180px) {
+      .s1-toolbar {
+        column-gap: 0.5rem !important;
+        padding-inline: 0.75rem !important;
+      }
+      .s1-progress-cluster {
+        min-width: 180px !important;
+        max-width: 215px !important;
+      }
+      #finish-complex-btn {
+        min-width: 0 !important;
+        padding-inline: 0.75rem !important;
+      }
+      #check-answer-btn {
+        min-width: 0 !important;
+        padding-inline: 0.85rem !important;
+      }
+      #current-task-title {
+        font-size: 0.8125rem !important;
+        line-height: 1.25 !important;
       }
     }
 
@@ -198,14 +295,17 @@
     }
 
     #current-task-title {
-      font-size: clamp(1.08rem, 0.95rem + 0.8vw, 1.5rem);
-      line-height: 1.2;
-      display: block;
-      max-width: 100%;
-      min-width: 0;
+      font-size: clamp(0.8125rem, 0.75rem + 0.25vw, 1.05rem);
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
+      word-break: normal;
+      overflow-wrap: break-word;
+      min-width: 0;
+      max-width: 100%;
     }
 
     #current-task-title.s1-title-updated {

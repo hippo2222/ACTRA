@@ -4,7 +4,7 @@
     var SUPPORTED = ['ru', 'en', 'uk'];
     var DEFAULT_LANG = 'ru';
     var STORAGE_KEY = 'actra_lang';
-    var LOCALE_VERSION = '2026.10.19.1';
+    var LOCALE_VERSION = '2026.10.20.1';
     var VERSION_KEY = 'actra_locale_version';
 
     var _locale = {};
@@ -283,8 +283,12 @@
         }
     }
 
+    var _initialized = false;
+
     async function setLang(lang) {
         if (SUPPORTED.indexOf(lang) === -1) return;
+        if (lang === _lang && _locale && Object.keys(_locale).length > 0) return;
+        var previousLang = _lang;
         await loadLocale(lang);
         try {
             if (typeof window !== 'undefined' && window.location && window.history && typeof window.history.replaceState === 'function') {
@@ -294,11 +298,12 @@
             }
         } catch (_) {}
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-            window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang } }));
+            window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang, previousLang: previousLang } }));
         }
     }
 
     async function init() {
+        if (_initialized) return;
         var lang = getLang();
         var storedVersion = typeof localStorage !== 'undefined' ? localStorage.getItem(VERSION_KEY) : null;
         if (storedVersion !== LOCALE_VERSION) {
@@ -310,14 +315,25 @@
             } catch (_) {}
         }
         var cached = typeof localStorage !== 'undefined' ? localStorage.getItem('actra_locale_' + lang) : null;
+        var hadCached = false;
         if (cached) {
             try {
-                applyLocale(JSON.parse(cached), lang);
+                var parsed = (_locale && _lang === lang && Object.keys(_locale).length > 0)
+                    ? _locale
+                    : JSON.parse(cached);
+                applyLocale(parsed, lang);
+                hadCached = true;
             } catch (_) {}
         }
-        await loadLocale(lang);
+        if (!hadCached) {
+            await loadLocale(lang);
+        }
+        _initialized = true;
         if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-            window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang } }));
+            window.dispatchEvent(new CustomEvent('i18n:ready', { detail: { lang: lang } }));
+            if (lang !== DEFAULT_LANG) {
+                window.dispatchEvent(new CustomEvent('i18n:changed', { detail: { lang: lang } }));
+            }
         }
     }
 
@@ -332,6 +348,7 @@
         updateDOM: updateDOM,
         applyLocale: applyLocale,
         init: init,
+        isReady: function () { return _initialized; },
     };
 
     document.addEventListener('click', function (e) {

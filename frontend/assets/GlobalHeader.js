@@ -1,9 +1,57 @@
 (function () {
     'use strict';
 
+    var USER_CACHE_KEY = 'actra_header_user_cache';
+
     var _t = function (key) {
         return (window.i18n && typeof window.i18n.t === 'function') ? window.i18n.t(key) : key;
     };
+
+    function getAvatarUrl(seed) {
+        var safeSeed = seed || '1.png';
+        return String(safeSeed).includes('.')
+            ? '/api/assets/avatars/' + encodeURIComponent(String(safeSeed))
+            : '/api/assets/avatars/1.png';
+    }
+
+    function normalizeUserData(user) {
+        if (!user || typeof user !== 'object') return null;
+        var displayName = user.displayName || user.display_name || user.name || user.username || user.login || '';
+        var avatarSeed = user.avatarSeed || user.avatar_seed || user.avatar || '1.png';
+        var effectivePlan = String(user.effectivePlan || user.effective_plan || user.plan || 'free').trim().toLowerCase();
+        return {
+            displayName: displayName,
+            avatarSeed: avatarSeed,
+            effectivePlan: effectivePlan,
+        };
+    }
+
+    function getCachedUser() {
+        try {
+            var raw = window.sessionStorage ? window.sessionStorage.getItem(USER_CACHE_KEY) : null;
+            if (!raw) return null;
+            var parsed = JSON.parse(raw);
+            return normalizeUserData(parsed);
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function setCachedUser(userData) {
+        try {
+            if (!window.sessionStorage) return;
+            if (!userData) {
+                window.sessionStorage.removeItem(USER_CACHE_KEY);
+            } else {
+                var normalized = normalizeUserData(userData);
+                if (normalized) {
+                    window.sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(normalized));
+                } else {
+                    window.sessionStorage.removeItem(USER_CACHE_KEY);
+                }
+            }
+        } catch (_) {}
+    }
 
     var NAV_ITEMS = [
         { section: 'main',      i18nKey: 'nav.home',      icon: 'home',           href: '/main' },
@@ -88,6 +136,14 @@
 
     function renderHeader(root) {
         var activeSection = root.dataset.appSection || document.body.dataset.appSection || getSectionFromPath();
+        var cachedUser = getCachedUser();
+        var displayName = cachedUser && cachedUser.displayName ? cachedUser.displayName : _t('header.profile_loading');
+        var avatarSeed = cachedUser && cachedUser.avatarSeed ? cachedUser.avatarSeed : '1.png';
+        var avatarSrc = getAvatarUrl(avatarSeed);
+        var hasBadge = Boolean(cachedUser && cachedUser.effectivePlan);
+        var effectivePlan = cachedUser && cachedUser.effectivePlan ? cachedUser.effectivePlan : 'free';
+        var planText = effectivePlan === 'premium' ? 'Premium' : 'Free';
+        var isPremium = effectivePlan === 'premium';
 
         var navHtml = NAV_ITEMS.map(function (item) {
             var active = item.section === activeSection;
@@ -193,9 +249,9 @@
             '</div>' +
             '</div>' +
             '<button class="global-header__profile" type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false">' +
-            '<img src="/api/assets/avatars/1.png" class="global-header__avatar" alt="" id="headerAvatar" data-global-avatar>' +
-            '<span class="global-header__plan-badge" data-global-plan-badge hidden>Free</span>' +
-            '<span class="global-header__user-name" id="headerUserName" data-global-user-name>' + escapeHtml(_t('header.profile_loading')) + '</span>' +
+            '<img src="' + escapeHtml(avatarSrc) + '" class="global-header__avatar" alt="" id="headerAvatar" data-global-avatar>' +
+            '<span class="global-header__plan-badge' + (isPremium ? ' is-premium' : '') + '" data-global-plan-badge' + (hasBadge ? '' : ' hidden') + '>' + escapeHtml(planText) + '</span>' +
+            '<span class="global-header__user-name" id="headerUserName" data-global-user-name>' + escapeHtml(displayName) + '</span>' +
             '<span class="material-symbols-outlined" aria-hidden="true">expand_more</span>' +
             '</button>' +
             '</div>' +
@@ -205,6 +261,7 @@
             // otherwise become the containing block for our position:fixed drawer,
             // trapping it inside the header strip instead of covering the viewport.
             drawerHtml;
+        root.dataset.globalHeaderReady = '1';
     }
 
     async function hydrateUser(root) {
@@ -213,27 +270,44 @@
         var planBadge = root.querySelector('[data-global-plan-badge]');
         try {
             var response = await fetch('/api/users/current');
+            if (response.status === 401) {
+                setCachedUser(null);
+                if (planBadge) planBadge.hidden = true;
+                if (name) {
+                    name.textContent = (window.i18n && typeof window.i18n.wt === 'function')
+                        ? window.i18n.wt('header.profile_fallback', 'Profile')
+                        : 'Profile';
+                }
+                return;
+            }
             var data = await response.json();
             var user = data && (data.user || data.profile || data);
-            var displayName = user?.display_name || user?.name || user?.username || user?.login || '';
-            var avatarSeed = user?.avatar_seed || user?.avatar || user?.avatarSeed || '1.png';
-            var effectivePlan = String(user?.effective_plan || user?.plan || 'free').trim().toLowerCase();
-            if (name && displayName) name.textContent = displayName;
-            if (planBadge) {
-                planBadge.hidden = false;
-                planBadge.textContent = effectivePlan === 'premium' ? 'Premium' : 'Free';
-                planBadge.classList.toggle('is-premium', effectivePlan === 'premium');
-            }
-            if (avatar) {
-                avatar.src = String(avatarSeed).includes('.')
-                    ? '/api/assets/avatars/' + encodeURIComponent(String(avatarSeed))
-                    : '/api/assets/avatars/1.png';
+            var normalized = normalizeUserData(user);
+            if (normalized) {
+                setCachedUser(normalized);
+                var newAvatarSrc = getAvatarUrl(normalized.avatarSeed);
+                var newPlanText = normalized.effectivePlan === 'premium' ? 'Premium' : 'Free';
+                var isPremium = normalized.effectivePlan === 'premium';
+
+                if (name && normalized.displayName && name.textContent !== normalized.displayName) {
+                    name.textContent = normalized.displayName;
+                }
+                if (planBadge) {
+                    if (planBadge.hidden) planBadge.hidden = false;
+                    if (planBadge.textContent !== newPlanText) planBadge.textContent = newPlanText;
+                    planBadge.classList.toggle('is-premium', isPremium);
+                }
+                if (avatar && avatar.getAttribute('src') !== newAvatarSrc) {
+                    avatar.src = newAvatarSrc;
+                }
             }
         } catch (_) {
-            if (planBadge) planBadge.hidden = true;
-            if (name) name.textContent = (window.i18n && typeof window.i18n.wt === 'function')
-                ? window.i18n.wt('header.profile_fallback', 'Profile')
-                : 'Profile';
+            if (planBadge && !getCachedUser()) planBadge.hidden = true;
+            if (name && !name.textContent) {
+                name.textContent = (window.i18n && typeof window.i18n.wt === 'function')
+                    ? window.i18n.wt('header.profile_fallback', 'Profile')
+                    : 'Profile';
+            }
         }
     }
 
@@ -357,12 +431,29 @@
     }
 
     function reRenderAllHeaders() {
-        initGlobalHeaders();
+        document.querySelectorAll('[data-global-header]').forEach(function (root) {
+            renderHeader(root);
+
+            if (root.dataset.globalHeaderBound !== '1') {
+                root.dataset.globalHeaderBound = '1';
+                bindHeader(root);
+            }
+            if (window.OnboardingTour && typeof window.OnboardingTour.refreshHelpButtons === 'function') {
+                window.OnboardingTour.refreshHelpButtons();
+            }
+        });
     }
 
     window.GlobalHeader = {
         init: initGlobalHeaders,
         reRender: reRenderAllHeaders,
+        getCachedUser: getCachedUser,
+        setCachedUser: function (user) {
+            setCachedUser(normalizeUserData(user));
+        },
+        clearUserCache: function () {
+            setCachedUser(null);
+        },
     };
 
     window.addEventListener('i18n:changed', function () {
@@ -370,15 +461,40 @@
     });
 
     window.addEventListener('actra:paddle:checkout_completed', function () {
+        var cached = getCachedUser();
+        if (cached) {
+            cached.effectivePlan = 'premium';
+            setCachedUser(cached);
+        }
         reRenderAllHeaders();
     });
 
     window.addEventListener('actra:premium_activated', function () {
+        var cached = getCachedUser();
+        if (cached) {
+            cached.effectivePlan = 'premium';
+            setCachedUser(cached);
+        }
         reRenderAllHeaders();
     });
 
-    initGlobalHeaders();
+    window.addEventListener('actra:auth_state_changed', function (event) {
+        if (event && event.detail && event.detail.user) {
+            setCachedUser(normalizeUserData(event.detail.user));
+        } else {
+            setCachedUser(null);
+        }
+        reRenderAllHeaders();
+    });
+
+    window.addEventListener('actra:user_logged_out', function () {
+        setCachedUser(null);
+        reRenderAllHeaders();
+    });
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initGlobalHeaders, { once: true });
+    } else {
+        initGlobalHeaders();
     }
 })();

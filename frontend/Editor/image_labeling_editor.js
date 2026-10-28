@@ -38,6 +38,10 @@ class ImageLabelingEditor extends BaseEditor {
         // Temp box dimensions (pixels relative to image original container)
         this.drawStart = { x: 0, y: 0 };
         this.currentBox = { x: 0, y: 0, w: 0, h: 0 };
+        const ilUrlParams = (typeof window !== 'undefined' && window.location?.search)
+            ? new URLSearchParams(window.location.search)
+            : new URLSearchParams();
+        this.subtypeParam = String(ilUrlParams.get('subtype') || ilUrlParams.get('initial_mode') || '').trim().toLowerCase();
 
         this.init();
     }
@@ -53,6 +57,10 @@ class ImageLabelingEditor extends BaseEditor {
     onTaskLoaded() {
         const content = this.task.task_data.content || {};
         this.zones = content.zones || [];
+
+        // Apply URL subtype / initial_mode handshake
+        this.applyInitialModeFromUrl();
+
         this.renderUI();
         
         // Auto-fit image on load
@@ -61,6 +69,28 @@ class ImageLabelingEditor extends BaseEditor {
         }, 100);
 
         this.setupOnboardingPreviewStateSync();
+    }
+
+    applyInitialModeFromUrl() {
+        const modeParam = (this.subtypeParam || '').toLowerCase().trim();
+        if (!modeParam) return;
+
+        this.subtype = modeParam;
+        if (!this.task) this.task = {};
+        if (!this.task.task_data) this.task.task_data = {};
+        this.task.task_data.subtype = modeParam;
+        if (!this.task.task_data.content) this.task.task_data.content = {};
+        this.task.task_data.content.subtype = modeParam;
+        if (!this.task.task_data.settings) this.task.task_data.settings = {};
+        if (modeParam === 'levels') {
+            this.task.task_data.settings.difficulty_level = 1;
+            this.task.task_data.settings.multi_level = true;
+        } else if (modeParam === 'zones') {
+            this.task.task_data.settings.multi_level = false;
+        }
+        if (this.task.metadata) {
+            this.task.metadata.subtype = modeParam;
+        }
     }
 
     setupOnboardingPreviewStateSync() {
@@ -143,50 +173,50 @@ class ImageLabelingEditor extends BaseEditor {
                     title: wt('editor_base.demo.check_title', 'Проверка')
                 },
                 content: {
-                    prompt: "Name the bones of a leg",
+                    prompt: wt('image_labeling_editor.demo.prompt', 'Назовите кости нижней конечности'),
                     image: hasImage ? "/assets/image_labeling_demo_leg.png" : null,
                     zones: hasImage ? [
                         {
                             id: "zone_patella",
                             rect: { x: 62.67, y: 13.87, width: 22.81, height: 5.0 },
                             color: "#6366f1",
-                            label: "Patella"
+                            label: wt('image_labeling_editor.demo.bone_patella', 'Надколенник')
                         },
                         {
                             id: "zone_femur",
                             rect: { x: 60.72, y: 3.06, width: 25.34, height: 4.67 },
                             color: "#6366f1",
-                            label: "Femur"
+                            label: wt('image_labeling_editor.demo.bone_femur', 'Бедренная кость')
                         },
                         {
                             id: "zone_tibia",
                             rect: { x: 60.91, y: 23.38, width: 21.05, height: 5.96 },
                             color: "#6366f1",
-                            label: "Tibia"
+                            label: wt('image_labeling_editor.demo.bone_tibia', 'Большеберцовая кость')
                         },
                         {
                             id: "zone_fibula",
                             rect: { x: 61.89, y: 37.58, width: 27.10, height: 4.83 },
                             color: "#f2f2f2",
-                            label: "Fibula"
+                            label: wt('image_labeling_editor.demo.bone_fibula', 'Малоберцовая кость')
                         },
                         {
                             id: "zone_tarsals",
                             rect: { x: 63.64, y: 73.70, width: 20.86, height: 4.67 },
                             color: "#6366f1",
-                            label: "Tarsals"
+                            label: wt('image_labeling_editor.demo.bone_tarsals', 'Предплюсна')
                         },
                         {
                             id: "zone_metatarsals",
                             rect: { x: 64.42, y: 81.29, width: 29.24, height: 4.03 },
                             color: "#6366f1",
-                            label: "Metatarsals"
+                            label: wt('image_labeling_editor.demo.bone_metatarsals', 'Плюсна')
                         },
                         {
                             id: "zone_phalanges",
                             rect: { x: 67.35, y: 88.54, width: 24.17, height: 5.64 },
                             color: "#e60000",
-                            label: "Phalanges"
+                            label: wt('image_labeling_editor.demo.bone_phalanges', 'Фаланги пальцев')
                         }
                     ] : []
                 }
@@ -278,17 +308,22 @@ class ImageLabelingEditor extends BaseEditor {
 
     buildTaskData() {
         const prompt = document.querySelector('#prompt-textarea')?.value || '';
+        const subtype = this.task?.task_data?.subtype || this.task?.task_data?.content?.subtype || this.subtypeParam || 'zones';
 
         return {
             type: 'image_labeling',
+            subtype: subtype,
             name: this.task?.task_data?.name || wt('image_labeling_editor.default_name', 'Подписи на рисунке'),
             content: {
                 prompt: prompt,
                 image: this.task?.task_data?.content?.image || null,
-                zones: this.zones
+                zones: this.zones,
+                subtype: subtype
             },
-            settings: this.task?.task_data?.settings || {
-                difficulty_level: 1,
+            settings: {
+                ...(this.task?.task_data?.settings || {}),
+                difficulty_level: this.task?.task_data?.settings?.difficulty_level || 1,
+                multi_level: subtype === 'levels' ? true : Boolean(this.task?.task_data?.settings?.multi_level),
                 case_sensitive: false,
                 allow_hints: true
             }

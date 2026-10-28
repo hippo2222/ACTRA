@@ -767,6 +767,7 @@
     };
 
     function openMainConsentGate(userId, required) {
+        finishMainBoot();
         mainConsentGateUserId = userId;
         const versionsEl = document.getElementById('mainConsentGateVersions');
         const termsEl = document.getElementById('mainConsentGateAcceptTerms');
@@ -852,6 +853,7 @@
         if (data.status === 'up_to_date') return true;
 
         const required = data.required || getRequiredConsentVersions();
+        finishMainBoot();
         return openMainConsentGate(userId, required);
     }
 
@@ -1020,6 +1022,7 @@
 
     // --- Initialization ---
     function finishMainBoot() {
+        window.PageBoot?.ready();
         document.body.classList.remove('main-is-booting');
         const bootScreen = document.querySelector('.main-boot-screen');
         if (bootScreen) {
@@ -1039,11 +1042,28 @@
             initProjectLinksMenu();
             installPremiumNavigationGate();
 
+            // Synchronously hydrate header from cache if available to prevent any layout delay
+            const cachedUser = window.GlobalHeader && typeof window.GlobalHeader.getCachedUser === 'function'
+                ? window.GlobalHeader.getCachedUser()
+                : null;
+            if (cachedUser) {
+                currentUser = {
+                    user_id: cachedUser.userId,
+                    name: cachedUser.name,
+                    avatar_seed: cachedUser.avatarSeed,
+                    plan: cachedUser.plan,
+                    effectivePlan: cachedUser.effectivePlan
+                };
+                updateHeaderUser(currentUser);
+            }
+
             if (!window.updateDateTimeInterval) {
                 window.updateDateTimeInterval = setInterval(updateDateTime, 30000);
             }
 
-            // 2. Load User
+            // 2. Load User & First-wave widgets in parallel
+            const premiumBannerPromise = loadPremiumArchiveBanner();
+            const userSettingsPromise = loadUserSettings();
             await loadCurrentUser();
 
             // 3. Load Dynamic Content
@@ -1091,9 +1111,9 @@
             });
 
             const criticalWidgetLoads = await Promise.allSettled([
-                loadPremiumArchiveBanner(),
+                premiumBannerPromise,
                 loadQuickAccess(),
-                loadUserSettings(), // Renamed from loadStatsSettings
+                userSettingsPromise,
             ]);
             criticalWidgetLoads.forEach((result) => {
                 if (result.status === 'rejected') {
@@ -1360,6 +1380,9 @@
 
     function updateHeaderUser(user) {
         window.__mainCurrentUser = user;
+        if (window.GlobalHeader && typeof window.GlobalHeader.setCachedUser === 'function') {
+            window.GlobalHeader.setCachedUser(user);
+        }
         const nameEl = document.getElementById('headerUserName');
         const avatarEl = document.getElementById('headerAvatar');
         const planBadgeEl = document.querySelector('[data-global-plan-badge]');
@@ -1510,6 +1533,11 @@
         });
 
         if (ok) {
+            if (window.GlobalHeader && typeof window.GlobalHeader.clearUserCache === 'function') {
+                window.GlobalHeader.clearUserCache();
+            } else {
+                try { window.sessionStorage?.removeItem('actra_header_user_cache'); } catch (_) {}
+            }
             if (typeof window.closeProfileMenu === 'function') {
                 window.closeProfileMenu();
             }

@@ -397,7 +397,7 @@ describe("TaskRenderer UI state", () => {
     expect(document.getElementById("current-task-type").textContent).toBe("Клик");
     expect(document.getElementById("task-progress-meta").classList.contains("hidden")).toBe(true);
     expect(document.getElementById("progress-label").textContent).toBe(
-      "Задание 2 из 4 • Итерация 2"
+      "2/4 • Попытка 2"
     );
     expect(document.getElementById("task-header-block").classList.contains("hidden")).toBe(true);
     expect(document.getElementById("task-header-label").textContent).toBe("Что нужно сделать");

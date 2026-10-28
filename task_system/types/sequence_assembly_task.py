@@ -104,8 +104,276 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
             return normalized_user == normalized_correct
         return Counter(normalized_user) == Counter(normalized_correct)
 
+    def _evaluate_hierarchy(self, user_input: Dict[str, Any], reference_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Оценивает реляционную структуру узлов (nodes) в режиме иерархии/классификации."""
+        user_nodes_raw = user_input.get("nodes", []) or []
+        correct_nodes_raw = reference_data.get("nodes", []) or []
+        sequence_matters = bool(reference_data.get("sequence_within_level_matters", False))
+        level_order_matters = bool(reference_data.get("level_order_matters", False))
+        semantic_map = self._build_element_semantic_map(reference_data)
+
+        ref_nodes: Dict[str, Dict[str, Any]] = {}
+        ref_children: Dict[str, List[str]] = {}
+        ref_roots: List[str] = []
+        for raw in correct_nodes_raw:
+            if not isinstance(raw, dict):
+                continue
+            nid = str(raw.get("node_id") or "").strip()
+            if not nid:
+                continue
+            ref_nodes[nid] = raw
+            ref_children.setdefault(nid, [])
+
+        for nid, raw in ref_nodes.items():
+            pid = str(raw.get("parent_id") or "").strip()
+            if pid and pid in ref_nodes:
+                ref_children.setdefault(pid, []).append(nid)
+            else:
+                ref_roots.append(nid)
+
+        user_nodes: Dict[str, Dict[str, Any]] = {}
+        user_children: Dict[str, List[str]] = {}
+        user_roots: List[str] = []
+        for idx, raw in enumerate(user_nodes_raw):
+            if not isinstance(raw, dict):
+                continue
+            nid = str(raw.get("node_id") or f"user_node_{idx + 1}").strip()
+            user_nodes[nid] = raw
+            user_children.setdefault(nid, [])
+
+        for nid, raw in user_nodes.items():
+            pid = str(raw.get("parent_id") or "").strip()
+            if pid and pid in user_nodes:
+                user_children.setdefault(pid, []).append(nid)
+            else:
+                user_roots.append(nid)
+
+        total_blocks = sum(len(n.get("blocks", []) or []) for n in ref_nodes.values())
+        if not ref_nodes:
+            return {
+                "success": False,
+                "score": 0.0,
+                "message": "Отсутствует структура узлов для проверки",
+                "metric": "percent",
+                "details": {},
+            }
+
+        memo: Dict[ Any, Dict[str, Any] ] = {}
+
+        def match_node_lists(r_ids: List[str], u_ids: List[str]) -> Dict[str, Any]:
+            if not r_ids or not u_ids:
+                return {"correct_blocks": 0, "correct_nodes": 0, "pairs": []}
+
+            if level_order_matters:
+                pairs = []
+                c_blocks = 0
+                c_nodes = 0
+                for idx, r_id in enumerate(r_ids):
+                    if idx >= len(u_ids):
+                        break
+                    u_id = u_ids[idx]
+                    r_lvl = str(ref_nodes[r_id].get("level_id") or "")
+                    u_lvl = str(user_nodes[u_id].get("level_id") or "")
+                    if r_lvl and u_lvl and r_lvl != u_lvl:
+                        continue
+                    sub = evaluate_pair(r_id, u_id)
+                    c_blocks += sub["subtree_correct_blocks"]
+                    c_nodes += sub["subtree_correct_nodes"]
+                    pairs.append((r_id, u_id))
+                return {"correct_blocks": c_blocks, "correct_nodes": c_nodes, "pairs": pairs}
+
+            # Реляционное сопоставление (порядок веток/колонок на одном этаже не важен)
+            m_len = len(r_ids)
+            k_len = len(u_ids)
+            if max(m_len, k_len) <= 10:
+                dp_memo: Dict[Any, Any] = {}
+
+                def solve_dp(r_idx: int, mask: int):
+                    if r_idx >= m_len:
+                        return (0, 0, 0, [])
+                    state = (r_idx, mask)
+                    if state in dp_memo:
+                        return dp_memo[state]
+
+                    # Вариант: пропустить r_idx (если у пользователя меньше узлов)
+                    best = solve_dp(r_idx + 1, mask)
+                    r_id = r_ids[r_idx]
+                    r_lvl = str(ref_nodes[r_id].get("level_id") or "")
+                    r_col_title = str(ref_nodes[r_id].get("column_title") or "").strip().lower()
+
+                    for u_idx in range(k_len):
+                        if mask & (1 << u_idx):
+                            continue
+                        u_id = u_ids[u_idx]
+                        u_lvl = str(user_nodes[u_id].get("level_id") or "")
+                        if r_lvl and u_lvl and r_lvl != u_lvl:
+                            continue
+                        u_col_title = str(user_nodes[u_id].get("column_title") or "").strip().lower()
+                        if r_col_title:
+                            if u_col_title:
+                                if u_col_title != r_col_title:
+                                    continue
+                            else:
+                                if r_id != u_id:
+                                    continue
+                        elif u_col_title:
+                            if r_id != u_id:
+                                continue
+                        sub = evaluate_pair(r_id, u_id)
+                        rem_blocks, rem_nodes, rem_same, rem_pairs = solve_dp(r_idx + 1, mask | (1 << u_idx))
+                        cand = (
+                            sub["subtree_correct_blocks"] + rem_blocks,
+                            sub["subtree_correct_nodes"] + rem_nodes,
+                            (1 if r_id == u_id else 0) + rem_same,
+                            [(r_id, u_id)] + rem_pairs,
+                        )
+                        if cand[:3] > best[:3]:
+                            best = cand
+
+                    dp_memo[state] = best
+                    return best
+
+                best_blocks, best_nodes, _, best_pairs = solve_dp(0, 0)
+                return {"correct_blocks": best_blocks, "correct_nodes": best_nodes, "pairs": best_pairs}
+
+            # Fallback для > 10 веток одного родителя: жадное сопоставление по убыванию веса
+            candidates = []
+            for r_id in r_ids:
+                r_lvl = str(ref_nodes[r_id].get("level_id") or "")
+                r_col_title = str(ref_nodes[r_id].get("column_title") or "").strip().lower()
+                for u_id in u_ids:
+                    u_lvl = str(user_nodes[u_id].get("level_id") or "")
+                    if r_lvl and u_lvl and r_lvl != u_lvl:
+                        continue
+                    u_col_title = str(user_nodes[u_id].get("column_title") or "").strip().lower()
+                    if r_col_title:
+                        if u_col_title:
+                            if u_col_title != r_col_title:
+                                continue
+                        else:
+                            if r_id != u_id:
+                                continue
+                    elif u_col_title:
+                        if r_id != u_id:
+                            continue
+                    sub = evaluate_pair(r_id, u_id)
+                    candidates.append((
+                        sub["subtree_correct_blocks"],
+                        sub["subtree_correct_nodes"],
+                        1 if r_id == u_id else 0,
+                        r_id,
+                        u_id,
+                    ))
+            candidates.sort(reverse=True)
+            used_r = set()
+            used_u = set()
+            pairs = []
+            c_blocks = 0
+            c_nodes = 0
+            for b_cnt, n_cnt, _, r_id, u_id in candidates:
+                if r_id in used_r or u_id in used_u:
+                    continue
+                used_r.add(r_id)
+                used_u.add(u_id)
+                pairs.append((r_id, u_id))
+                c_blocks += b_cnt
+                c_nodes += n_cnt
+            return {"correct_blocks": c_blocks, "correct_nodes": c_nodes, "pairs": pairs}
+
+        def evaluate_pair(r_id: str, u_id: str) -> Dict[str, Any]:
+            key = (r_id, u_id)
+            if key in memo:
+                return memo[key]
+
+            r_node = ref_nodes[r_id]
+            u_node = user_nodes[u_id]
+            r_blocks = r_node.get("blocks", []) or []
+            u_blocks = u_node.get("blocks", []) or []
+            u_block_names = u_node.get("block_names", {}) or {}
+
+            own_correct = self._count_matching_blocks(
+                u_blocks, r_blocks, semantic_map, sequence_matters, u_block_names
+            )
+            own_exact = self._blocks_match(
+                u_blocks, r_blocks, semantic_map, sequence_matters, u_block_names
+            )
+
+            r_col_title = str(r_node.get("column_title") or "").strip().lower()
+            u_col_title = str(u_node.get("column_title") or "").strip().lower()
+            if r_col_title:
+                if u_col_title:
+                    col_title_ok = (u_col_title == r_col_title)
+                else:
+                    col_title_ok = (r_id == u_id)
+            elif u_col_title:
+                col_title_ok = (r_id == u_id)
+            else:
+                col_title_ok = True
+
+            if not col_title_ok:
+                own_exact = False
+
+            children_res = match_node_lists(ref_children.get(r_id, []), user_children.get(u_id, []))
+            res = {
+                "own_correct_blocks": own_correct,
+                "own_exact": own_exact,
+                "subtree_correct_blocks": own_correct + children_res["correct_blocks"],
+                "subtree_correct_nodes": (1 if own_exact else 0) + children_res["correct_nodes"],
+                "child_pairs": children_res["pairs"],
+            }
+            memo[key] = res
+            return res
+
+        root_res = match_node_lists(ref_roots, user_roots)
+        correct_blocks = root_res["correct_blocks"]
+
+        node_mapping: Dict[str, str] = {}
+        correct_nodes: List[str] = []
+        incorrect_nodes: List[str] = []
+
+        def collect_pairs(pairs: List[Any]):
+            for r_id, u_id in pairs:
+                node_mapping[r_id] = u_id
+                pair_info = evaluate_pair(r_id, u_id)
+                if pair_info["own_exact"]:
+                    correct_nodes.append(u_id)
+                else:
+                    incorrect_nodes.append(u_id)
+                collect_pairs(pair_info["child_pairs"])
+
+        collect_pairs(root_res["pairs"])
+        for r_id in ref_nodes:
+            if r_id not in node_mapping:
+                incorrect_nodes.append(r_id)
+
+        score = (correct_blocks / total_blocks * 100.0) if total_blocks > 0 else 0.0
+        success = (
+            len(correct_nodes) == len(ref_nodes)
+            and len(user_nodes) == len(ref_nodes)
+            and len(incorrect_nodes) == 0
+        )
+
+        return {
+            "success": success,
+            "score": score,
+            "message": self._format_result_message(
+                success, score, total_blocks, sequence_matters, level_order_matters, True, [], []
+            ),
+            "metric": "percent",
+            "details": {
+                "display_mode": reference_data.get("display_mode", "hierarchy"),
+                "correct_blocks": correct_blocks,
+                "total_blocks": total_blocks,
+                "correct_nodes": correct_nodes,
+                "incorrect_nodes": incorrect_nodes,
+                "node_mapping": node_mapping,
+                "sequence_matters": sequence_matters,
+                "level_order_matters": level_order_matters,
+            },
+        }
+
     def evaluate(self, user_input: Any, reference_data: Any) -> Dict[str, Any]:
-        """Оценивает правильность последовательности элементов по уровням"""
+        """Оценивает правильность последовательности элементов по уровням или иерархии узлов"""
         if not isinstance(user_input, dict) or not isinstance(reference_data, dict):
             return {
                 "success": False,
@@ -114,6 +382,10 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
                 "metric": "percent",
                 "details": {}
             }
+
+        # Если задание и ответ используют иерархическую структуру узлов (nodes)
+        if reference_data.get("nodes") and user_input.get("nodes"):
+            return self._evaluate_hierarchy(user_input, reference_data)
         
         # Получаем уровни пользователя и правильные уровни
         user_levels = user_input.get('levels', [])
@@ -388,7 +660,9 @@ class SequenceAssemblyTaskType(BaseTaskType):
             "show_hints": False,
             "allow_duplicates": False,
             "sequence_within_level_matters": False,
-            "level_order_matters": False
+            "level_order_matters": False,
+            "display_mode": "linear",
+            "color_differentiation": False,
         }
     
     def validate_task_data(self, task_data: Dict[str, Any]) -> bool:
@@ -400,11 +674,12 @@ class SequenceAssemblyTaskType(BaseTaskType):
         if 'elements' not in task_data:
             return False
         
-        # Проверяем наличие levels или correct_sequence (для обратной совместимости)
+        # Проверяем наличие levels, nodes или correct_sequence (для обратной совместимости)
         has_levels = 'levels' in task_data
+        has_nodes = 'nodes' in task_data and bool(task_data.get('nodes'))
         has_sequence = 'correct_sequence' in task_data
         
-        if not has_levels and not has_sequence:
+        if not has_levels and not has_sequence and not has_nodes:
             return False
         
         elements = task_data['elements']
@@ -427,6 +702,7 @@ class SequenceAssemblyTaskType(BaseTaskType):
                 return False  # Дублирующиеся ID
             element_ids.add(element_id)
         
+        level_ids = set()
         # Проверяем levels (новая структура)
         if has_levels:
             levels = task_data['levels']
@@ -438,15 +714,40 @@ class SequenceAssemblyTaskType(BaseTaskType):
             
             # Проверяем каждый уровень
             for level in levels:
-                if not isinstance(level, dict) or 'level_id' not in level or 'blocks' not in level:
+                if not isinstance(level, dict) or 'level_id' not in level:
+                    return False
+                if not has_nodes and 'blocks' not in level:
                     return False
                 
-                blocks = level['blocks']
+                level_ids.add(level['level_id'])
+                blocks = level.get('blocks', [])
                 if not isinstance(blocks, list):
                     return False
                 
                 # Проверяем, что все ID в blocks существуют в elements
                 for block_id in blocks:
+                    if block_id not in element_ids:
+                        return False
+
+        # Проверяем nodes (иерархическая структура)
+        if has_nodes:
+            nodes = task_data['nodes']
+            if not isinstance(nodes, list) or len(nodes) == 0:
+                return False
+            node_ids = set()
+            for node in nodes:
+                if not isinstance(node, dict) or 'node_id' not in node or 'level_id' not in node:
+                    return False
+                nid = node['node_id']
+                if not nid or nid in node_ids:
+                    return False
+                node_ids.add(nid)
+                if level_ids and node['level_id'] not in level_ids:
+                    return False
+                nblocks = node.get('blocks', [])
+                if not isinstance(nblocks, list):
+                    return False
+                for block_id in nblocks:
                     if block_id not in element_ids:
                         return False
         
@@ -465,3 +766,4 @@ class SequenceAssemblyTaskType(BaseTaskType):
                     return False
         
         return True
+

@@ -70,6 +70,27 @@ class SequenceAssemblyTaskSchema(BaseTaskSchema):
         if 'sequence_within_level_matters' in content:
             seq_matters_errors = cls._validate_sequence_within_level_matters(content['sequence_within_level_matters'])
             errors.extend(seq_matters_errors)
+
+        # Валидируем display_mode (опционально)
+        if 'display_mode' in content and content['display_mode'] is not None:
+            display_mode_errors = cls._validate_display_mode(content['display_mode'])
+            errors.extend(display_mode_errors)
+
+        # Валидируем color_differentiation (опционально)
+        if 'color_differentiation' in content and content['color_differentiation'] is not None:
+            color_diff_errors = cls._validate_color_differentiation(content['color_differentiation'])
+            errors.extend(color_diff_errors)
+
+        # Валидируем nodes для иерархического режима (опционально)
+        if 'nodes' in content and content['nodes'] is not None:
+            nodes_errors = cls._validate_nodes(
+                content['nodes'],
+                content.get('elements', []),
+                content.get('levels', []),
+            )
+            errors.extend(nodes_errors)
+        elif content.get('display_mode') == 'hierarchy':
+            errors.append("content.nodes: поле обязательно при display_mode='hierarchy'")
         
         return errors
     
@@ -344,6 +365,122 @@ class SequenceAssemblyTaskSchema(BaseTaskSchema):
         if not isinstance(value, bool):
             errors.append("content.sequence_within_level_matters: должно быть булевым значением")
         
+        return errors
+
+    @classmethod
+    def _validate_display_mode(cls, value: Any) -> List[str]:
+        """Валидирует режим отображения display_mode ('linear' | 'hierarchy')."""
+        errors = []
+        if not isinstance(value, str) or value.strip().lower() not in {"linear", "hierarchy"}:
+            errors.append("content.display_mode: должно быть 'linear' или 'hierarchy'")
+        return errors
+
+    @classmethod
+    def _validate_color_differentiation(cls, value: Any) -> List[str]:
+        """Валидирует флаг цветовой дифференциации color_differentiation."""
+        errors = []
+        if not isinstance(value, bool):
+            errors.append("content.color_differentiation: должно быть булевым значением")
+        return errors
+
+    @classmethod
+    def _validate_nodes(cls, nodes: Any, elements: Any, levels: Any) -> List[str]:
+        """
+        Валидирует массив иерархических узлов (nodes) для режима hierarchy.
+        Проверяет уникальность node_id, принадлежность level_id, ссылки на блоки,
+        существование parent_id и отсутствие циклов.
+        """
+        errors = []
+        if not isinstance(nodes, list):
+            errors.append("content.nodes: должно быть массивом")
+            return errors
+        if len(nodes) == 0:
+            errors.append("content.nodes: массив не может быть пустым")
+            return errors
+
+        element_ids = {
+            elem["id"]
+            for elem in (elements if isinstance(elements, list) else [])
+            if isinstance(elem, dict) and "id" in elem
+        }
+        level_ids = {
+            str(lvl["level_id"])
+            for lvl in (levels if isinstance(levels, list) else [])
+            if isinstance(lvl, dict) and "level_id" in lvl
+        }
+
+        node_ids = set()
+        parent_map: Dict[str, Any] = {}
+
+        for i, node in enumerate(nodes):
+            if not isinstance(node, dict):
+                errors.append(f"content.nodes[{i}]: должен быть объектом")
+                continue
+
+            node_id = node.get("node_id")
+            if not isinstance(node_id, str) or not node_id.strip():
+                errors.append(f"content.nodes[{i}].node_id: должно быть непустой строкой")
+                node_id = None
+            else:
+                node_id = node_id.strip()
+                if node_id in node_ids:
+                    errors.append(f"content.nodes[{i}].node_id: ID '{node_id}' дублируется")
+                else:
+                    node_ids.add(node_id)
+
+            raw_level_id = node.get("level_id")
+            if raw_level_id is None or (isinstance(raw_level_id, str) and not raw_level_id.strip()):
+                errors.append(f"content.nodes[{i}].level_id: поле обязательно")
+            else:
+                str_level_id = str(raw_level_id).strip()
+                if level_ids and str_level_id not in level_ids:
+                    errors.append(
+                        f"content.nodes[{i}].level_id: уровень '{str_level_id}' не найден в content.levels"
+                    )
+
+            parent_id = node.get("parent_id")
+            if parent_id is not None:
+                if not isinstance(parent_id, str) or not parent_id.strip():
+                    errors.append(f"content.nodes[{i}].parent_id: должно быть непустой строкой или null")
+                elif node_id and parent_id.strip() == node_id:
+                    errors.append(f"content.nodes[{i}].parent_id: узел '{node_id}' не может ссылаться сам на себя")
+                elif node_id:
+                    parent_map[node_id] = parent_id.strip()
+            elif node_id:
+                parent_map[node_id] = None
+
+            column_title = node.get("column_title")
+            if column_title is not None and not isinstance(column_title, str):
+                errors.append(f"content.nodes[{i}].column_title: должно быть строкой или null")
+
+            if "blocks" not in node:
+                errors.append(f"content.nodes[{i}].blocks: поле обязательно")
+            elif not isinstance(node["blocks"], list) or len(node["blocks"]) == 0:
+                errors.append(f"content.nodes[{i}].blocks: должен быть непустым массивом")
+            else:
+                for j, block_id in enumerate(node["blocks"]):
+                    if not isinstance(block_id, str) or not block_id.strip():
+                        errors.append(f"content.nodes[{i}].blocks[{j}]: должно быть непустой строкой")
+                    elif element_ids and block_id not in element_ids:
+                        errors.append(
+                            f"content.nodes[{i}].blocks[{j}]: ID '{block_id}' не найден в elements"
+                        )
+
+        # Проверяем существование parent_id и отсутствие циклов
+        for nid, pid in parent_map.items():
+            if pid is not None and pid not in node_ids:
+                errors.append(f"content.nodes: parent_id '{pid}' у узла '{nid}' не существует в nodes")
+
+        for nid in node_ids:
+            visited = set()
+            curr = nid
+            while curr is not None:
+                if curr in visited:
+                    errors.append(f"content.nodes: обнаружен цикл в иерархии узлов вокруг '{nid}'")
+                    break
+                visited.add(curr)
+                curr = parent_map.get(curr)
+
         return errors
     
     @classmethod

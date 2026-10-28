@@ -3184,6 +3184,7 @@
     if (isTheoryCenterOnboardingDemoRequested()) {
       state.loading = false;
       applyTheoryCenterOnboardingDemoState();
+      window.PageBoot?.ready();
       return;
     }
     try {
@@ -3239,6 +3240,7 @@
       renderLoadingState(wt('tc.k213', 'Обзор теории недоступен.'));
     } finally {
       state.loading = false;
+      window.PageBoot?.ready();
     }
   }
 

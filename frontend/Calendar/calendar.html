@@ -39,13 +39,6 @@
     </div>
 
     <div id="app" class="relative flex min-h-screen flex-col overflow-x-hidden">
-        <div id="calendarInitialLoading"
-            class="absolute inset-0 z-[60] flex items-center justify-center bg-bg-main">
-            <div class="calendar-loading-logo-frame" aria-hidden="true">
-                <img id="calendarLoadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="calendar-loading-logo">
-                <img id="calendarLoadingLogoStatic" src="/assets/logo.svg" alt="ACTRA" class="calendar-loading-logo hidden">
-            </div>
-        </div>
 
         <!-- Header -->
 
@@ -868,43 +861,9 @@
 
         }
 
-        function setCalendarInitialLoading(show) {
-
-            const overlay = document.getElementById('calendarInitialLoading');
-
-            if (!overlay) return;
-
-            overlay.classList.toggle('hidden', !show);
-
-        }
-
-        function scheduleCalendarInitialLoading() {
-
-            if (calendarInitialLoadingTimer) {
-
-                clearTimeout(calendarInitialLoadingTimer);
-
-            }
-
-            calendarInitialLoadingTimer = setTimeout(() => {
-
-                setCalendarInitialLoading(true);
-
-                calendarInitialLoadingTimer = null;
-
-            }, CALENDAR_INITIAL_LOADING_DELAY_MS);
-
-        }
-
-        function clearCalendarInitialLoadingTimer() {
-
-            if (!calendarInitialLoadingTimer) return;
-
-            clearTimeout(calendarInitialLoadingTimer);
-
-            calendarInitialLoadingTimer = null;
-
-        }
+        function setCalendarInitialLoading(show) {}
+        function scheduleCalendarInitialLoading() {}
+        function clearCalendarInitialLoadingTimer() {}
 
         function escapeHtml(value) {
 
@@ -1117,6 +1076,10 @@
                 if (isCalendarQaPreview()) {
 
                     applyCalendarQaPreviewState(CALENDAR_PREVIEW_MODE);
+
+                    if (isInitialLoad) {
+                        window.PageBoot?.ready();
+                    }
 
                     return;
 

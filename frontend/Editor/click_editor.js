@@ -2380,6 +2380,7 @@ class ClickEditor extends BaseEditor {
         this.additionalInfo = this.normalizeAdditionalInfo(this.task.task_data?.content?.additionalInfo);
         this.additionalInfoDirty = false;
         this.setupModeSwitch();
+        await this.applyInitialModeFromUrl();
         this.renderUI();
         if (!skipAutosave) {
             this.refreshDifficultyAuthoringControls().catch((error) => {
@@ -3851,6 +3852,45 @@ class ClickEditor extends BaseEditor {
         const spans = this.getErrorSpansArray();
         this.errorsTotalCountLabel.textContent = String(spans.length);
         this.syncErrorsRequiredCorrectWithTotal(spans.length);
+    }
+
+    async applyInitialModeFromUrl() {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location.search || '');
+        const modeParam = (params.get('initial_mode') || params.get('subtype') || '').toLowerCase().trim();
+        if (!modeParam) return;
+
+        this.subtype = modeParam;
+        if (!this.task) this.task = {};
+        if (!this.task.task_data) this.task.task_data = {};
+        this.task.task_data.subtype = modeParam;
+        if (!this.task.task_data.content) this.task.task_data.content = {};
+        this.task.task_data.content.subtype = modeParam;
+        if (this.task.metadata) {
+            this.task.metadata.subtype = modeParam;
+        }
+
+        if (modeParam === 'freehand' || modeParam === 'polygon') {
+            this.task.task_data.type = 'draw';
+            if (this.task.metadata) this.task.metadata.type = 'draw';
+        }
+
+        if (modeParam === 'errors_words' || modeParam === 'words' || modeParam === 'text_errors') {
+            await this.setModeToggleActive('errors');
+            this.handleSubtaskModeClick('text');
+        } else if (modeParam === 'errors_texts' || modeParam === 'texts' || modeParam === 'text_choice') {
+            await this.setModeToggleActive('errors');
+            this.handleSubtaskModeClick('errors');
+        } else if (modeParam === 'regions' || modeParam === 'image' || modeParam === 'point') {
+            await this.setModeToggleActive('text');
+            this.setTool('polygon');
+        } else if (modeParam === 'freehand') {
+            await this.setModeToggleActive('text');
+            this.setTool('freehand');
+        } else if (modeParam === 'polygon') {
+            await this.setModeToggleActive('text');
+            this.setTool('polygon');
+        }
     }
 
     setupModeSwitch() {
@@ -6917,6 +6957,13 @@ class ClickEditor extends BaseEditor {
         this.task.task_data.id = this.taskId || this.task.task_data.id;
         if (!this.task.task_data.type) {
             this.task.task_data.type = this.taskTypeParam || this.task.task_data?.type || "click";
+        }
+        const currentSubtype = this.task?.task_data?.subtype || this.task?.metadata?.subtype || this.subtype || '';
+        if (currentSubtype) {
+            this.task.task_data.subtype = currentSubtype;
+            if (this.task.task_data.content) {
+                this.task.task_data.content.subtype = currentSubtype;
+            }
         }
         this.task.task_data.meta.id = this.taskId || this.task.task_data.meta.id;
         this.task.task_data.meta.module = this.moduleId || this.task.task_data.meta.module;

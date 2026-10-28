@@ -8,14 +8,14 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="seq_editor.page_title">ACTRA — Редактор последовательностей</title>
-    <link rel="stylesheet" href="sequence_editor.css?v=sequence-onboarding-3">
+    <link rel="stylesheet" href="sequence_editor.css?v=sequence-col-arch-2">
     <!-- BaseEditor dependencies -->
     <script src="undo_manager.js"></script>
     <script src="autosave_manager.js?v=editor-draft-fix-3"></script>
     <script src="../../assets/NotificationUI.js"></script>
     <script src="ai_ux_messages.js"></script>
     <script src="base_editor.js?v=editor-draft-fix-6"></script>
-    <script src="sequence_editor.js?v=sequence-onboarding-13" defer></script>
+    <script src="sequence_editor.js?v=sequence-col-arch-2" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
@@ -30,35 +30,33 @@
     class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display selection:bg-primary-light selection:text-primary antialiased">
     <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
         <header
-            class="h-16 flex items-center justify-between gap-4 px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-10 sticky top-0"
+            class="h-16 flex items-center justify-between gap-3 px-4 sm:px-5 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-10 sticky top-0"
             data-onboarding-spotlight="frame"
             data-onboarding-target="sequence-header">
-            <div class="flex min-w-0 flex-1 items-center gap-4 text-text-main">
+            <div class="flex min-w-0 flex-1 items-center gap-3 text-text-main">
                 <button id="back-to-dashboard" data-i18n-title="seq_editor.back_title" title="Библиотека заданий"
-                    class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
+                    class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors shrink-0">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
-                <div class="flex min-w-0 flex-1 items-center gap-3">
-                    <h2 class="min-w-0 flex-1 flex items-center gap-2 text-base font-bold text-text-main tracking-tight">
-                        <span id="task-title-display" class="min-w-0 flex-1 truncate text-base font-bold text-text-main"
-                            data-onboarding-target="sequence-title" data-i18n="seq_editor.loading">Загрузка...</span>
-                    </h2>
-                    <div id="save-status-container" class="sequence-header-status status-cluster shrink-0" data-tone="success"
-                        aria-live="polite"
-                        data-onboarding-target="sequence-save-status">
-                        <div id="save-status-indicator" class="status-cluster__dot"></div>
-                        <div class="status-cluster__body">
-                            <span id="save-status-text"
-                                class="text-[10px] font-bold text-text-secondary uppercase tracking-tight leading-none" data-i18n="seq_editor.status_saved">Сохранено</span>
-                            <span id="save-status-detail"
-                                class="text-[9px] text-text-disabled leading-none mt-1 hidden"></span>
-                        </div>
+                <h2 class="min-w-0 flex-1 flex items-center text-sm font-semibold text-text-main tracking-tight">
+                    <span id="task-title-display" class="min-w-0 flex-1 text-[13px] font-semibold text-text-main"
+                        data-onboarding-target="sequence-title" data-i18n="seq_editor.loading">Загрузка...</span>
+                </h2>
+            </div>
+            <div class="flex shrink-0 items-center gap-1.5 pl-1.5">
+                <div id="save-status-container" class="sequence-header-status status-cluster shrink-0" data-tone="success"
+                    aria-live="polite"
+                    data-onboarding-target="sequence-save-status">
+                    <div id="save-status-indicator" class="status-cluster__dot"></div>
+                    <div class="status-cluster__body">
+                        <span id="save-status-text"
+                            class="status-cluster__label text-xs font-medium text-text-muted select-none leading-none" data-i18n="seq_editor.status_saved">Сохранено</span>
+                        <span id="save-status-detail"
+                            class="text-[9px] text-text-disabled leading-none mt-1 hidden"></span>
                     </div>
                 </div>
-            </div>
-            <div class="flex shrink-0 items-center gap-3 pl-2">
                 <!-- Undo/Redo buttons -->
-                <div class="flex items-center gap-1 border-r border-border-subtle pr-3"
+                <div class="flex items-center gap-1 border-r border-border-subtle pr-2"
                     data-onboarding-target="sequence-history-actions">
                     <button id="undo-btn" disabled data-i18n-title="editor_base.history.undo_tooltip" title="Отменить (Ctrl+Z)"
                         class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled">
@@ -84,27 +82,48 @@
                 </button>
                 <button id="save-task-btn"
                     data-onboarding-target="sequence-save-action"
-                    class="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg px-5 py-2 transition-colors shadow-md text-sm">
+                    class="hidden flex items-center justify-center gap-1.5 bg-surface-1 border border-border-subtle text-text-secondary hover:text-text-main hover:bg-bg-hover font-semibold rounded-lg px-3.5 py-2 transition-all shadow-xs text-xs sm:text-sm">
                     <span class="material-symbols-outlined text-[18px]">save</span>
                     <span data-i18n="seq_editor.save_btn">Сохранить</span>
+                </button>
+                <button id="toggle-settings-sidebar-btn"
+                    type="button"
+                    class="flex items-center justify-center px-2.5 py-1.5 rounded-lg text-text-secondary hover:text-text-main hover:bg-bg-hover transition-colors border border-border-subtle shadow-xs"
+                    data-i18n-title="seq_editor.toggle_settings"
+                    title="Панель настроек"
+                    data-i18n-aria="seq_editor.toggle_settings"
+                    aria-label="Панель настроек">
+                    <span class="material-symbols-outlined text-[18px]">tune</span>
+                    <span class="text-xs font-medium ml-1.5" data-i18n="seq_editor.settings_btn">Настройки</span>
                 </button>
             </div>
         </header>
         <div class="flex-1 overflow-y-auto">
-            <div class="max-w-5xl mx-auto p-4 sm:p-5 lg:p-6 pb-36">
-                <div class="mb-5" data-onboarding-spotlight="frame"
+            <div id="se-main-container" class="max-w-5xl mx-auto p-4 sm:p-5 lg:p-6 pb-36 transition-all duration-200">
+                <div id="se-prompt-accordion" class="se-prompt-block mb-3 rounded-xl border border-border-subtle bg-surface-1 p-2.5 transition-all shadow-xs" data-onboarding-spotlight="frame"
                     data-onboarding-target="sequence-prompt-block">
-                    <label class="block text-xs font-semibold text-text-disabled uppercase tracking-wider mb-1.5" data-i18n="seq_editor.prompt_label">Текст
-                        задания</label>
-                    <textarea id="prompt-textarea"
-                        data-onboarding-target="sequence-prompt-text"
-                        class="block w-full rounded-lg border-border-subtle bg-surface-2 shadow-sm focus:border-primary focus:ring-0 sm:text-sm text-text-main leading-relaxed"
-                        data-i18n-placeholder="seq_editor.prompt_placeholder" placeholder="Опишите процедуру или инструкцию для обучающегося..." rows="2"></textarea>
+                    <div class="flex items-center justify-between cursor-pointer select-none gap-3" id="se-prompt-toggle">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <span class="material-symbols-outlined text-[18px] text-text-muted shrink-0">description</span>
+                            <label class="block text-xs font-medium text-text-muted cursor-pointer shrink-0" data-i18n="seq_editor.prompt_label">Текст задания</label>
+                            <span id="se-prompt-preview" class="text-xs text-text-secondary truncate hidden flex-1 min-w-0 pr-4 mr-2"></span>
+                        </div>
+                        <button type="button" id="se-prompt-toggle-btn" class="flex items-center gap-1.5 text-xs font-medium shrink-0 ml-3" data-i18n-title="seq_editor.toggle_prompt" title="Свернуть / развернуть текст задания">
+                            <span id="se-prompt-toggle-text" class="hidden sm:inline" data-i18n="seq_editor.collapse_prompt">Свернуть</span>
+                            <span id="se-prompt-toggle-icon" class="material-symbols-outlined text-[16px]">expand_less</span>
+                        </button>
+                    </div>
+                    <div id="se-prompt-body" class="mt-2 transition-all">
+                        <textarea id="prompt-textarea"
+                            data-onboarding-target="sequence-prompt-text"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 shadow-sm focus:border-primary focus:ring-0 sm:text-sm text-text-main leading-relaxed"
+                            data-i18n-placeholder="seq_editor.prompt_placeholder" placeholder="Опишите процедуру или инструкцию для обучающегося..." rows="2"></textarea>
+                    </div>
                 </div>
-                <div id="levels-container" class="space-y-4" data-onboarding-target="sequence-levels-container">
+<div id="levels-container" class="space-y-4" data-onboarding-target="sequence-levels-container">
                     <!-- Levels will be rendered here -->
                 </div>
-                <div class="flex items-center justify-between pt-4">
+                <div id="se-bottom-actions" class="flex items-center justify-between pt-4">
                     <button id="clear-all-btn"
                         data-onboarding-target="sequence-clear-all"
                         class="flex items-center gap-2 bg-surface-1 border border-border-subtle text-text-secondary hover:bg-bg-hover hover:text-error font-medium px-4 py-2 rounded-lg text-sm transition-colors shadow-sm">
@@ -122,15 +141,56 @@
         </div>
     </main>
     <aside
-        class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 z-20 h-full overflow-y-auto"
-        style="width: 320px;" data-onboarding-spotlight="frame" data-onboarding-target="sequence-sidebar">
-        <div class="h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 sticky top-0 z-10">
+        id="sequence-sidebar"
+        class="sequence-sidebar bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 z-20 h-full overflow-y-auto"
+        data-onboarding-spotlight="frame" data-onboarding-target="sequence-sidebar">
+        <!-- Vertical rail bookmark button when sidebar is collapsed -->
+        <button id="sequence-sidebar-rail-btn"
+            type="button"
+            class="hidden h-full w-full flex-col items-center justify-center py-4 bg-surface-1 hover:bg-bg-hover text-text-secondary hover:text-primary transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            data-i18n-title="seq_editor.expand_sidebar"
+            title="Развернуть панель настроек"
+            data-i18n-aria="seq_editor.expand_sidebar"
+            aria-label="Развернуть панель настроек">
+            <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-0.5">chevron_left</span>
+            <span class="text-[10px] font-bold tracking-widest text-text-muted group-hover:text-primary uppercase select-none mt-3"
+                style="writing-mode: vertical-rl; transform: rotate(180deg);"
+                data-i18n="seq_editor.expand_sidebar">Настройки</span>
+        </button>
+        <div id="sequence-sidebar-header" class="h-16 flex items-center justify-between px-6 border-b border-border-subtle bg-surface-1 sticky top-0 z-10">
             <h3 class="text-text-main font-bold text-base tracking-tight flex items-center gap-2">
                 <span class="material-symbols-outlined text-text-disabled">tune</span>
                 <span data-i18n="seq_editor.settings_title">Настройки задания</span>
             </h3>
+            <button id="collapse-sidebar-btn"
+                type="button"
+                class="p-1.5 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
+                data-i18n-title="seq_editor.collapse_sidebar"
+                title="Свернуть панель"
+                data-i18n-aria="seq_editor.collapse_sidebar"
+                aria-label="Свернуть панель">
+                <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+            </button>
         </div>
         <div id="sequence-sidebar-content" class="p-5 space-y-6">
+            <div data-onboarding-target="sequence-display-mode-block" class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="se.display_mode_label">Вид структуры</label>
+                </div>
+                <div id="se-display-mode-tabs" class="se-mode-tabs se-mode-tabs--sidebar w-full grid grid-cols-2" role="tablist" data-i18n-aria="se.display_mode_label" aria-label="Вид структуры">
+                    <span id="se-mode-tabs-pill" class="se-mode-tabs__pill" aria-hidden="true"></span>
+                    <button type="button" id="mode-tab-linear" role="tab" aria-selected="true" data-display-mode="linear"
+                        class="se-mode-tabs__tab is-active">
+                        <span class="material-symbols-outlined text-[16px]">view_agenda</span>
+                        <span data-i18n="se.display_mode_linear_short">Линейная</span>
+                    </button>
+                    <button type="button" id="mode-tab-hierarchy" role="tab" aria-selected="false" data-display-mode="hierarchy"
+                        class="se-mode-tabs__tab">
+                        <span class="material-symbols-outlined text-[16px]">account_tree</span>
+                        <span data-i18n="se.display_mode_hierarchy_short">Иерархия</span>
+                    </button>
+                </div>
+            </div>
             <div data-onboarding-target="sequence-logic-info" class="space-y-2">
                 <div class="flex items-center justify-between">
                     <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider" data-i18n="seq_editor.logic_label">Логика проверки</label>
@@ -150,38 +210,40 @@
             </div>
             <div class="space-y-3" data-onboarding-target="sequence-settings-block">
                 <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2" data-i18n="seq_editor.settings_label">Настройки последовательности</label>
-                <label for="order-inside-matters" class="settings-toggle-card flex items-start gap-3 p-3.5 rounded-xl border border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2/40 cursor-pointer transition-all select-none group">
-                    <div class="pt-0.5 shrink-0">
-                        <input id="order-inside-matters" checked=""
-                            data-onboarding-target="sequence-order-inside"
-                            class="rounded border-border-strong text-primary focus:ring-primary focus:ring-offset-0 h-4 w-4 cursor-pointer"
-                            type="checkbox" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <span class="block text-sm font-semibold text-text-main group-hover:text-primary transition-colors leading-snug" data-i18n="seq_editor.order_inside_matters_label">
-                            Порядок элементов внутри уровней
-                        </span>
-                        <span class="block text-xs text-text-muted mt-1 leading-normal" data-i18n="seq_editor.order_inside_matters_desc">
-                            Важна последовательность шагов в каждом уровне
-                        </span>
-                    </div>
-                </label>
-                <label for="level-order-matters" class="settings-toggle-card flex items-start gap-3 p-3.5 rounded-xl border border-border-subtle bg-surface-1 hover:border-primary/40 hover:bg-surface-2/40 cursor-pointer transition-all select-none group">
-                    <div class="pt-0.5 shrink-0">
-                        <input id="level-order-matters"
-                            data-onboarding-target="sequence-level-order"
-                            class="rounded border-border-strong text-primary focus:ring-primary focus:ring-offset-0 h-4 w-4 cursor-pointer"
-                            type="checkbox" />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <span class="block text-sm font-semibold text-text-main group-hover:text-primary transition-colors leading-snug" data-i18n="seq_editor.level_order_matters_label">
-                            Порядок самих уровней
-                        </span>
-                        <span class="block text-xs text-text-muted mt-1 leading-normal" data-i18n="seq_editor.level_order_matters_desc">
-                            Важна очередность прохождения самих уровней (этапов)
-                        </span>
-                    </div>
-                </label>
+                <div class="space-y-2">
+                    <label for="order-inside-matters" class="settings-toggle-row flex items-start gap-3 p-2 rounded-lg hover:bg-bg-hover cursor-pointer transition-colors select-none group">
+                        <div class="pt-0.5 shrink-0">
+                            <input id="order-inside-matters" checked=""
+                                data-onboarding-target="sequence-order-inside"
+                                class="rounded border-border-strong text-primary focus:ring-primary focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                                type="checkbox" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span id="order-inside-matters-label" class="block text-sm font-medium text-text-main group-hover:text-primary transition-colors leading-snug" data-i18n="seq_editor.order_inside_matters_label">
+                                Порядок элементов внутри уровней
+                            </span>
+                            <span id="order-inside-matters-desc" class="block text-xs text-text-muted mt-0.5 leading-normal" data-i18n="seq_editor.order_inside_matters_desc">
+                                Важна последовательность шагов в каждом уровне
+                            </span>
+                        </div>
+                    </label>
+                    <label for="level-order-matters" class="settings-toggle-row flex items-start gap-3 p-2 rounded-lg hover:bg-bg-hover cursor-pointer transition-colors select-none group">
+                        <div class="pt-0.5 shrink-0">
+                            <input id="level-order-matters"
+                                data-onboarding-target="sequence-level-order"
+                                class="rounded border-border-strong text-primary focus:ring-primary focus:ring-offset-0 h-4 w-4 cursor-pointer"
+                                type="checkbox" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <span id="level-order-matters-label" class="block text-sm font-medium text-text-main group-hover:text-primary transition-colors leading-snug" data-i18n="seq_editor.level_order_matters_label">
+                                Порядок самих уровней
+                            </span>
+                            <span id="level-order-matters-desc" class="block text-xs text-text-muted mt-0.5 leading-normal" data-i18n="seq_editor.level_order_matters_desc">
+                                Важна очередность прохождения самих уровней (этапов)
+                            </span>
+                        </div>
+                    </label>
+                </div>
             </div>
         </div>
     </aside>

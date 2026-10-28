@@ -202,11 +202,25 @@ def _list_active_session_items(session_api: Any, user_id: str) -> List[Dict[str,
             payload["display_task_index"] = _resolve_display_task_index(session_api, loaded)
             items_by_session_id[session_id] = payload
 
-    return sorted(
+    sorted_items = sorted(
         items_by_session_id.values(),
-        key=lambda item: str(item.get("updated_at") or item.get("start_time") or ""),
+        key=lambda item: (
+            str(item.get("updated_at") or ""),
+            str(item.get("start_time") or ""),
+            str(item.get("session_id") or ""),
+        ),
         reverse=True,
     )
+    seen_complexes = set()
+    deduped_items = []
+    for item in sorted_items:
+        complex_id = item.get("complex_id")
+        if complex_id:
+            if complex_id in seen_complexes:
+                continue
+            seen_complexes.add(complex_id)
+        deduped_items.append(item)
+    return deduped_items
 
 
 @session_bp.route("/api/session/<string:session_id>/task", methods=["GET"])

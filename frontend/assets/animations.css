@@ -213,6 +213,12 @@
    PAGE TRANSITION - Shared navigation enter/leave
    Theme-safe: only opacity/transform (no color overlay).
    ============================================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
 .app-page-transition {
   transition: opacity 140ms ease;
   will-change: opacity;

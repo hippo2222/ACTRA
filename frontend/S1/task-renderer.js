@@ -1073,7 +1073,19 @@
             }
             const localeKey = `s1.${messageKey}`;
             const fallback = result && result.message ? String(result.message) : "";
-            return wtf(localeKey, fallback, params);
+            let tpl = wt(localeKey, "");
+            if (!tpl || tpl === localeKey) {
+                tpl = wt(messageKey, "");
+            }
+            if (!tpl || tpl === messageKey) {
+                tpl = fallback;
+            }
+            if (tpl && typeof tpl === "string" && params) {
+                tpl = tpl.replace(/\{(\w+)\}/g, function (_, k) {
+                    return params[k] !== undefined ? params[k] : '{' + k + '}';
+                });
+            }
+            return tpl;
         }
 
         let messageText = result && result.message ? String(result.message) : "";
@@ -1545,7 +1557,7 @@
             ? (normalizedTitle && normalizedTitle !== normalizedQuestion
                 ? normalizedTitle
                 : wt('s1.open_answer_label', 'Открытый ответ'))
-            : wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?');
+            : wt('s1.iteration_label', 'Попытка {iter}').replace('{iter}', task.iteration ?? '?');
         const headerDescription = isOpenAnswerTask
             ? ((normalizedDescription && normalizedDescription !== normalizedQuestion)
                 ? normalizedDescription
@@ -1596,10 +1608,10 @@
             const progressParts = [];
             progressParts.push(
                 total && index != null
-                    ? wt('s1.task_n_of_total', 'Задание {n} из {total}').replace('{n}', index + 1).replace('{total}', total)
+                    ? `${index + 1}/${total}`
                     : wt('s1.task_type_default', 'Задание') + ' \u2013'
             );
-            progressParts.push(wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?'));
+            progressParts.push(wt('s1.iteration_label', 'Попытка {iter}').replace('{iter}', task.iteration ?? '?'));
             progressLabel.textContent = progressParts.join(" \u2022 ");
         }
 
@@ -1616,14 +1628,14 @@
                 total && index != null
                     ? wt('s1.question_n_of_total', 'Вопрос {n} из {total}').replace('{n}', index + 1).replace('{total}', total)
                     : wt('s1.question_label', 'Вопрос');
-            const iterInfo = wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?');
+            const iterInfo = wt('s1.iteration_label', 'Попытка {iter}').replace('{iter}', task.iteration ?? '?');
             taskHeaderMeta.textContent = `${qInfo} - ${iterInfo}`;
             taskHeaderMeta.classList.remove("hidden");
         }
         if (taskProgressMetaEl) {
             const metaParts = [];
             if (total && index != null) metaParts.push(wt('s1.task_n_of_total', 'Задание {n} из {total}').replace('{n}', index + 1).replace('{total}', total));
-            metaParts.push(wt('s1.iteration_label', 'Итерация {iter}').replace('{iter}', task.iteration ?? '?'));
+            metaParts.push(wt('s1.iteration_label', 'Попытка {iter}').replace('{iter}', task.iteration ?? '?'));
             taskProgressMetaEl.textContent = metaParts.join(" • ");
             taskProgressMetaEl.textContent = "";
             taskProgressMetaEl.classList.add("hidden");

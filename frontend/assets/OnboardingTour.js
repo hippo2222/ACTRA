@@ -1185,7 +1185,8 @@
             controlEl = null;
         }
 
-        const useStack = window.innerWidth <= 720;
+        const stackBreakpoint = Number(step?.calloutStackBreakpoint) || 720;
+        const useStack = window.innerWidth <= stackBreakpoint;
         if (useStack) {
             calloutStack = document.createElement('div');
             calloutStack.className = 'onboarding-tour-callout-stack';
@@ -1342,7 +1343,9 @@
     }
 
     function positionCallout(callout, occupiedRects = []) {
-        if (!callout || window.innerWidth <= 720) return;
+        const currentStep = activeTour?.steps?.[activeStepIndex];
+        const stackBreakpoint = Number(currentStep?.calloutStackBreakpoint) || 720;
+        if (!callout || window.innerWidth <= stackBreakpoint) return;
         const target = callout.__onboardingTarget;
         if (!target) return;
 
@@ -1408,7 +1411,7 @@
                     nextLeft = rect.right + balancedGap + offsetX;
                 }
             }
-            if (nextLeft + bubble.width > window.innerWidth - margin) {
+            if (!keepPlacement && nextLeft + bubble.width > window.innerWidth - margin) {
                 placement = 'left';
                 nextLeft = rect.left - bubble.width - gap - offsetX;
             }
@@ -1490,7 +1493,9 @@
     }
 
     function positionExtraArrows(callout) {
-        if (!callout || window.innerWidth <= 720) return;
+        const currentStep = activeTour?.steps?.[activeStepIndex];
+        const stackBreakpoint = Number(currentStep?.calloutStackBreakpoint) || 720;
+        if (!callout || window.innerWidth <= stackBreakpoint) return;
         const arrows = Array.isArray(callout.__onboardingExtraArrows) ? callout.__onboardingExtraArrows : [];
         if (!arrows.length) return;
 
@@ -2006,7 +2011,7 @@
         notifyReferencePreviewStep(tour, step);
     }
 
-    async function finishTour({ seen = true } = {}) {
+    async function finishTour({ seen = true, nextTourId = "" } = {}) {
         const tour = activeTour;
         const wasPreview = Boolean(activePreviewMode || activeReferencePreviewMode);
         const shouldPersistSeen = seen && !activePreviewMode;
@@ -2020,7 +2025,7 @@
         if (shouldPersistSeen && tour) {
             await markTourSeen(tour);
         }
-        if (wasPreview && typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
+        if (!nextTourId && wasPreview && typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
             try {
                 const url = new URL(window.location.href);
                 if (url.searchParams.has('onboarding_preview') || url.searchParams.has('onboarding_tour') || url.searchParams.has('onboarding_step') || url.searchParams.has('demo_state')) {
@@ -2038,6 +2043,7 @@
             detail: {
                 tourId: tour?.tourId || '',
                 seen: Boolean(seen),
+                nextTourId: String(nextTourId || ''),
             },
         }));
     }
@@ -2105,7 +2111,7 @@
                     || activeTour?.returnTourId
                     || '';
                 const shouldPreview = activePreviewMode;
-                void finishTour({ seen: false }).then(() => {
+                void finishTour({ seen: false, nextTourId: returnTourId }).then(() => {
                     if (!returnTourId) return;
                     window.setTimeout(() => {
                         void startTour(returnTourId, { force: true, preview: shouldPreview });
@@ -2119,7 +2125,7 @@
                     || step?.branchTourId
                     || '';
                 const shouldPreview = activePreviewMode;
-                void finishTour({ seen: false }).then(() => {
+                void finishTour({ seen: false, nextTourId }).then(() => {
                     if (!nextTourId) return;
                     window.setTimeout(() => {
                         void startTour(nextTourId, { force: true, preview: shouldPreview });
@@ -2295,6 +2301,9 @@
         findTour: findTourById,
         findTourForRoute,
         finish: finishTour,
+        isActive: () => Boolean(activeTour),
+        getActiveTour: () => activeTour,
+        getActiveStep: () => activeTour?.steps?.[activeStepIndex] || null,
         setStepVariant: (variant) => {
             if (!activeTour?.steps?.[activeStepIndex]) return false;
             const normalized = String(variant || '').trim();

@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from flask import Blueprint, jsonify, redirect, request, send_from_directory
+from flask import Blueprint, has_request_context, jsonify, redirect, request, send_from_directory
 
 from routes._context import get_authenticated_user_id, get_ctx, get_extra, is_hosted_web_runtime
 from services.user_service import USER_PLAN_PREMIUM, resolve_effective_plan
@@ -942,6 +942,42 @@ def _premium_required_page(feature_label: str) -> Any:
     )
 
 
+def _is_flask_debug_enabled() -> bool:
+    try:
+        val = get_extra("FLASK_DEBUG_ENABLED")
+        if val is not None:
+            return bool(val)
+    except Exception:
+        pass
+    return str(os.environ.get("FLASK_DEBUG", "0")).strip().lower() in ("1", "true", "yes", "on", "t")
+
+
+def _apply_static_cache_headers(resp: Any, filename: str) -> Any:
+    try:
+        lower = filename.lower()
+        if lower.endswith(".html"):
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+        if "/fonts/" in lower or lower.startswith("fonts/") or lower.endswith((".woff2", ".woff", ".ttf", ".eot")):
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif lower.endswith((".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp")):
+            resp.headers["Cache-Control"] = "public, max-age=86400, must-revalidate"
+        elif is_hosted_web_runtime():
+            has_version = False
+            if has_request_context():
+                try:
+                    has_version = bool(request.args.get("v"))
+                except Exception:
+                    pass
+            if has_version:
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            else:
+                resp.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+    except Exception:
+        pass
+    return resp
+
+
 def _file_debug_meta(path: Path) -> Dict[str, Any]:
     try:
         if not path.exists() or not path.is_file():
@@ -1195,12 +1231,13 @@ def serve_main_ui() -> Any:
         return jsonify({"ok": False, "error": "mainscreen_ui_not_found"}), 500
 
     main_path = MAINSCREEN_UI_DIR / "Main.html"
-    try:
-        meta = _file_debug_meta(main_path)
-        logger.info("[HTTP][UI_MAIN] serve %s", json.dumps(meta, ensure_ascii=False))
-        _flush_log_handlers()
-    except Exception:
-        pass
+    if _is_flask_debug_enabled():
+        try:
+            meta = _file_debug_meta(main_path)
+            logger.info("[HTTP][UI_MAIN] serve %s", json.dumps(meta, ensure_ascii=False))
+            _flush_log_handlers()
+        except Exception:
+            pass
 
     resp = send_from_directory(MAINSCREEN_UI_DIR, "Main.html")
     try:
@@ -1266,11 +1303,7 @@ def serve_clickui_static(filename: str) -> Any:
         return jsonify({"ok": False, "error": "clickui_not_found"}), 500
 
     resp = send_from_directory(CLICKUI_DIR, filename)
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
+    return _apply_static_cache_headers(resp, filename)
 
 
 @static_bp.route("/ui/ClickUI/<path:filename>", methods=["GET"])
@@ -1708,7 +1741,8 @@ def serve_assets(filename: str) -> Any:
     if not ASSETS_DIR or not ASSETS_DIR.exists():
         logger.error("[HTTP] ASSETS_DIR does not exist: %s", ASSETS_DIR)
         return jsonify({"ok": False, "error": "assets_dir_not_found"}), 500
-    return send_from_directory(ASSETS_DIR, filename)
+    resp = send_from_directory(ASSETS_DIR, filename)
+    return _apply_static_cache_headers(resp, filename)
 
 
 @static_bp.route("/ui/assets/<path:filename>", methods=["GET"])
@@ -1719,7 +1753,8 @@ def serve_ui_assets(filename: str) -> Any:
     if not ASSETS_DIR or not ASSETS_DIR.exists():
         logger.error("[HTTP] ASSETS_DIR does not exist: %s", ASSETS_DIR)
         return jsonify({"ok": False, "error": "assets_dir_not_found"}), 500
-    return send_from_directory(ASSETS_DIR, filename)
+    resp = send_from_directory(ASSETS_DIR, filename)
+    return _apply_static_cache_headers(resp, filename)
 
 
 @static_bp.route("/favicon.ico")

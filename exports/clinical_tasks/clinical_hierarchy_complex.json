@@ -1,0 +1,16 @@
+{
+  "id": "clinical_hierarchy_complex",
+  "name": "Клинический стенд: ТЭЛА и Острая патология плевры (Иерархии)",
+  "description": "Сквозной клинический тренажер S1 для матричных алгоритмов высокой плотности данных (ESC 2019 / РКО 2024)",
+  "tasks": [
+    "neotlozhnye_sostoyaniya_pulmonologiya_i_kardiologiya/differentsialnaya_diagnostika_i_stratifikatsiya_riska/task_5_1_tela_stratification",
+    "neotlozhnye_sostoyaniya_pulmonologiya_i_kardiologiya/differentsialnaya_diagnostika_i_stratifikatsiya_riska/task_5_2_pneumothorax_differentiation"
+  ],
+  "settings": {
+    "adaptive_difficulty": false,
+    "escalation_on_success": false,
+    "error_pool_enabled": false,
+    "max_iterations": 1,
+    "smart_retry_training_control_enabled": false
+  }
+}

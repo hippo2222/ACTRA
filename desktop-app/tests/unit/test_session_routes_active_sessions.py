@@ -386,3 +386,68 @@ def test_iteration_results_route_forwards_requested_iteration(monkeypatch):
     assert response.get_json()["results"]["iteration"] == 1
     assert calls == [("session_resume", 1, "audit_user")]
 
+
+
+def test_list_active_session_items_deduplicates_by_complex_id():
+    now = datetime.utcnow()
+    older_session = make_session(
+        session_id="session_old",
+        user_id="audit_user",
+        complex_id="same_complex",
+        paused=True,
+    )
+    older_session.start_time = now - timedelta(hours=2)
+    older_session.paused_at = now - timedelta(hours=2)
+
+    newer_session = make_session(
+        session_id="session_new",
+        user_id="audit_user",
+        complex_id="same_complex",
+        paused=True,
+    )
+    newer_session.start_time = now - timedelta(minutes=10)
+    newer_session.paused_at = now - timedelta(minutes=10)
+
+    other_complex_session = make_session(
+        session_id="session_other",
+        user_id="audit_user",
+        complex_id="another_complex",
+        paused=True,
+    )
+
+    repo = SimpleNamespace(load_all_sessions=lambda user_id: [older_session, newer_session, other_complex_session])
+    session_manager = SimpleNamespace(
+        session_repository=repo,
+        _active_sessions={},
+    )
+    fake_session_api = SimpleNamespace(
+        _session_manager=session_manager,
+        get_resume_target=lambda session: {"screen_type": "task", "url": f"/session/{session.id}"},
+    )
+
+    items = session_routes._list_active_session_items(fake_session_api, "audit_user")
+
+    # Should deduplicate 'same_complex' and keep only 'session_new'
+    session_ids = [item["session_id"] for item in items]
+    assert "session_new" in session_ids
+    assert "session_old" not in session_ids
+    assert "session_other" in session_ids
+    assert len(items) == 2
+
+
+def test_hosted_session_repository_delete_session_calls_underlying_delete_sessions_for_complex():
+    from services.session_repository import HostedSessionRepository
+    repo = HostedSessionRepository.__new__(HostedSessionRepository)
+    calls = []
+
+    class FakeDocRepo:
+        def delete_sessions_for_complex(self, *, user_id, complex_id):
+            calls.append((user_id, complex_id))
+
+    repo.ensure_persistence_ready = lambda: None
+    repo._get_hosted_repository = lambda: FakeDocRepo()
+    repo.logger = SimpleNamespace(debug=lambda *args, **kwargs: None)
+
+    res = repo.delete_session("complex_abc", "user_xyz")
+    assert res is True
+    assert calls == [("user_xyz", "complex_abc")]

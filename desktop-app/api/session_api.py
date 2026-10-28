@@ -25,6 +25,7 @@ from services.task_evaluator_service import EvaluationResult
 from api.web_models.sequence_models import (
     WebSequenceElement,
     WebSequenceLevel,
+    WebSequenceHierarchyNode,
     WebSequenceSettings,
     WebSequenceTaskData,
     WebSequenceResultDetails,
@@ -3066,6 +3067,40 @@ class SessionAPI:
                         or storage_task_data.get("levels")
                         or []
                     )
+                    nodes_src = (
+                        content.get("nodes")
+                        or task_data.get("nodes")
+                        or storage_content.get("nodes")
+                        or storage_task_data.get("nodes")
+                        or []
+                    )
+
+                    display_mode = str(
+                        content.get("display_mode")
+                        or task_data.get("display_mode")
+                        or settings_dict.get("display_mode")
+                        or storage_content.get("display_mode")
+                        or storage_task_data.get("display_mode")
+                        or "linear"
+                    ).strip().lower()
+                    if display_mode not in {"linear", "hierarchy"}:
+                        display_mode = "linear"
+
+                    color_differentiation = bool(
+                        content.get(
+                            "color_differentiation",
+                            task_data.get(
+                                "color_differentiation",
+                                settings_dict.get(
+                                    "color_differentiation",
+                                    storage_content.get(
+                                        "color_differentiation",
+                                        storage_task_data.get("color_differentiation", False),
+                                    ),
+                                ),
+                            ),
+                        )
+                    )
 
                     elements = [
                         WebSequenceElement(
@@ -3079,7 +3114,7 @@ class SessionAPI:
 
                     levels = [
                         WebSequenceLevel(
-                            level_id=l["level_id"],
+                            level_id=str(l["level_id"]),
                             label=l.get("label") or l.get("level_name") or l.get("name"),
                             slots=list(l.get("blocks") or l.get("slots") or []),
                         )
@@ -3087,7 +3122,23 @@ class SessionAPI:
                         if isinstance(l, dict) and "level_id" in l
                     ]
 
+                    nodes = None
+                    if isinstance(nodes_src, list) and nodes_src:
+                        nodes = [
+                            WebSequenceHierarchyNode(
+                                node_id=str(n["node_id"]),
+                                level_id=str(n["level_id"]),
+                                parent_id=str(n["parent_id"]) if n.get("parent_id") is not None else None,
+                                slots=list(n.get("blocks") or n.get("slots") or []),
+                                column_title=str(n["column_title"]).strip() if n.get("column_title") else None,
+                            )
+                            for n in nodes_src
+                            if isinstance(n, dict) and "node_id" in n and "level_id" in n
+                        ]
+
                     settings = WebSequenceSettings(
+                        display_mode=display_mode,
+                        color_differentiation=color_differentiation,
                         level_order_matters=bool(
                             content.get(
                                 "level_order_matters",
@@ -3111,6 +3162,8 @@ class SessionAPI:
                             for k, v in settings_dict.items()
                             if k
                             not in {
+                                "display_mode",
+                                "color_differentiation",
                                 "level_order_matters",
                                 "sequence_within_level_matters",
                                 "shuffle_elements",
@@ -3121,10 +3174,27 @@ class SessionAPI:
 
                     web_task = WebSequenceTaskData(
                         prompt=str(prompt_text),
+                        display_mode=display_mode,
+                        color_differentiation=color_differentiation,
                         elements=elements,
                         levels=levels,
+                        nodes=nodes,
                         settings=settings,
                     )
+
+                    # Preserve difficulty enhancement flags on content if present
+                    preserved_content_flags = {}
+                    for flag_key in (
+                        "show_level_labels",
+                        "show_block_labels",
+                        "requires_level_names",
+                        "requires_block_names",
+                        "display_mode",
+                        "color_differentiation",
+                    ):
+                        if flag_key in content:
+                            preserved_content_flags[flag_key] = content[flag_key]
+                    preserved_difficulty_level = task_data.get("_difficulty_level")
 
                     # Заменяем task_data на нормализованное представление,
                     # сохраняя явный тип задания для HTTP-слоя и фронта.
@@ -3133,6 +3203,13 @@ class SessionAPI:
                         "task_type": "sequence_assembly",
                         **web_task.dict(),
                     }
+                    if preserved_content_flags:
+                        task_data["content"] = {
+                            **(task_data.get("content") or {}),
+                            **preserved_content_flags,
+                        }
+                    if preserved_difficulty_level is not None:
+                        task_data["_difficulty_level"] = preserved_difficulty_level
                     if title_text:
                         task_data["name"] = str(title_text)
                     if description_text:

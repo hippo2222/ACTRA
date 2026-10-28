@@ -271,6 +271,16 @@ const PageTransition = {
         );
     },
 
+    hasNativeViewTransition() {
+        return !!(
+            typeof document !== 'undefined'
+            && 'startViewTransition' in document
+            && window.CSS
+            && CSS.supports
+            && CSS.supports('view-transition-name', 'none')
+        );
+    },
+
     _getTarget() {
         return document.querySelector('[data-page-transition-root]')
             || document.querySelector('main')
@@ -280,14 +290,18 @@ const PageTransition = {
     },
 
     applyEnterTransition() {
-        if (this.prefersReducedMotion()) return;
+        if (this.prefersReducedMotion() || this.hasNativeViewTransition()) return;
         const target = this._getTarget();
         if (!target) return;
 
         target.classList.add(this.transitionClass, this.enterClass);
 
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
+        const raf = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb) => setTimeout(cb, 16));
+
+        raf(() => {
+            raf(() => {
                 target.classList.add(this.enterActiveClass);
                 target.classList.remove(this.enterClass);
                 window.setTimeout(() => {
@@ -295,6 +309,11 @@ const PageTransition = {
                 }, this.durationMs + 40);
             });
         });
+    },
+
+    _doNavigate(url, replace = false) {
+        if (replace) window.location.replace(url);
+        else window.location.assign(url);
     },
 
     navigate(url, options = {}) {
@@ -305,16 +324,14 @@ const PageTransition = {
             ? Math.max(0, Number(options.delayMs))
             : this.durationMs;
 
-        if (this.prefersReducedMotion()) {
-            if (replace) window.location.replace(url);
-            else window.location.assign(url);
+        if (this.prefersReducedMotion() || (this.hasNativeViewTransition() && options.delayMs === undefined)) {
+            this._doNavigate(url, replace);
             return;
         }
 
         const target = this._getTarget();
         if (!target) {
-            if (replace) window.location.replace(url);
-            else window.location.assign(url);
+            this._doNavigate(url, replace);
             return;
         }
 
@@ -323,13 +340,16 @@ const PageTransition = {
         target.classList.add(this.transitionClass, this.leaveClass);
 
         window.setTimeout(() => {
-            if (replace) window.location.replace(url);
-            else window.location.assign(url);
+            this._doNavigate(url, replace);
         }, delayMs);
     },
 
     bindLinkTransitions() {
         if (this._linksBound) return;
+        if (this.hasNativeViewTransition()) {
+            this._linksBound = true;
+            return;
+        }
         this._linksBound = true;
 
         document.addEventListener(
@@ -388,8 +408,15 @@ ThemeManager.installButtonTextPreservation();
 ThemeManager.init();
 PageTransition.init();
 
-// Re-apply theme when restoring from bfcache
+// Re-apply theme and unlock transitions when restoring from bfcache
 window.addEventListener('pageshow', (event) => {
+    if (typeof PageTransition !== 'undefined') {
+        const target = PageTransition._getTarget();
+        if (target) {
+            target.removeAttribute(PageTransition.lockAttr);
+            target.classList.remove(PageTransition.transitionClass, PageTransition.leaveClass);
+        }
+    }
     if (event.persisted) {
         ThemeManager.init();
     }
@@ -397,4 +424,5 @@ window.addEventListener('pageshow', (event) => {
 
 // Export for use in other scripts if needed
 window.ThemeManager = ThemeManager;
+window.PageTransition = PageTransition;
 window.navigateWithTransition = (url, options) => PageTransition.navigate(url, options);

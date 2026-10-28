@@ -64,6 +64,12 @@
     isReady: () => readyCalled,
   };
 
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      ready();
+    }
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', armTimeout, { once: true });
   } else {

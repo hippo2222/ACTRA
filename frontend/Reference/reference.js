@@ -513,7 +513,8 @@
     }
 
     function init(root) {
-        if (!root) return;
+        try {
+            if (!root) return;
         state.tours = normalizeTours(window.ACTRA_ONBOARDING_TOURS || []);
         state.filteredTours = state.tours;
         const hashState = parseReferenceHash();
@@ -583,6 +584,9 @@
         } else {
             renderToc(root);
             renderPreview(root, null);
+        }
+        } finally {
+            window.PageBoot?.ready();
         }
     }
 

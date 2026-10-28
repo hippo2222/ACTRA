@@ -177,6 +177,18 @@ class SequenceAssemblyAnswerKey(BaseModel):
         default=None,
         description="Correct level structure with blocks (optional, can be in task.json instead)"
     )
+    nodes: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="Correct hierarchy node structure [{node_id, level_id, parent_id, blocks}]"
+    )
+    display_mode: str = Field(
+        default="linear",
+        description="Display mode: 'linear' or 'hierarchy'"
+    )
+    color_differentiation: bool = Field(
+        default=False,
+        description="Whether auto-palette color differentiation is enabled"
+    )
     sequence_within_level_matters: bool = Field(
         default=False,
         description="Whether sequence within level matters"

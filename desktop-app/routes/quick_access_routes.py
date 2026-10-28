@@ -624,17 +624,33 @@ def get_quick_access() -> Any:
             else:
                 all_p = calendar_service.get_all_progress()
             for item in all_p:
+                health_score = getattr(item, "health_score", 1.0)
+                health_pct = getattr(item, "health_percent", None)
+                if health_pct is None:
+                    health_pct = int(health_score * 100) if health_score is not None else 100
+                last_dt = getattr(item, "last_reviewed_at", None) or getattr(item, "last_practice_date", None)
+                if last_dt is not None and hasattr(last_dt, "date"):
+                    days_since = (date.today() - last_dt.date()).days
+                elif last_dt is not None:
+                    days_since = (date.today() - last_dt).days
+                else:
+                    days_since = None
+                is_crit = getattr(item, "is_critical", None)
+                if is_crit is None and hasattr(item, "get_mastery_category"):
+                    try:
+                        from services.calendar.models import MasteryCategory
+                        is_crit = item.get_mastery_category() == MasteryCategory.CRITICAL
+                    except Exception:
+                        is_crit = False
+                elif is_crit is None:
+                    is_crit = False
                 health_map[item.complex_id] = {
-                    "health_percent": item.health_percent,
+                    "health_percent": health_pct,
                     "status": (
                         item.status.value if hasattr(item.status, "value") else str(item.status)
                     ),
-                    "is_critical": item.is_critical,
-                    "days_since_last": (
-                        (date.today() - item.last_practice_date).days
-                        if item.last_practice_date
-                        else None
-                    ),
+                    "is_critical": bool(is_crit),
+                    "days_since_last": days_since,
                 }
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)

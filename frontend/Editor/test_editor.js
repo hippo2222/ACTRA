@@ -58,6 +58,10 @@ class TestEditor extends BaseEditor {
         this.testEditorOnboardingFinished = false;
         this.testEditorOnboardingDemoSnapshot = null;
         this.testEditorOnboardingDemoActive = false;
+        const testUrlParams = (typeof window !== 'undefined' && window.location?.search)
+            ? new URLSearchParams(window.location.search)
+            : new URLSearchParams();
+        this.subtypeParam = String(testUrlParams.get('subtype') || testUrlParams.get('initial_mode') || '').trim().toLowerCase();
         this.init();
     }
 
@@ -1708,8 +1712,10 @@ class TestEditor extends BaseEditor {
             return payload;
         });
 
+        const testSubtype = this.task?.task_data?.subtype || this.task?.task_data?.content?.subtype || this.subtypeParam || 'single_choice';
         return {
             test_type: testType,
+            subtype: testSubtype,
             settings: testSettings,
             questions
         };
@@ -1806,9 +1812,54 @@ class TestEditor extends BaseEditor {
             this.questions.push(this.createEmptyQuestion());
         }
 
+        // Apply URL subtype / initial_mode
+        this.applyInitialModeFromUrl();
+
         // Render UI
         this.renderUI();
     }
+
+    applyInitialModeFromUrl() {
+        const modeParam = (this.subtypeParam || '').toLowerCase().trim();
+        if (!modeParam) return;
+
+        this.subtype = modeParam;
+        if (!this.task) this.task = {};
+        if (!this.task.task_data) this.task.task_data = {};
+        this.task.task_data.subtype = modeParam;
+        if (!this.task.task_data.content) this.task.task_data.content = {};
+        this.task.task_data.content.subtype = modeParam;
+        if (this.task.metadata) {
+            this.task.metadata.subtype = modeParam;
+        }
+
+        if (this.questions.length === 1) {
+            const q = this.questions[0];
+            const isDefaultQuestion = (!q.text || q.text === wt('xt.k125', 'Новый вопрос')) &&
+                q.options.length === 2 && q.options[0].is_correct && !q.options[1].is_correct;
+            if (isDefaultQuestion || this.isNewTaskParam) {
+                if (modeParam === 'multiple_choice') {
+                    q.options = [
+                        { text: wt('xt.k126', 'Вариант 1'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                        { text: wt('xt.k127', 'Вариант 2'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                        { text: (wt('xt.k127', 'Вариант 2') + ' (3)'), is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null }
+                    ];
+                    q.settings = { all_correct_required: true, allow_partial_credit: false };
+                    this.task.task_data.content.test_type = 'multiple_choice';
+                } else if (modeParam === 'single_choice') {
+                    q.options = [
+                        { text: wt('xt.k126', 'Вариант 1'), is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                        { text: wt('xt.k127', 'Вариант 2'), is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null }
+                    ];
+                    this.task.task_data.content.test_type = 'single_choice';
+                } else if (modeParam === 'image_options') {
+                    this.task.task_data.content.test_type = 'image_options';
+                }
+            }
+        }
+    }
+
+
 
     determineQuestionType(question) {
         if (!question || !Array.isArray(question.options)) {
@@ -3358,6 +3409,7 @@ class TestEditor extends BaseEditor {
         this.finalizePendingQuestionDeletion({ dismissToast: true, silent: true });
         // Update task content with current questions
         this.task.task_data.content = this.buildBackendContent();
+        this.task.task_data.subtype = this.task?.task_data?.subtype || this.task?.task_data?.content?.subtype || this.subtypeParam || 'single_choice';
         return this.task.task_data;
     }
 

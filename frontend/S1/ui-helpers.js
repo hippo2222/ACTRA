@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI Helpers Module
  * Handles DOM manipulations, status messages, modals, and loading states.
  */
@@ -281,6 +281,22 @@
         const canShowNext = !!SessionState.canGoNext && !!SessionState.currentTaskChecked;
         nextBtn.disabled = SessionState.isLoading || !canShowNext;
         nextBtn.classList.toggle("hidden", !canShowNext);
+        const checkBtn = document.getElementById("check-answer-btn");
+        if (canShowNext) {
+            nextBtn.classList.remove("bg-surface-2", "text-text-main", "border-2", "border-border-strong");
+            nextBtn.classList.add("bg-primary", "text-primary-fg", "hover:bg-primary/90", "shadow-sm");
+            if (checkBtn) {
+                checkBtn.classList.remove("bg-primary", "text-primary-fg", "hover:bg-primary/90", "shadow-sm");
+                checkBtn.classList.add("bg-surface-2", "text-text-muted", "border", "border-border-subtle");
+            }
+        } else {
+            nextBtn.classList.remove("bg-primary", "text-primary-fg", "hover:bg-primary/90", "shadow-sm");
+            nextBtn.classList.add("bg-surface-2", "text-text-main", "border-2", "border-border-strong");
+            if (checkBtn) {
+                checkBtn.classList.remove("bg-surface-2", "text-text-muted", "border", "border-border-subtle");
+                checkBtn.classList.add("bg-primary", "text-primary-fg", "hover:bg-primary/90", "shadow-sm");
+            }
+        }
     }
 
     function setCanGoNext(enabled) {

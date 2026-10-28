@@ -4736,6 +4736,7 @@ async function loadTheoryById(theoryId) {
         syncActiveTheoryPublicationFromIndex();
         updateTheoryEditorActions();
         renderTheoryLibraryList();
+        window.PageBoot?.ready();
         await restoreTheoryDraftIfPresent(theoryEditorState.activeTheoryId);
         setTheoryStatus(wt('te.k117', 'Теория загружена'), "success", "check_circle");
         document.title = item.title ? `${item.title}${wt('te.k091', ' — Редактор теории')}` : wt('te.k002', 'Редактор теории');
@@ -5414,35 +5415,40 @@ function bindTheoryEditorEvents() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-    theoryEditorState.context = parseTheoryEditorContext();
-    renderTheoryContextHeader();
-    bindTheoryEditorEvents();
-    bindTheoryEditorOnboardingDemoObserver();
-    updateTheoryEditorActions();
-    cleanupExpiredTheoryDrafts(14);
-    updateTheoryDraftsBadge();
-    if (isTheoryEditorOnboardingDemoRequested()) {
-        applyTheoryEditorOnboardingDemoState();
-        return;
-    }
-    await Promise.all([
-        loadTheoryCatalog({ keepSelection: true }),
-        fetchTheoryWorkspaceLimits(),
-    ]);
+    try {
+        theoryEditorState.context = parseTheoryEditorContext();
+        renderTheoryContextHeader();
+        bindTheoryEditorEvents();
+        bindTheoryEditorOnboardingDemoObserver();
+        updateTheoryEditorActions();
+        cleanupExpiredTheoryDrafts(14);
+        updateTheoryDraftsBadge();
+        if (isTheoryEditorOnboardingDemoRequested()) {
+            applyTheoryEditorOnboardingDemoState();
+            return;
+        }
+        await Promise.all([
+            loadTheoryCatalog({ keepSelection: true }),
+            fetchTheoryWorkspaceLimits(),
+        ]);
 
-    if (theoryEditorState.context?.theoryId) {
-        await loadTheoryById(theoryEditorState.context.theoryId);
-        return;
-    }
+        if (theoryEditorState.context?.theoryId) {
+            await loadTheoryById(theoryEditorState.context.theoryId);
+            return;
+        }
 
-    resetTheoryEditorState();
-    setTheoryStatus(wt('te.k093', 'Новая теория'), "muted", "edit_square");
-    document.title = wt('te.k094', 'Новая теория — Редактор теории');
+        resetTheoryEditorState();
+        setTheoryStatus(wt('te.k093', 'Новая теория'), "muted", "edit_square");
+        document.title = wt('te.k094', 'Новая теория — Редактор теории');
+    } finally {
+        window.PageBoot?.ready();
+    }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
     window.setTimeout(async () => {
         if (theoryEditorState.context?.theoryId || theoryEditorState.activeTheoryId) return;
+        window.PageBoot?.ready();
         await restoreTheoryDraftIfPresent("");
     }, 280);
 });

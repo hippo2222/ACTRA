@@ -4,6 +4,8 @@
 <head>
     <link rel="icon" href="../assets/actra_white.ico" type="image/x-icon" />
     <script src="../../assets/ThemeManager.js"></script>
+    <link href="/assets/PageBoot.css" rel="stylesheet" />
+    <script src="/assets/PageBoot.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="page.editor">ACTRA — Редактор</title>
@@ -455,6 +457,11 @@
             max-width: min(100%, 34rem);
         }
 
+        .editor-dialog-shell-studio {
+            max-width: min(100%, 48rem);
+            max-height: min(92vh, 570px);
+        }
+
         .editor-dialog-title-wrap,
         .editor-dialog-title,
         .editor-dialog-subtitle,
@@ -621,7 +628,12 @@
 </head>
 
 <body
-    class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
+    class="actra-page-booting bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
+    <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+        <div class="actra-page-boot-card">
+            <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
     <div data-global-header data-app-section="editor"></div>
     <div class="editor-dashboard-shell relative flex min-h-0 overflow-hidden" data-onboarding-target="editor-dashboard-shell">
     <aside id="editor-sidebar"
@@ -835,115 +847,163 @@
     </div>
     <!-- Create Task Modal -->
     <div id="create-task-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="editor-task-studio-title"
         data-onboarding-target="editor-create-task-modal"
         class="editor-modal-layer hidden fixed inset-0 overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
             data-onboarding-target="editor-create-task-dialog"
             data-onboarding-spotlight="frame"
-            class="editor-dialog-shell editor-dialog-shell-wide editor-dialog-surface">
-            <div class="editor-dialog-header px-6 pt-6 pb-5">
-                <div class="flex items-start justify-between gap-3 mb-5">
+            class="editor-dialog-shell editor-dialog-shell-studio editor-dialog-surface">
+            <div class="editor-dialog-header px-5 pt-4 pb-3">
+                <div class="flex items-start justify-between gap-3 mb-2">
                     <div class="editor-dialog-title-wrap">
-                        <h3 class="editor-modal-title" data-i18n="md.create_task_title">Создать новое задание</h3>
-                        <p class="editor-modal-subtitle" data-i18n="md.create_task_subtitle">Выберите модуль, тему и тип. После создания откроется рабочий редактор задания.</p>
+                        <h3 id="editor-task-studio-title" class="editor-modal-title text-base font-bold" data-i18n="md.studio_create_title">Студия создания заданий</h3>
+                        <p class="editor-modal-subtitle text-xs" data-i18n="md.studio_create_subtitle">Выберите архетип, формат проверки и настройте контекст обучения.</p>
                     </div>
-                    <button onclick="dashboard.closeModals()"
+                    <button onclick="dashboard.closeModals({ userInitiated: true, resetDraft: true })"
                         class="editor-modal-close-btn"
                         aria-label="Закрыть" data-i18n-aria="md.close_aria">
                         <span class="material-symbols-outlined" style="font-size: 20px;">close</span>
                     </button>
                 </div>
-                <div id="create-task-limit-note" class="hidden mb-4 rounded-lg border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker"></div>
-                <form id="create-task-form" class="space-y-4">
-                    <div data-onboarding-target="editor-create-task-context" class="editor-modal-group">
+                <div id="create-task-limit-note" class="hidden mb-2 rounded-lg border border-warning-light bg-warning-lighter px-3 py-1.5 text-xs text-warning-darker"></div>
+                <form id="create-task-form" class="space-y-2" onsubmit="event.preventDefault(); dashboard.submitTaskForm(); return false;">
+                    <div data-onboarding-target="editor-create-task-context" class="editor-dialog-context-row">
                         <div>
-                            <label class="editor-modal-label" data-i18n="md.module_label">Модуль</label>
+                            <label class="editor-modal-label text-xs mb-1" data-i18n="md.module_label">Модуль</label>
                             <div class="editor-dialog-inline-row">
                                 <div class="editor-select-wrap flex-1 min-w-0">
-                                    <select id="task-module-select" class="editor-modal-field">
+                                    <select id="task-module-select" class="editor-modal-field text-xs py-1.5">
                                         <option value="" data-i18n="md.select_module_opt">Выберите модуль...</option>
                                     </select>
                                 </div>
                                 <button type="button" onclick="dashboard.showModuleModal()"
-                                    class="editor-inline-add-btn"
+                                    class="editor-inline-add-btn h-8 w-8"
                                     title="Добавить модуль" data-i18n-title="md.add_module_title">
-                                    <span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
                                 </button>
                             </div>
                         </div>
                         <div data-onboarding-target="editor-create-task-topic">
-                            <label class="editor-modal-label" data-i18n="md.topic_label">Тема</label>
+                            <label class="editor-modal-label text-xs mb-1" data-i18n="md.topic_label">Тема</label>
                             <div class="editor-dialog-inline-row">
                                 <div class="editor-select-wrap flex-1 min-w-0">
-                                    <select id="task-topic-select" class="editor-modal-field">
+                                    <select id="task-topic-select" class="editor-modal-field text-xs py-1.5">
                                         <option value="" data-i18n="md.select_topic_opt">Выберите тему...</option>
                                     </select>
                                 </div>
                                 <button type="button" onclick="dashboard.showTopicModal()"
-                                    class="editor-inline-add-btn"
+                                    class="editor-inline-add-btn h-8 w-8"
                                     title="Добавить тему" data-i18n-title="md.add_topic_title">
-                                    <span class="material-symbols-outlined" style="font-size: 20px;">add</span>
+                                    <span class="material-symbols-outlined" style="font-size: 18px;">add</span>
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <div class="space-y-3 pt-1">
-                        <div data-onboarding-target="editor-create-task-name">
-                            <label class="editor-modal-label" data-i18n="md.task_name_label">Название задания</label>
-                            <input type="text" id="task-name-input" maxlength="100"
-                                class="editor-modal-field"
-                                placeholder="Введите понятное название задания" data-i18n-placeholder="md.task_name_ph" required>
-                        </div>
-                        <div data-onboarding-target="editor-create-task-type">
-                            <label class="editor-modal-label" data-i18n="md.task_type_label">Тип задания</label>
-                            <!-- Apple-style visual task type grid -->
-                            <div class="editor-task-type-grid" id="editor-task-type-picker">
+                    <div data-onboarding-target="editor-create-task-name">
+                        <label class="editor-modal-label text-xs mb-1" data-i18n="md.task_name_label">Название задания</label>
+                        <input type="text" id="task-name-input" maxlength="100"
+                            class="editor-modal-field text-xs py-1.5"
+                            placeholder="Введите понятное название задания" data-i18n-placeholder="md.task_name_ph" required>
+                    </div>
+                    <div data-onboarding-target="editor-create-task-type">
+                        <label class="editor-modal-label text-xs mb-1" data-i18n="md.studio_archetype_header">Тип задания</label>
+                        
+                        <!-- Studio Split-View -->
+                        <div class="editor-task-studio-grid">
+                            <!-- Left: Archetype selection -->
+                            <div class="editor-studio-archetypes" id="editor-task-type-picker" role="radiogroup" aria-label="Тип задания" data-i18n-aria="md.task_type_label">
                                 <button type="button" class="editor-task-type-card is-active" data-type="click">
-                                    <span class="material-symbols-outlined">ads_click</span>
-                                    <span class="editor-task-type-name" data-i18n="md.task_type_click">Клик</span>
-                                </button>
-                                <button type="button" class="editor-task-type-card" data-type="draw">
-                                    <span class="material-symbols-outlined">draw</span>
-                                    <span class="editor-task-type-name" data-i18n="md.task_type_draw">Рисование</span>
-                                </button>
-                                <button type="button" class="editor-task-type-card" data-type="test">
-                                    <span class="material-symbols-outlined">quiz</span>
-                                    <span class="editor-task-type-name" data-i18n="md.task_type_test">Тест</span>
+                                    <span class="material-symbols-outlined editor-studio-archetype-icon">ads_click</span>
+                                    <div class="editor-task-type-meta">
+                                        <span class="editor-task-type-name" data-i18n="md.archetype_click_title">Клик / Точка</span>
+                                        <span class="editor-task-type-badge" data-i18n="md.studio_formats_count_3">3 формата</span>
+                                    </div>
                                 </button>
                                 <button type="button" class="editor-task-type-card" data-type="sequence_assembly">
-                                    <span class="material-symbols-outlined">format_list_numbered</span>
-                                    <span class="editor-task-type-name" data-i18n="md.task_type_seq">Сборка</span>
+                                    <span class="material-symbols-outlined editor-studio-archetype-icon">format_list_numbered</span>
+                                    <div class="editor-task-type-meta">
+                                        <span class="editor-task-type-name" data-i18n="md.archetype_seq_title">Последовательность</span>
+                                        <span class="editor-task-type-badge" data-i18n="md.studio_formats_count_2">2 формата</span>
+                                    </div>
                                 </button>
-                                <button type="button" class="editor-task-type-card" data-type="image_labeling">
-                                    <span class="material-symbols-outlined">label</span>
-                                    <span class="editor-task-type-name" data-i18n="md.task_type_image_labeling">Подписи</span>
+                                <button type="button" class="editor-task-type-card" data-type="test">
+                                    <span class="material-symbols-outlined editor-studio-archetype-icon">quiz</span>
+                                    <div class="editor-task-type-meta">
+                                        <span class="editor-task-type-name" data-i18n="md.archetype_test_title">Тест / Выбор</span>
+                                        <span class="editor-task-type-badge" data-i18n="md.studio_formats_count_3">3 формата</span>
+                                    </div>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="draw">
+                                    <span class="material-symbols-outlined editor-studio-archetype-icon">draw</span>
+                                    <div class="editor-task-type-meta">
+                                        <span class="editor-task-type-name" data-i18n="md.archetype_draw_title">Рисование / Контур</span>
+                                        <span class="editor-task-type-badge" data-i18n="md.studio_formats_count_2">2 формата</span>
+                                    </div>
                                 </button>
                                 <button type="button" class="editor-task-type-card" data-type="open_answer">
-                                    <span class="material-symbols-outlined">edit_note</span>
-                                    <span class="editor-task-type-name" data-i18n="md.task_type_open">Открытый</span>
+                                    <span class="material-symbols-outlined editor-studio-archetype-icon">edit_note</span>
+                                    <div class="editor-task-type-meta">
+                                        <span class="editor-task-type-name" data-i18n="md.archetype_open_title">Открытый ответ</span>
+                                        <span class="editor-task-type-badge" data-i18n="md.studio_formats_count_2">2 формата</span>
+                                    </div>
+                                </button>
+                                <button type="button" class="editor-task-type-card" data-type="image_labeling">
+                                    <span class="material-symbols-outlined editor-studio-archetype-icon">label</span>
+                                    <div class="editor-task-type-meta">
+                                        <span class="editor-task-type-name" data-i18n="md.archetype_image_labeling_title">Подписи на рисунке</span>
+                                        <span class="editor-task-type-badge" data-i18n="md.studio_formats_count_2">2 формата</span>
+                                    </div>
                                 </button>
                             </div>
-                            <!-- Underlying select kept synced for form submission & tours -->
-                            <select id="task-type-select" class="hidden">
-                                <option value="click" selected data-i18n="md.task_type_click">Клик (Аннотация)</option>
-                                <option value="draw" data-i18n="md.task_type_draw">Рисование</option>
-                                <option value="test" data-i18n="md.task_type_test">Тест (Выбор ответа)</option>
-                                <option value="sequence_assembly" data-i18n="md.task_type_seq">Сборка последовательности</option>
-                                <option value="image_labeling" data-i18n="md.task_type_image_labeling">Подписи на рисунке</option>
-                                <option value="open_answer" data-i18n="md.task_type_open">Открытый ответ</option>
-                            </select>
+
+                            <!-- Right: Showcase -->
+                            <div class="editor-studio-showcase" id="editor-task-showcase">
+                                <div class="editor-showcase-header-row">
+                                    <div class="editor-subtype-pills" id="editor-subtype-pills">
+                                        <!-- Dynamic subtype buttons -->
+                                    </div>
+                                    
+                                </div>
+                                <div class="editor-showcase-canvas" id="editor-showcase-canvas">
+                                    <!-- Dynamic SVG Vector Preview -->
+                                </div>
+                                <p class="editor-showcase-desc" id="editor-showcase-desc">
+                                    <!-- Dynamic Description -->
+                                </p>
+                                <div class="editor-showcase-example" id="editor-showcase-example">
+                                    <span class="material-symbols-outlined text-sm text-primary flex-shrink-0">school</span>
+                                    <div>
+                                        <span class="editor-showcase-example-label" data-i18n="md.studio_clinical_example_label">Учебный пример:</span>
+                                        <span id="editor-showcase-example-text"></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Underlying inputs kept synced for form submission & tours -->
+                        <input type="hidden" id="task-subtype-input" name="task_subtype" value="regions">
+                        <select id="task-type-select" class="hidden">
+                            <option value="click" selected data-i18n="md.task_type_click">Клик (Аннотация)</option>
+                            <option value="draw" data-i18n="md.task_type_draw">Рисование</option>
+                            <option value="test" data-i18n="md.task_type_test">Тест (Выбор ответа)</option>
+                            <option value="sequence_assembly" data-i18n="md.task_type_seq">Последовательность</option>
+                            <option value="image_labeling" data-i18n="md.task_type_image_labeling">Подписи на рисунке</option>
+                            <option value="open_answer" data-i18n="md.task_type_open">Открытый ответ</option>
+                        </select>
                     </div>
                 </form>
             </div>
-            <div class="editor-modal-footer">
-                <button type="button" onclick="dashboard.closeModals()"
-                    class="editor-modal-ghost-btn" data-i18n="md.cancel">
+            <div class="editor-modal-footer px-5 py-3">
+                <button type="button" onclick="dashboard.closeModals({ userInitiated: true, resetDraft: true })"
+                    class="editor-modal-ghost-btn text-xs py-1.5" data-i18n="md.cancel">
                     Отмена
                 </button>
                 <button id="create-task-submit-btn" type="button" onclick="dashboard.submitTaskForm()"
                     data-onboarding-target="editor-create-task-submit"
-                    class="editor-modal-primary-btn" data-i18n="md.create_task_btn">
+                    class="editor-modal-primary-btn text-xs py-1.5" data-i18n="md.create_task_btn">
                     Создать задание
                 </button>
             </div>

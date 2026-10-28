@@ -3191,6 +3191,7 @@ function wt(key, fallback) {
             const errorEl = document.getElementById("error-state");
             const filterEmptyEl = document.getElementById("filtered-empty-state");
             if (!listEl) return;
+            if (isComplexesLoading) return;
             const isInitialLoad = !hasLoadedComplexesOnce;
 
             isComplexesLoading = true;
@@ -3205,13 +3206,14 @@ function wt(key, fallback) {
 
             try {
               const userId = await resolveCurrentComplexesUserId();
-              const [complexesResp, linkedLibraryItems, sessionsResp, quickAccessResp, catalogResp] = await Promise.all([
+              const [complexesResp, linkedLibraryItems, sessionsResp, quickAccessResp, catalogResp, , healthResp] = await Promise.all([
                 fetch("/api/complexes"),
                 fetchLinkedComplexLibraryItemsForList(),
                 fetch(appendUserIdQuery("/api/sessions/active", userId)),
                 fetch(appendUserIdQuery("/api/ui/quick-access", userId)),
                 fetch("/api/editor/catalog"),
                 workspaceLimitsPromise,
+                fetch("/api/calendar/health").catch(() => null),
               ]);
               const data = await complexesResp.json();
               let sessions = [];
@@ -3284,16 +3286,17 @@ function wt(key, fallback) {
               const statusByComplexId = new Map();
               const reviewStateByComplexId = new Map();
               try {
-                const healthResp = await fetch("/api/calendar/health");
-                const healthData = await healthResp.json();
-                const ok = healthData && (healthData.success || healthData.ok);
-                if (ok && Array.isArray(healthData.complexes)) {
-                  for (const item of healthData.complexes) {
-                    if (!item) continue;
-                    const id = normalizeComplexId(item.complex_id || item.id);
-                    if (!id) continue;
-                    statusByComplexId.set(id, item.status);
-                    reviewStateByComplexId.set(id, !!item.is_critical);
+                if (healthResp && healthResp.ok) {
+                  const healthData = await healthResp.json();
+                  const ok = healthData && (healthData.success || healthData.ok);
+                  if (ok && Array.isArray(healthData.complexes)) {
+                    for (const item of healthData.complexes) {
+                      if (!item) continue;
+                      const id = normalizeComplexId(item.complex_id || item.id);
+                      if (!id) continue;
+                      statusByComplexId.set(id, item.status);
+                      reviewStateByComplexId.set(id, !!item.is_critical);
+                    }
                   }
                 }
               } catch (_) {}

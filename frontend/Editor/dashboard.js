@@ -157,6 +157,10 @@ class EditorDashboard {
                 this.renderRecoveryCenter();
             }
             this.checkActivePreviewSession();
+            window.PageBoot?.ready();
+        }).catch((err) => {
+            console.error('[Dashboard] Init failed:', err);
+            window.PageBoot?.ready();
         }); // Clean orphaned drafts after catalog loads
         this.setupEventListeners();
         this.setupPageExitSafety();
@@ -368,7 +372,10 @@ class EditorDashboard {
         }
         if (topicSelect) topicSelect.value = 'onboarding-topic-waves';
         if (nameInput) nameInput.value = wt('editor_base.demo.wave_control_q', 'Контрольный вопрос по волнам');
-        if (typeSelect) typeSelect.value = 'test';
+        if (typeSelect) {
+            typeSelect.value = 'test';
+            this.syncTaskTypePicker();
+        }
     }
 
     restoreEditorDashboardOnboardingDemoState() {
@@ -1968,36 +1975,53 @@ class EditorDashboard {
         });
     }
 
-    showCreateTaskModal() {
+    showCreateTaskModal(options = {}) {
         const modal = document.querySelector('#create-task-modal');
         if (!modal) return;
 
-        // Populate modules
-        const moduleSelect = document.querySelector('#task-module-select');
-        moduleSelect.innerHTML = wt('db.k068', '<option value="">Выберите модуль...</option>');
-        this.catalog.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = m.name || m.id;
-            moduleSelect.appendChild(opt);
-        });
+        if (typeof document !== 'undefined' && document.activeElement && typeof document.activeElement.focus === 'function') {
+            this.lastFocusedElementBeforeTaskModal = document.activeElement;
+        }
 
-        // Listen for module change to update topics
+        const preserveDraft = options.preserveDraft !== false;
+        const nameInput = document.querySelector('#task-name-input');
+        const typeSelect = document.querySelector('#task-type-select');
+        const subtypeInput = document.querySelector('#task-subtype-input');
+
+        const savedName = preserveDraft ? (nameInput?.value || '') : '';
+        const savedType = preserveDraft ? (typeSelect?.value || 'click') : 'click';
+        const savedSubtype = preserveDraft ? (subtypeInput?.value || 'regions') : 'regions';
+        const savedModule = preserveDraft ? (document.querySelector('#task-module-select')?.value || '') : '';
+        const savedTopic = preserveDraft ? (document.querySelector('#task-topic-select')?.value || '') : '';
+
+        // Populate modules
+        this.populateTaskModuleSelect();
+        const moduleSelect = document.querySelector('#task-module-select');
         moduleSelect.onchange = () => this.updateTopicSelect();
 
-        if (this.activeModuleId) {
-            moduleSelect.value = this.activeModuleId;
+        const targetModuleId = options.moduleId || savedModule || this.activeModuleId;
+        if (targetModuleId) {
+            moduleSelect.value = targetModuleId;
             this.updateTopicSelect();
             const topicSelect = document.querySelector('#task-topic-select');
-            if (this.activeTopicId) {
-                topicSelect.value = this.activeTopicId;
+            const targetTopicId = options.topicId || savedTopic || this.activeTopicId;
+            if (targetTopicId) {
+                topicSelect.value = targetTopicId;
             }
         } else {
             this.updateTopicSelect();
         }
 
+        if (nameInput) {
+            nameInput.value = savedName;
+        }
+
+        if (typeSelect) {
+            typeSelect.value = savedType;
+        }
+
         this.setupTaskTypePicker();
-        this.syncTaskTypePicker();
+        this.syncTaskTypePicker(savedSubtype);
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -2006,11 +2030,19 @@ class EditorDashboard {
             modalContent.classList.remove('animate-scale-in');
             requestAnimationFrame(() => modalContent.classList.add('animate-scale-in'));
         }
+
+        this.setupTaskModalFocusTrap(modal);
+        if (nameInput && typeof nameInput.focus === 'function') {
+            try {
+                nameInput.focus();
+            } catch (_) {}
+        }
+
         // Backdrop-click to dismiss
         const onBackdropClick = (e) => {
             if (e.target === modal) {
                 modal.removeEventListener('click', onBackdropClick);
-                this.closeModals();
+                this.closeModals({ userInitiated: true, resetDraft: true });
             }
         };
         modal.addEventListener('click', onBackdropClick);
@@ -2025,12 +2057,676 @@ class EditorDashboard {
         }
     }
 
+    setupTaskModalFocusTrap(modal) {
+        if (!modal) return;
+        if (this._taskModalKeydownHandler) {
+            modal.removeEventListener('keydown', this._taskModalKeydownHandler);
+            this._taskModalKeydownHandler = null;
+        }
+
+        this._taskModalKeydownHandler = (e) => {
+            if (e.key === 'Tab') {
+                const focusableSelectors = [
+                    'button:not([disabled])',
+                    'input:not([disabled]):not([type="hidden"])',
+                    'select:not([disabled])',
+                    'textarea:not([disabled])',
+                    'a[href]',
+                    '[tabindex]:not([tabindex="-1"])'
+                ].join(', ');
+                const focusable = Array.from(modal.querySelectorAll(focusableSelectors))
+                    .filter(el => {
+                        if (typeof window !== 'undefined' && window.getComputedStyle) {
+                            const style = window.getComputedStyle(el);
+                            if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+                        }
+                        return el.offsetParent !== null || el.offsetWidth > 0 || el.offsetHeight > 0;
+                    });
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+
+                if (e.shiftKey) {
+                    if (document.activeElement === first || !modal.contains(document.activeElement)) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else {
+                    if (document.activeElement === last || !modal.contains(document.activeElement)) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            }
+        };
+        modal.addEventListener('keydown', this._taskModalKeydownHandler);
+    }
+
+    resetTaskModalDraft() {
+        const nameInput = document.querySelector('#task-name-input');
+        if (nameInput) nameInput.value = '';
+        const typeSelect = document.querySelector('#task-type-select');
+        if (typeSelect) typeSelect.value = 'click';
+        const subtypeInput = document.querySelector('#task-subtype-input');
+        if (subtypeInput) subtypeInput.value = 'regions';
+        this.syncTaskTypePicker('regions');
+    }
+
+    getTaskStudioArchetypes() {
+        return {
+            click: {
+                id: 'click',
+                subtypes: [
+                    {
+                        id: 'regions',
+                        nameKey: 'md.subtype_click_regions_name',
+                        defaultName: wt('md.subtype_click_regions_name', 'Область на схеме'),
+                        descKey: 'md.subtype_click_regions_desc',
+                        defaultDesc: wt('md.subtype_click_regions_desc', 'Нажатие на нужную структуру или зону на иллюстрации с подтверждением выбора.'),
+                        exampleKey: 'md.subtype_click_regions_example',
+                        defaultExample: wt('md.subtype_click_regions_example', 'Биология: найти и нажать на хлоропласт на схеме растительной клетки.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <path d="M40,55 C40,25 90,16 150,18 C200,20 220,35 220,60 C220,90 190,102 140,102 C80,102 40,85 40,55 Z" fill="color-mix(in srgb, var(--color-primary) 6%, var(--color-surface-2))" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <circle cx="85" cy="58" r="16" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                <text x="85" y="62" font-family="Inter, sans-serif" font-size="9.5" fill="var(--color-text-secondary)" text-anchor="middle">${wt('md.svg_clk_cell_nucleus', 'Ядро')}</text>
+                                <ellipse cx="125" cy="38" rx="14" ry="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                <text x="125" y="41" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle">${wt('md.svg_clk_cell_mitoch', 'Митохондрия')}</text>
+                                <ellipse cx="165" cy="68" rx="26" ry="18" fill="color-mix(in srgb, var(--color-success, #10b981) 15%, transparent)" stroke="var(--color-success, #10b981)" stroke-width="1.8" stroke-dasharray="4 2"/>
+                                <line x1="145" y1="68" x2="185" y2="68" stroke="var(--color-success, #10b981)" stroke-width="1.2"/>
+                                <line x1="165" y1="50" x2="165" y2="86" stroke="var(--color-success, #10b981)" stroke-width="1.2"/>
+                                <polygon points="175,76 179,88 185,82" fill="var(--color-primary)"/>
+                                <g transform="translate(210, 36)">
+                                    <rect width="205" height="48" rx="6" fill="var(--color-surface-2)" stroke="var(--color-success, #10b981)" stroke-width="1.2"/>
+                                    <circle cx="22" cy="24" r="10" fill="var(--color-success, #10b981)"/>
+                                    <text x="22" y="28" font-family="Inter, sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+                                    <text x="40" y="22" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-text-main)">${wt('md.svg_clk_target_badge', 'Область: Хлоропласт ✓')}</text>
+                                    <text x="40" y="38" font-family="Inter, sans-serif" font-size="9.5" fill="var(--color-text-secondary)">${wt('md.svg_clk_target_sub', 'Органелла фотосинтеза')}</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'errors_words',
+                        nameKey: 'md.subtype_click_errors_words_name',
+                        defaultName: wt('md.subtype_click_errors_words_name', 'Поиск ошибок в словах'),
+                        descKey: 'md.subtype_click_errors_words_desc',
+                        defaultDesc: wt('md.subtype_click_errors_words_desc', 'Интерактивный клик по ошибочным словам в учебном тексте с заменой на эталон.'),
+                        exampleKey: 'md.subtype_click_errors_words_example',
+                        defaultExample: wt('md.subtype_click_errors_words_example', 'Фармакология: поиск ошибки в рецепте («три раза [в неделю]» → эталон «[в день]»).'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(26, 18)">
+                                    <rect width="388" height="84" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <text x="16" y="24" font-family="Inter, sans-serif" font-size="11" font-weight="700" fill="var(--color-primary)">${wt('md.svg_clk_rx_title', 'Рецепт: по 1 капсуле 3 раза')}</text>
+                                    <text x="16" y="48" font-family="Inter, sans-serif" font-size="10.5" fill="var(--color-text-main)">${wt('md.svg_clk_rx_take', 'Принимать:')}</text>
+                                    <rect x="90" y="34" width="102" height="20" rx="4" fill="color-mix(in srgb, #ef4444 15%, transparent)" stroke="#ef4444" stroke-width="1.2"/>
+                                    <text x="141" y="48" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="#ef4444" text-anchor="middle">${wt('md.svg_clk_rx_err', 'в неделю ✗')}</text>
+                                    <text x="202" y="48" font-family="Inter, sans-serif" font-size="10.5" fill="var(--color-text-main)">${wt('md.svg_clk_rx_after', 'после еды.')}</text>
+                                    <path d="M141,56 L141,64 L160,64" stroke="var(--color-success, #10b981)" stroke-width="1.2" fill="none"/>
+                                    <rect x="160" y="58" width="140" height="20" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 15%, transparent)" stroke="var(--color-success, #10b981)" stroke-width="1.2"/>
+                                    <text x="230" y="72" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_clk_rx_correct', 'Эталон: в день ✓')}</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'errors_texts',
+                        nameKey: 'md.subtype_click_errors_texts_name',
+                        defaultName: wt('md.subtype_click_errors_texts_name', 'Выбор верного текста'),
+                        descKey: 'md.subtype_click_errors_texts_desc',
+                        defaultDesc: wt('md.subtype_click_errors_texts_desc', 'Сравнение 2–3 вариантов развернутых формулировок и выбор методически верной.'),
+                        exampleKey: 'md.subtype_click_errors_texts_example',
+                        defaultExample: wt('md.subtype_click_errors_texts_example', 'Медицина: выбор клинически корректного правила приема препарата.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(26, 18)">
+                                    <rect width="388" height="36" rx="5" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <circle cx="18" cy="18" r="8" fill="color-mix(in srgb, #ef4444 15%, transparent)" stroke="#ef4444" stroke-width="1"/>
+                                    <text x="18" y="22" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#ef4444" text-anchor="middle">✗</text>
+                                    <text x="34" y="22" font-family="Inter, sans-serif" font-size="10.5" fill="var(--color-text-secondary)">${wt('md.svg_clk_opt_wrong', '✗ Вариант А: Натощак перед сном')}</text>
+                                </g>
+                                <g transform="translate(26, 62)">
+                                    <rect width="388" height="38" rx="5" fill="color-mix(in srgb, var(--color-success, #10b981) 12%, var(--color-surface-1))" stroke="var(--color-success, #10b981)" stroke-width="1.5"/>
+                                    <circle cx="18" cy="19" r="8" fill="var(--color-success, #10b981)"/>
+                                    <text x="18" y="23" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+                                    <text x="34" y="23" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-success, #10b981)">${wt('md.svg_clk_opt_correct', '✓ Вариант Б: После еды, запивая водой')}</text>
+                                </g>
+                            </svg>
+                        `
+                    }
+                ]
+            },
+            sequence_assembly: {
+                id: 'sequence_assembly',
+                subtypes: [
+                    {
+                        id: 'linear',
+                        nameKey: 'md.subtype_seq_linear_name',
+                        defaultName: wt('md.subtype_seq_linear_name', 'Цепочка шагов'),
+                        descKey: 'md.subtype_seq_linear_desc',
+                        defaultDesc: wt('md.subtype_seq_linear_desc', 'Пошаговый алгоритм проведения опыта или решения задачи с контролем порядка.'),
+                        exampleKey: 'md.subtype_seq_linear_example',
+                        defaultExample: wt('md.subtype_seq_linear_example', 'Химия: этапы приготовления раствора заданной концентрации из сухого вещества.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(22, 34)">
+                                    <rect width="118" height="52" rx="6" fill="var(--color-surface-2)" stroke="var(--color-success, #10b981)" stroke-width="1.5"/>
+                                    <rect x="8" y="8" width="16" height="16" rx="3" fill="var(--color-success, #10b981)"/>
+                                    <text x="16" y="20" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+                                    <text x="28" y="20" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="var(--color-text-main)">${wt('md.svg_seq_sol_step1', '1. Навеска соли')}</text>
+                                    <text x="8" y="38" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)">${wt('md.svg_seq_sol_sub1', 'Взвешивание образца')}</text>
+                                    <text x="110" y="20" font-family="Inter, sans-serif" font-size="10.5" fill="var(--color-success, #10b981)" text-anchor="end">✓</text>
+                                </g>
+                                <path d="M144,60 L160,60" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round"/>
+                                <polygon points="158,56 166,60 158,64" fill="var(--color-primary)"/>
+                                <g transform="translate(168, 34)">
+                                    <rect width="132" height="52" rx="6" fill="color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-2))" stroke="var(--color-primary)" stroke-width="1.5"/>
+                                    <rect x="8" y="8" width="16" height="16" rx="3" fill="var(--color-primary)"/>
+                                    <text x="16" y="20" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+                                    <text x="28" y="20" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="var(--color-primary)">${wt('md.svg_seq_sol_step2', '2. Растворение')}</text>
+                                    <text x="8" y="38" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)">${wt('md.svg_seq_sol_sub2', 'Перемешивание в колбе')}</text>
+                                </g>
+                                <path d="M304,60 L320,60" stroke="var(--color-border-subtle)" stroke-width="2" stroke-linecap="round"/>
+                                <polygon points="318,56 326,60 318,64" fill="var(--color-border-subtle)"/>
+                                <g transform="translate(328, 34)">
+                                    <rect width="94" height="52" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <rect x="8" y="8" width="16" height="16" rx="3" fill="var(--color-border-subtle)"/>
+                                    <text x="16" y="20" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="var(--color-text-secondary)" text-anchor="middle">3</text>
+                                    <text x="28" y="20" font-family="Inter, sans-serif" font-size="9" font-weight="600" fill="var(--color-text-main)">${wt('md.svg_seq_sol_step3', '3. До метки')}</text>
+                                    <text x="8" y="38" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)">${wt('md.svg_seq_sol_sub3', 'Мерная колба')}</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'hierarchy',
+                        nameKey: 'md.subtype_seq_hierarchy_name',
+                        defaultName: wt('md.subtype_seq_hierarchy_name', 'Иерархия и 2D-матрица'),
+                        descKey: 'md.subtype_seq_hierarchy_desc',
+                        defaultDesc: wt('md.subtype_seq_hierarchy_desc', 'Классификация понятий по колонкам (категориям) и строкам (уровням) с проверкой связей.'),
+                        exampleKey: 'md.subtype_seq_hierarchy_example',
+                        defaultExample: wt('md.subtype_seq_hierarchy_example', 'Химия: классификация неорганических веществ (Оксиды, Кислоты, Соли).'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <rect x="26" y="16" width="186" height="22" rx="4" fill="color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-2))" stroke="var(--color-primary)" stroke-width="1"/>
+                                <text x="119" y="31" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="var(--color-primary)" text-anchor="middle">${wt('md.svg_seq_hier_col1', 'Оксиды (категория)')}</text>
+                                
+                                <rect x="228" y="16" width="186" height="22" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                <text x="321" y="31" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="var(--color-text-main)" text-anchor="middle">${wt('md.svg_seq_hier_col2', 'Кислоты (категория)')}</text>
+
+                                <g transform="translate(26, 46)">
+                                    <rect width="88" height="32" rx="4" fill="var(--color-surface-2)" stroke="var(--color-primary)" stroke-width="1.2"/>
+                                    <text x="44" y="14" font-family="Inter, sans-serif" font-size="9" font-weight="600" fill="var(--color-text-main)" text-anchor="middle">${wt('md.svg_seq_hier_item1_sub', 'Основные')}</text>
+                                    <text x="44" y="26" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-primary)" text-anchor="middle">CaO</text>
+                                </g>
+                                <g transform="translate(124, 46)">
+                                    <rect width="88" height="32" rx="4" fill="var(--color-surface-2)" stroke="var(--color-primary)" stroke-width="1.2"/>
+                                    <text x="44" y="14" font-family="Inter, sans-serif" font-size="9" font-weight="600" fill="var(--color-text-main)" text-anchor="middle">${wt('md.svg_seq_hier_item2_sub', 'Кислотные')}</text>
+                                    <text x="44" y="26" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-primary)" text-anchor="middle">SO₃</text>
+                                </g>
+                                <g transform="translate(228, 46)">
+                                    <rect width="90" height="32" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <text x="45" y="14" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle">${wt('md.svg_seq_hier_item3_sub', 'Бескислородные')}</text>
+                                    <text x="45" y="26" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-primary)" text-anchor="middle">HCl</text>
+                                </g>
+                                <g transform="translate(324, 46)">
+                                    <rect width="90" height="32" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <text x="45" y="14" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle">${wt('md.svg_seq_hier_item4_sub', 'Кислородные')}</text>
+                                    <text x="45" y="26" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-primary)" text-anchor="middle">H₂SO₄</text>
+                                </g>
+
+                                <path d="M119,38 L119,42 L70,42 L70,46" stroke="var(--color-primary)" stroke-width="1.2" fill="none"/>
+                                <path d="M119,38 L119,42 L168,42 L168,46" stroke="var(--color-primary)" stroke-width="1.2" fill="none"/>
+                                <path d="M321,38 L321,42 L273,42 L273,46" stroke="var(--color-border-subtle)" stroke-width="1.2" fill="none"/>
+                                <path d="M321,38 L321,42 L369,42 L369,46" stroke="var(--color-border-subtle)" stroke-width="1.2" fill="none"/>
+
+                                <rect x="115" y="86" width="210" height="20" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 12%, var(--color-surface-1))" stroke="var(--color-success, #10b981)" stroke-width="1"/>
+                                <text x="220" y="100" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_seq_hier_status', '2D-матрица: 4/4 связи верны ✓')}</text>
+                            </svg>
+                        `
+                    }
+                ]
+            },
+            test: {
+                id: 'test',
+                subtypes: [
+                    {
+                        id: 'single_choice',
+                        nameKey: 'md.subtype_test_single_name',
+                        defaultName: wt('md.subtype_test_single_name', 'Одиночный выбор'),
+                        descKey: 'md.subtype_test_single_desc',
+                        defaultDesc: wt('md.subtype_test_single_desc', 'Выбор одного верного ответа из взаимоисключающего списка вариантов с радиокнопками.'),
+                        exampleKey: 'md.subtype_test_single_example',
+                        defaultExample: wt('md.subtype_test_single_example', 'Физика: расстояние между двумя соседними гребнями волны (Длина волны λ).'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <text x="26" y="24" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-text-main)">${wt('md.svg_test_question_wave', 'Расстояние между соседними гребнями волны:')}</text>
+                                <g transform="translate(26, 34)">
+                                    <rect width="388" height="22" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <circle cx="14" cy="11" r="5" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <text x="28" y="15" font-family="Inter, sans-serif" font-size="10" fill="var(--color-text-secondary)">${wt('md.svg_test_opt_freq', 'Частота колебаний (ν)')}</text>
+                                </g>
+                                <g transform="translate(26, 60)">
+                                    <rect width="388" height="24" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 12%, var(--color-surface-1))" stroke="var(--color-success, #10b981)" stroke-width="1.5"/>
+                                    <circle cx="14" cy="12" r="6" fill="var(--color-success, #10b981)"/>
+                                    <circle cx="14" cy="12" r="2.5" fill="#fff"/>
+                                    <text x="28" y="16" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-success, #10b981)">${wt('md.svg_test_opt_wavelength', 'Длина волны (λ)')}</text>
+                                    <text x="372" y="16" font-family="Inter, sans-serif" font-size="11" font-weight="700" fill="var(--color-success, #10b981)">✓</text>
+                                </g>
+                                <g transform="translate(26, 88)">
+                                    <rect width="388" height="22" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <circle cx="14" cy="11" r="5" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <text x="28" y="15" font-family="Inter, sans-serif" font-size="10" fill="var(--color-text-secondary)">${wt('md.svg_test_opt_amplitude', 'Амплитуда волны (A)')}</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'multiple_choice',
+                        nameKey: 'md.subtype_test_multi_name',
+                        defaultName: wt('md.subtype_test_multi_name', 'Множественный выбор'),
+                        descKey: 'md.subtype_test_multi_desc',
+                        defaultDesc: wt('md.subtype_test_multi_desc', 'Выбор нескольких верных утверждений или характеристик явления с чекбоксами.'),
+                        exampleKey: 'md.subtype_test_multi_example',
+                        defaultExample: wt('md.subtype_test_multi_example', 'Физика: свойства электромагнитных волн в вакууме и веществе.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <text x="26" y="24" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-text-main)">${wt('md.svg_test_multi_q', 'Свойства электромагнитных волн:')}</text>
+                                <g transform="translate(26, 34)">
+                                    <rect width="388" height="22" rx="4" fill="color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-1))" stroke="var(--color-primary)" stroke-width="1.2"/>
+                                    <rect x="8" y="5" width="12" height="12" rx="2.5" fill="var(--color-primary)"/>
+                                    <text x="14" y="14" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+                                    <text x="28" y="15" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="var(--color-text-main)">${wt('md.svg_test_multi_opt1', 'Переносят энергию')}</text>
+                                </g>
+                                <g transform="translate(26, 60)">
+                                    <rect width="388" height="22" rx="4" fill="color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-1))" stroke="var(--color-primary)" stroke-width="1.2"/>
+                                    <rect x="8" y="5" width="12" height="12" rx="2.5" fill="var(--color-primary)" stroke-width="1.2"/>
+                                    <rect x="8" y="5" width="12" height="12" rx="2.5" fill="var(--color-primary)"/>
+                                    <text x="14" y="14" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">✓</text>
+                                    <text x="28" y="15" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="var(--color-text-main)">${wt('md.svg_test_multi_opt2', 'Распространяются в вакууме')}</text>
+                                </g>
+                                <g transform="translate(26, 86)">
+                                    <rect width="388" height="22" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <rect x="8" y="5" width="12" height="12" rx="2.5" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <text x="28" y="15" font-family="Inter, sans-serif" font-size="10" fill="var(--color-text-secondary)">${wt('md.svg_test_multi_opt3', 'Требуют упругую среду (неверно)')}</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'image_options',
+                        nameKey: 'md.subtype_test_image_options_name',
+                        defaultName: wt('md.subtype_test_image_options_name', 'С иллюстрациями'),
+                        descKey: 'md.subtype_test_image_options_desc',
+                        defaultDesc: wt('md.subtype_test_image_options_desc', 'Наглядный выбор графика, схемы или формулы в интерактивных карточках ответов.'),
+                        exampleKey: 'md.subtype_test_image_options_example',
+                        defaultExample: wt('md.subtype_test_image_options_example', 'Физика: определение графика гармонической волны по ее уравнению.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <text x="26" y="24" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-text-main)">${wt('md.svg_test_img_q', 'Укажите график гармонической волны:')}</text>
+                                <g transform="translate(26, 32)">
+                                    <rect width="186" height="74" rx="6" fill="color-mix(in srgb, var(--color-success, #10b981) 8%, var(--color-surface-2))" stroke="var(--color-success, #10b981)" stroke-width="1.5"/>
+                                    <line x1="16" y1="34" x2="170" y2="34" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <line x1="30" y1="12" x2="30" y2="56" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <path d="M30,34 Q48,18 66,34 T102,34 T138,34 T170,34" fill="none" stroke="var(--color-primary)" stroke-width="2"/>
+                                    <text x="100" y="68" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_test_card_a', 'График А (гармоническая) ✓')}</text>
+                                </g>
+                                <g transform="translate(228, 32)">
+                                    <rect width="186" height="74" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <line x1="16" y1="34" x2="170" y2="34" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <line x1="30" y1="12" x2="30" y2="56" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <polyline points="30,34 60,34 60,18 100,18 100,34 140,34 140,18 170,18" fill="none" stroke="var(--color-text-secondary)" stroke-width="1.5"/>
+                                    <text x="100" y="68" font-family="Inter, sans-serif" font-size="9.5" fill="var(--color-text-secondary)" text-anchor="middle">${wt('md.svg_test_card_b', 'График Б (импульс)')}</text>
+                                </g>
+                            </svg>
+                        `
+                    }
+                ]
+            },
+            draw: {
+                id: 'draw',
+                subtypes: [
+                    {
+                        id: 'polygon',
+                        nameKey: 'md.subtype_draw_polygon_name',
+                        defaultName: wt('md.subtype_draw_polygon_name', 'Контур по точкам (Лассо)'),
+                        descKey: 'md.subtype_draw_polygon_desc',
+                        defaultDesc: wt('md.subtype_draw_polygon_desc', 'Построение точного многоугольника последовательными кликами по вершинам границы объекта.'),
+                        exampleKey: 'md.subtype_draw_polygon_example',
+                        defaultExample: wt('md.subtype_draw_polygon_example', 'Анатомия: выделение контура органа или структуры по ключевым точкам.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <path d="M70,55 C70,25 150,18 210,30 C270,18 350,28 360,65 C340,100 250,105 190,92 C130,105 60,95 70,55 Z" fill="color-mix(in srgb, var(--color-surface-2) 90%, transparent)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <polygon points="120,42 205,30 245,52 165,82" fill="color-mix(in srgb, var(--color-primary) 12%, transparent)" stroke="var(--color-primary)" stroke-width="2"/>
+                                <circle cx="120" cy="42" r="8" fill="var(--color-primary)"/>
+                                <text x="120" y="46" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+                                <circle cx="205" cy="30" r="8" fill="var(--color-primary)"/>
+                                <text x="205" y="34" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+                                <circle cx="245" cy="52" r="8" fill="var(--color-primary)"/>
+                                <text x="245" y="56" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+                                <circle cx="165" cy="82" r="8" fill="var(--color-primary)"/>
+                                <text x="165" y="86" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+                                <line x1="165" y1="82" x2="120" y2="42" stroke="var(--color-primary)" stroke-width="1.5" stroke-dasharray="4 3"/>
+                                <g transform="translate(248, 80)">
+                                    <rect width="172" height="24" rx="4" fill="var(--color-surface-1)" stroke="var(--color-primary)" stroke-width="1.2"/>
+                                    <text x="86" y="16" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-primary)" text-anchor="middle">${wt('md.svg_draw_poly_badge', 'Лассо: 4 вершины / Замыкание')}</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'freehand',
+                        nameKey: 'md.subtype_draw_freehand_name',
+                        defaultName: wt('md.subtype_draw_freehand_name', 'Свободный контур (От руки)'),
+                        descKey: 'md.subtype_draw_freehand_desc',
+                        defaultDesc: wt('md.subtype_draw_freehand_desc', 'Плавная непрерывная обводка карандашом сложной природной или микроскопической границы.'),
+                        exampleKey: 'md.subtype_draw_freehand_example',
+                        defaultExample: wt('md.subtype_draw_freehand_example', 'Гистология: обводка от руки колонии клеток или границы ткани.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <circle cx="115" cy="60" r="42" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                <path d="M85,35 Q125,24 150,42 Q170,65 145,85 Q110,95 83,76 Q67,55 85,35" fill="color-mix(in srgb, var(--color-primary) 15%, transparent)" stroke="var(--color-primary)" stroke-width="2.2"/>
+                                <g transform="translate(81, 26)">
+                                    <line x1="0" y1="12" x2="12" y2="0" stroke="var(--color-primary)" stroke-width="2"/>
+                                    <polygon points="0,12 3,7 8,12" fill="var(--color-primary)"/>
+                                </g>
+                                <g transform="translate(196, 38)">
+                                    <rect width="216" height="42" rx="6" fill="var(--color-surface-1)" stroke="var(--color-success, #10b981)" stroke-width="1.2"/>
+                                    <text x="108" y="19" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_draw_free_badge', 'Свободный контур: Точность 96% ✓')}</text>
+                                    <text x="108" y="33" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle">${wt('md.svg_draw_free_sub', 'Плавная обводка границы')}</text>
+                                </g>
+                            </svg>
+                        `
+                    }
+                ]
+            },
+            open_answer: {
+                id: 'open_answer',
+                subtypes: [
+                    {
+                        id: 'keywords',
+                        nameKey: 'md.subtype_oa_keywords_name',
+                        defaultName: wt('md.subtype_oa_keywords_name', 'Опорные ключевые слова'),
+                        descKey: 'md.subtype_oa_keywords_desc',
+                        defaultDesc: wt('md.subtype_oa_keywords_desc', 'Проверка развернутого ответа ученика по наличию обязательных смысловых терминов.'),
+                        exampleKey: 'md.subtype_oa_keywords_example',
+                        defaultExample: wt('md.subtype_oa_keywords_example', 'Биология: механизм диффузии кислорода и углекислого газа в альвеолах легких.'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(26, 16)">
+                                    <rect width="388" height="88" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <text x="14" y="24" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="var(--color-primary)">${wt('md.svg_oa_bio_title', 'Газообмен в альвеолах (эталон):')}</text>
+                                    <g transform="translate(226, 10)">
+                                        <rect width="148" height="20" rx="4" fill="var(--color-surface-1)" stroke="var(--color-primary)" stroke-width="1"/>
+                                        <text x="74" y="14" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="var(--color-primary)" text-anchor="middle">${wt('md.svg_oa_kw_score', '3 / 3 ключевых слова (100%) ✓')}</text>
+                                    </g>
+                                    
+                                    <text x="14" y="46" font-family="Inter, sans-serif" font-size="9" fill="var(--color-text-secondary)">«${wt('md.svg_oa_kw_in_alveoli', 'В альвеолах идет')} ... ${wt('md.svg_oa_kw_diffuses', 'поступает в кровь, а')} ... ${wt('md.svg_oa_kw_excreted', 'удаляется наружу.')}»</text>
+                                    
+                                    <g transform="translate(14, 56)">
+                                        <g>
+                                            <rect x="0" y="0" width="112" height="22" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 18%, transparent)" stroke="var(--color-success, #10b981)" stroke-width="1"/>
+                                            <text x="56" y="15" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_oa_kw_gasexchange', 'газообмен ✓')}</text>
+                                        </g>
+                                        <g>
+                                            <rect x="120" y="0" width="98" height="22" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 18%, transparent)" stroke="var(--color-success, #10b981)" stroke-width="1"/>
+                                            <text x="169" y="15" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_oa_kw_oxygen', 'кислород ✓')}</text>
+                                        </g>
+                                        <g>
+                                            <rect x="226" y="0" width="144" height="22" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 18%, transparent)" stroke="var(--color-success, #10b981)" stroke-width="1"/>
+                                            <text x="298" y="15" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="middle">${wt('md.svg_oa_kw_co2', 'углекислый газ ✓')}</text>
+                                        </g>
+                                    </g>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'sequential',
+                        nameKey: 'md.subtype_oa_sequential_name',
+                        defaultName: wt('md.subtype_oa_sequential_name', 'Пошаговая серия вопросов'),
+                        descKey: 'md.subtype_oa_sequential_desc',
+                        defaultDesc: wt('md.subtype_oa_sequential_desc', 'Последовательное раскрытие цепочки вопросов к одному тексту или схеме со строгим порядком.'),
+                        exampleKey: 'md.subtype_oa_sequential_example',
+                        defaultExample: wt('md.subtype_oa_sequential_example', 'Биология: пошаговый разбор внешнего дыхания (1. Диффузия → 2. Градиент давления → 3. Транспорт).'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(26, 16)">
+                                    <rect width="388" height="26" rx="4" fill="color-mix(in srgb, var(--color-success, #10b981) 10%, var(--color-surface-1))" stroke="var(--color-success, #10b981)" stroke-width="1"/>
+                                    <text x="12" y="17" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="var(--color-success, #10b981)">${wt('md.svg_oa_seq_step1', '1. Где происходит диффузия газов?')}</text>
+                                    <text x="372" y="17" font-family="Inter, sans-serif" font-size="11" font-weight="700" fill="var(--color-success, #10b981)">✓</text>
+                                </g>
+                                <g transform="translate(26, 46)">
+                                    <rect width="388" height="28" rx="4" fill="var(--color-surface-2)" stroke="var(--color-primary)" stroke-width="1.5"/>
+                                    <text x="12" y="18" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="var(--color-primary)">${wt('md.svg_oa_seq_step2', '2. За счет чего идет перенос газов?')}</text>
+                                    <line x1="280" y1="8" x2="280" y2="22" stroke="var(--color-primary)" stroke-width="1.5"/>
+                                </g>
+                                <g transform="translate(26, 78)">
+                                    <rect width="388" height="24" rx="4" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <text x="12" y="16" font-family="Inter, sans-serif" font-size="9.5" fill="var(--color-text-secondary)">${wt('md.svg_oa_seq_step3', '🔒 3. Как связывается гемоглобин?')}</text>
+                                </g>
+                            </svg>
+                        `
+                    }
+                ]
+            },
+            image_labeling: {
+                id: 'image_labeling',
+                subtypes: [
+                    {
+                        id: 'zones',
+                        nameKey: 'md.subtype_image_zones_name',
+                        defaultName: wt('md.subtype_image_zones_name', 'Цветовые зоны на рисунке'),
+                        descKey: 'md.subtype_image_zones_desc',
+                        defaultDesc: wt('md.subtype_image_zones_desc', 'Разметка областей поверх учебной иллюстрации с сопоставлением названий.'),
+                        exampleKey: 'md.subtype_image_zones_example',
+                        defaultExample: wt('md.subtype_image_zones_example', 'Анатомия: кости нижней конечности (Бедренная кость, Надколенник, Большеберцовая кость).'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(26, 16)">
+                                    <rect width="160" height="88" rx="6" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                    <!-- Anatomical Knee Joint: Femur, Patella, Tibia -->
+                                    <!-- Femur (epiphysis & condyles) -->
+                                    <path d="M64,6 L96,6 L96,22 C96,32 102,36 100,42 C98,46 88,46 84,43 C80,41 76,41 72,43 C68,46 58,46 56,42 C54,36 60,32 60,22 Z" fill="color-mix(in srgb, var(--color-primary) 12%, var(--color-surface-1))" stroke="color-mix(in srgb, var(--color-primary) 40%, var(--color-border-subtle))" stroke-width="1.4"/>
+                                    <!-- Patella (sesamoid kneecap) -->
+                                    <path d="M72,35 C72,30 88,30 88,35 C88,43 80,48 80,48 C80,48 72,43 72,35 Z" fill="color-mix(in srgb, #10b981 18%, var(--color-surface-1))" stroke="#10b981" stroke-width="1.4"/>
+                                    <!-- Tibia (tibial plateau) & Fibula -->
+                                    <path d="M58,52 C64,50 74,50 80,51 C86,50 96,50 102,52 C104,56 98,64 98,82 L62,82 C62,64 56,56 58,52 Z" fill="color-mix(in srgb, #ef4444 12%, var(--color-surface-1))" stroke="color-mix(in srgb, #ef4444 40%, var(--color-border-subtle))" stroke-width="1.4"/>
+                                    <path d="M104,58 L108,62 L108,82 L104,82 Z" fill="color-mix(in srgb, #ef4444 8%, var(--color-surface-1))" stroke="color-mix(in srgb, #ef4444 30%, var(--color-border-subtle))" stroke-width="1.2"/>
+                                    
+                                    <!-- Marker Pin 1 (Femur) -->
+                                    <circle cx="44" cy="20" r="8" fill="#6366f1"/>
+                                    <text x="44" y="24" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+                                    <line x1="52" y1="20" x2="72" y2="20" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="2 2"/>
+                                    <circle cx="72" cy="20" r="2.5" fill="#6366f1"/>
+                                    
+                                    <!-- Marker Pin 2 (Patella) -->
+                                    <circle cx="116" cy="39" r="8" fill="#10b981"/>
+                                    <text x="116" y="43" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+                                    <line x1="108" y1="39" x2="86" y2="39" stroke="#10b981" stroke-width="1.2" stroke-dasharray="2 2"/>
+                                    <circle cx="86" cy="39" r="2.5" fill="#10b981"/>
+                                    
+                                    <!-- Marker Pin 3 (Tibia) -->
+                                    <circle cx="44" cy="66" r="8" fill="#ef4444"/>
+                                    <text x="44" y="70" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+                                    <line x1="52" y1="66" x2="74" y2="66" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="2 2"/>
+                                    <circle cx="74" cy="66" r="2.5" fill="#ef4444"/>
+                                </g>
+                                <g transform="translate(196, 18)">
+                                    <rect width="218" height="24" rx="4" fill="var(--color-surface-2)" stroke="#6366f1" stroke-width="1.2"/>
+                                    <rect x="8" y="4" width="16" height="16" rx="3" fill="#6366f1"/>
+                                    <text x="16" y="16" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+                                    <text x="32" y="16" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="var(--color-text-main)">${wt('md.svg_lbl_femur', '1. Бедренная кость')}</text>
+                                    <text x="200" y="16" font-family="Inter, sans-serif" font-size="11" fill="#6366f1">✓</text>
+                                </g>
+                                <g transform="translate(196, 48)">
+                                    <rect width="218" height="24" rx="4" fill="var(--color-surface-2)" stroke="#10b981" stroke-width="1.2"/>
+                                    <rect x="8" y="4" width="16" height="16" rx="3" fill="#10b981"/>
+                                    <text x="16" y="16" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+                                    <text x="32" y="16" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="var(--color-text-main)">${wt('md.svg_lbl_patella', '2. Надколенник')}</text>
+                                    <text x="200" y="16" font-family="Inter, sans-serif" font-size="11" fill="#10b981">✓</text>
+                                </g>
+                                <g transform="translate(196, 78)">
+                                    <rect width="218" height="24" rx="4" fill="var(--color-surface-2)" stroke="#ef4444" stroke-width="1.2"/>
+                                    <rect x="8" y="4" width="16" height="16" rx="3" fill="#ef4444"/>
+                                    <text x="16" y="16" font-family="Inter, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+                                    <text x="32" y="16" font-family="Inter, sans-serif" font-size="10" font-weight="600" fill="var(--color-text-main)">${wt('md.svg_lbl_tibia', '3. Большеберцовая кость')}</text>
+                                    <text x="200" y="16" font-family="Inter, sans-serif" font-size="11" fill="#ef4444">✓</text>
+                                </g>
+                            </svg>
+                        `
+                    },
+                    {
+                        id: 'levels',
+                        nameKey: 'md.subtype_image_levels_name',
+                        defaultName: wt('md.subtype_image_levels_name', 'Уровни самопроверки'),
+                        descKey: 'md.subtype_image_levels_desc',
+                        defaultDesc: wt('md.subtype_image_levels_desc', 'Постепенное усложнение: от выбора подписи из банка к вводу термина по памяти.'),
+                        exampleKey: 'md.subtype_image_levels_example',
+                        defaultExample: wt('md.subtype_image_levels_example', 'Анатомия: уровень 1 (выбор подписи из банка) → уровень 2 (ввод термина по памяти).'),
+                        renderSvg: () => `
+                            <svg viewBox="0 0 440 120" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="10" y="8" width="420" height="104" rx="8" fill="var(--color-surface-1)" stroke="var(--color-border-subtle)" stroke-width="1.2"/>
+                                <g transform="translate(26, 16)">
+                                    <rect width="388" height="42" rx="5" fill="var(--color-surface-2)" stroke="var(--color-border-subtle)" stroke-width="1"/>
+                                    <text x="12" y="16" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-text-main)">${wt('md.svg_lbl_level1', 'Уровень 1: Выбор из банка')}</text>
+                                    <rect x="12" y="20" width="160" height="18" rx="3" fill="var(--color-surface-1)" stroke="var(--color-primary)" stroke-width="1"/>
+                                    <text x="20" y="33" font-family="Inter, sans-serif" font-size="9.5" font-weight="600" fill="var(--color-primary)">${wt('md.svg_lbl_femur_drop', 'Бедренная кость ▼')}</text>
+                                    <text x="376" y="26" font-family="Inter, sans-serif" font-size="10.5" font-weight="700" fill="var(--color-success, #10b981)" text-anchor="end">100% ✓</text>
+                                </g>
+                                <g transform="translate(26, 64)">
+                                    <rect width="388" height="42" rx="5" fill="color-mix(in srgb, var(--color-primary) 8%, var(--color-surface-2))" stroke="var(--color-primary)" stroke-width="1.5"/>
+                                    <text x="12" y="16" font-family="Inter, sans-serif" font-size="9.5" font-weight="700" fill="var(--color-primary)">${wt('md.svg_lbl_level2', 'Уровень 2: Ввод по памяти')}</text>
+                                    <rect x="12" y="20" width="160" height="18" rx="3" fill="var(--color-surface-1)" stroke="var(--color-primary)" stroke-width="1"/>
+                                    <text x="20" y="33" font-family="Inter, sans-serif" font-size="9.5" fill="var(--color-text-main)">${wt('md.svg_lbl_patella_input', 'Надколенник')}</text>
+                                    <line x1="88" y1="22" x2="88" y2="36" stroke="var(--color-primary)" stroke-width="1.5"/>
+                                    <rect x="235" y="11" width="140" height="20" rx="4" fill="var(--color-primary)"/>
+                                    <text x="305" y="25" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">${wt('md.svg_lbl_level_badge', 'L1: 100% → L2: Активен')}</text>
+                                </g>
+                            </svg>
+                        `
+                    }
+                ]
+            }
+        };
+    }
+
+    renderTaskShowcase(type, forcedSubtypeId = null) {
+        const archetypes = this.getTaskStudioArchetypes();
+        const arch = archetypes[type] || archetypes.click;
+        if (!arch || !arch.subtypes || !arch.subtypes.length) return;
+
+        const hiddenInput = document.getElementById('task-subtype-input');
+        let currentSubtypeId = forcedSubtypeId || (hiddenInput ? hiddenInput.value : '');
+        let activeSubtype = arch.subtypes.find(s => s.id === currentSubtypeId);
+        if (!activeSubtype) {
+            activeSubtype = arch.subtypes[0];
+            currentSubtypeId = activeSubtype.id;
+        }
+        if (hiddenInput) {
+            hiddenInput.value = currentSubtypeId;
+        }
+        this.currentStudioSubtype = currentSubtypeId;
+
+        const pillsContainer = document.getElementById('editor-subtype-pills');
+        if (pillsContainer) {
+            pillsContainer.setAttribute('role', 'tablist');
+            pillsContainer.setAttribute('aria-label', wt('md.studio_formats_label', 'Форматы задания'));
+            pillsContainer.innerHTML = '';
+            arch.subtypes.forEach(st => {
+                const isActive = st.id === currentSubtypeId;
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.setAttribute('role', 'tab');
+                pill.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                pill.setAttribute('tabindex', isActive ? '0' : '-1');
+                pill.className = `editor-subtype-pill${isActive ? ' is-active' : ''}`;
+                pill.textContent = wt(st.nameKey, st.defaultName);
+                pill.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.renderTaskShowcase(type, st.id);
+                });
+                pillsContainer.appendChild(pill);
+            });
+
+            const pillElements = Array.from(pillsContainer.querySelectorAll('.editor-subtype-pill'));
+            pillElements.forEach((pill, idx) => {
+                pill.addEventListener('keydown', (e) => {
+                    let targetIdx = -1;
+                    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                        targetIdx = (idx + 1) % pillElements.length;
+                    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                        targetIdx = (idx - 1 + pillElements.length) % pillElements.length;
+                    } else if (e.key === 'Home') {
+                        targetIdx = 0;
+                    } else if (e.key === 'End') {
+                        targetIdx = pillElements.length - 1;
+                    }
+                    if (targetIdx !== -1) {
+                        e.preventDefault();
+                        const targetPill = pillElements[targetIdx];
+                        targetPill.focus();
+                        targetPill.click();
+                    }
+                });
+            });
+        }
+
+
+
+        const canvas = document.getElementById('editor-showcase-canvas');
+        if (canvas && typeof activeSubtype.renderSvg === 'function') {
+            canvas.innerHTML = activeSubtype.renderSvg();
+        }
+
+        const desc = document.getElementById('editor-showcase-desc');
+        if (desc) {
+            desc.textContent = wt(activeSubtype.descKey, activeSubtype.defaultDesc);
+        }
+
+        const exampleText = document.getElementById('editor-showcase-example-text');
+        if (exampleText) {
+            exampleText.textContent = wt(activeSubtype.exampleKey, activeSubtype.defaultExample);
+        }
+    }
+
     setupTaskTypePicker() {
         const picker = document.getElementById('editor-task-type-picker');
         const select = document.getElementById('task-type-select');
         if (!picker || !select || picker._bound) return;
 
-        picker.querySelectorAll('.editor-task-type-card').forEach((card) => {
+        picker.setAttribute('role', 'radiogroup');
+        picker.setAttribute('aria-label', wt('md.task_type_label', 'Тип задания'));
+        const cards = Array.from(picker.querySelectorAll('.editor-task-type-card'));
+        cards.forEach((card, index) => {
+            card.setAttribute('role', 'radio');
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const next = cards[(index + 1) % cards.length];
+                    next.focus();
+                    next.click();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const prev = cards[(index - 1 + cards.length) % cards.length];
+                    prev.focus();
+                    prev.click();
+                }
+            });
             card.addEventListener('click', () => {
                 const type = card.dataset.type;
                 if (!type) return;
@@ -2041,17 +2737,33 @@ class EditorDashboard {
         });
 
         select.addEventListener('change', () => this.syncTaskTypePicker());
+
+        const form = document.querySelector('#create-task-form');
+        if (form && !form._boundSubmit) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.submitTaskForm();
+            });
+            form._boundSubmit = true;
+        }
+
         picker._bound = true;
     }
 
-    syncTaskTypePicker() {
+    syncTaskTypePicker(forcedSubtypeId = null) {
         const picker = document.getElementById('editor-task-type-picker');
         const select = document.getElementById('task-type-select');
         if (!picker || !select) return;
         const currentType = select.value || 'click';
-        picker.querySelectorAll('.editor-task-type-card').forEach((card) => {
-            card.classList.toggle('is-active', card.dataset.type === currentType);
+        this.currentStudioType = currentType;
+        const cards = picker.querySelectorAll('.editor-task-type-card');
+        cards.forEach((card) => {
+            const isActive = card.dataset.type === currentType;
+            card.classList.toggle('is-active', isActive);
+            card.setAttribute('aria-checked', isActive ? 'true' : 'false');
+            card.setAttribute('tabindex', isActive ? '0' : '-1');
         });
+        this.renderTaskShowcase(currentType, forcedSubtypeId);
     }
 
     updateTopicSelect() {
@@ -2073,7 +2785,25 @@ class EditorDashboard {
         }
     }
 
-    closeModals() {
+    closeModals(options = {}) {
+        const { userInitiated = false, resetDraft = false } = options;
+        if (userInitiated && window.OnboardingTour && typeof window.OnboardingTour.isActive === 'function' && window.OnboardingTour.isActive()) {
+            window.OnboardingTour.finish({ seen: true });
+        }
+        const taskModal = document.getElementById('create-task-modal');
+        if (taskModal && this._taskModalKeydownHandler) {
+            taskModal.removeEventListener('keydown', this._taskModalKeydownHandler);
+            this._taskModalKeydownHandler = null;
+        }
+        if (resetDraft) {
+            this.resetTaskModalDraft();
+        }
+        if (this.lastFocusedElementBeforeTaskModal && typeof this.lastFocusedElementBeforeTaskModal.focus === 'function') {
+            try {
+                this.lastFocusedElementBeforeTaskModal.focus();
+            } catch (_) {}
+            this.lastFocusedElementBeforeTaskModal = null;
+        }
         ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal', 'selection-review-modal'].forEach(id => {
             if (id === 'selection-review-modal') {
                 this.closeSelectionReviewModal();
@@ -2141,6 +2871,7 @@ class EditorDashboard {
         const topic_id = document.querySelector('#task-topic-select').value;
         const task_name = document.querySelector('#task-name-input').value.trim();
         const task_type = document.querySelector('#task-type-select').value;
+        const task_subtype = document.querySelector('#task-subtype-input')?.value || '';
 
         if (!module_id) {
             this.showVoiceToast({
@@ -2179,7 +2910,7 @@ class EditorDashboard {
             return;
         }
 
-        await this.createNewTask(module_id, topic_id, task_name, task_type);
+        await this.createNewTask(module_id, topic_id, task_name, task_type, task_subtype);
         document.querySelector('#task-name-input').value = '';
         this.closeModals();
     }
@@ -2245,7 +2976,7 @@ class EditorDashboard {
                 this.closeModuleModal();
                 // Update module select in task modal if it was open
                 if (!document.querySelector('#create-task-modal').classList.contains('hidden')) {
-                    this.showCreateTaskModal();
+                    this.showCreateTaskModal({ moduleId: data.module_id, preserveDraft: true });
                 }
             } else {
                 this.showVoiceToast({
@@ -4801,7 +5532,7 @@ class EditorDashboard {
         }
     }
 
-    async createNewTask(module_id, topic_id, task_name, task_type) {
+    async createNewTask(module_id, topic_id, task_name, task_type, task_subtype = '') {
         try {
             const response = await fetch('/api/editor/task/bootstrap', {
                 method: 'POST',
@@ -4831,11 +5562,14 @@ class EditorDashboard {
                 this.ensureModuleExpandedState(module_id, { save: false });
                 this.ensureTopicExpandedState(module_id, topic_id, { save: false });
                 this.saveDashboardState();
+                const subtypeToPass = task_subtype || document.querySelector('#task-subtype-input')?.value || '';
                 window.navigateWithTransition(
                     this.getEditorUrl(task_type, module_id, topic_id, data.task_id, {
                         isNew: true,
                         taskType: task_type,
                         taskName: task_name,
+                        subtype: subtypeToPass,
+                        initialMode: subtypeToPass,
                     })
                 );
             } else {
@@ -4884,6 +5618,12 @@ class EditorDashboard {
         if (normalizedOptions.restoreDraft) {
             params.set('restore_draft', '1');
         }
+        if (normalizedOptions.subtype) {
+            params.set('subtype', normalizedOptions.subtype);
+        }
+        if (normalizedOptions.initialMode) {
+            params.set('initial_mode', normalizedOptions.initialMode);
+        }
         if (!editorPage) {
             return '';
         }
@@ -4891,7 +5631,24 @@ class EditorDashboard {
         return `/editor/${encodedEditorPage}?${params.toString()}`;
     }
 
+    populateTaskModuleSelect() {
+        const moduleSelect = document.querySelector('#task-module-select');
+        if (!moduleSelect) return;
+        const currentVal = moduleSelect.value;
+        moduleSelect.innerHTML = wt('db.k068', '<option value="">Выберите модуль...</option>');
+        (this.catalog || []).forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = m.name || m.id;
+            moduleSelect.appendChild(opt);
+        });
+        if (currentVal && Array.from(moduleSelect.options).some(o => o.value === currentVal)) {
+            moduleSelect.value = currentVal;
+        }
+    }
+
     renderSidebar() {
+        this.populateTaskModuleSelect();
         const sidebarContainer = document.querySelector('aside .flex-1');
         if (!sidebarContainer) return;
 
@@ -6525,13 +7282,7 @@ class EditorDashboard {
         `;
         addTaskBtn.onclick = (e) => {
             e.stopPropagation();
-            // Pre-select module and topic in the task modal and show it
-            const moduleSelect = document.querySelector('#task-module-select');
-            moduleSelect.value = moduleId;
-            this.updateTopicSelect();
-            const topicSelect = document.querySelector('#task-topic-select');
-            topicSelect.value = topic.id;
-            this.showCreateTaskModal();
+            this.showCreateTaskModal({ moduleId, topicId: topic.id, preserveDraft: false });
         };
         tasksContainer.appendChild(addTaskBtn);
 
@@ -8288,20 +9039,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
-        const modalIds = ['create-task-modal', 'create-module-modal', 'create-topic-modal', 'topic-theory-modal', 'theory-hub-modal', 'import-modal', 'selection-review-modal'];
-        for (const id of modalIds) {
-            const el = document.getElementById(id);
-            if (el && (!el.classList.contains('hidden') || el.open)) {
+        const subModalMap = [
+            { id: 'create-module-modal', close: () => window.dashboard.closeModuleModal() },
+            { id: 'create-topic-modal', close: () => window.dashboard.closeTopicModal() },
+            { id: 'topic-theory-modal', close: () => window.dashboard.closeTopicTheoryModal() },
+            { id: 'theory-hub-modal', close: () => window.dashboard.closeTheoryHub() },
+            { id: 'import-modal', close: () => window.dashboard.closeImportModal() },
+            { id: 'selection-review-modal', close: () => window.dashboard.closeSelectionReviewModal() },
+            { id: 'create-task-modal', close: () => window.dashboard.closeModals({ userInitiated: true, resetDraft: true }) }
+        ];
+        for (const item of subModalMap) {
+            const el = document.getElementById(item.id);
+            if (!el) continue;
+            const isOpen = el.tagName === 'DIALOG' ? Boolean(el.open) : !el.classList.contains('hidden');
+            if (isOpen) {
                 if (el.tagName === 'DIALOG') {
-                    // Let the native dialog cancel event handler handle it to avoid duplicate calls
                     break;
                 }
-                if (id === 'import-modal') {
-                    window.dashboard.closeImportModal();
-                } else {
-                    window.dashboard.closeModals();
-                }
-                break;
+                item.close();
+                return;
             }
         }
         window.dashboard.cancelDeleteConfirmation();

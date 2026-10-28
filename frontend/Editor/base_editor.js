@@ -3445,6 +3445,17 @@ class BaseEditor {
     // ===== UNDO/REDO SYSTEM =====
 
     /**
+     * Hook to determine whether an editable input should delegate undo/redo
+     * to the editor UndoManager instead of native browser input history.
+     * Subclasses (e.g. SequenceEditor) can override this.
+     * @param {HTMLElement} target
+     * @returns {boolean}
+     */
+    shouldDelegateUndoRedoFromInput(target) {
+        return false;
+    }
+
+    /**
      * Setup keyboard shortcuts for Undo/Redo
      */
     setupUndoRedoHandlers() {
@@ -3456,7 +3467,11 @@ class BaseEditor {
                 target.isContentEditable
             );
             if (isEditable) {
-                return;
+                if (typeof this.shouldDelegateUndoRedoFromInput === 'function' && this.shouldDelegateUndoRedoFromInput(target)) {
+                    // Allowed to delegate to editor undo/redo
+                } else {
+                    return;
+                }
             }
 
             const isCtrl = e.ctrlKey || e.metaKey;

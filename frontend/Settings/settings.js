@@ -2769,6 +2769,7 @@
 
     function initSettingsPage() {
         bootstrapSettingsPage();
+        window.PageBoot?.ready();
     }
 
     if (document.readyState === 'loading') {

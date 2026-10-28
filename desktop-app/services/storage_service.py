@@ -537,8 +537,7 @@ class StorageService:
             if 'elements' in content and isinstance(content.get('elements'), list):
                 base['elements'] = content['elements']
 
-            # Editor saves 'sequence' list in content
-            # Evaluator expects 'levels' list in answer_key
+            # Editor saves 'sequence' list (legacy) or 'levels' list (modern) in content
             if 'sequence' in content:
                 editor_sequence = content['sequence']
                 levels = []
@@ -552,8 +551,6 @@ class StorageService:
                         if isinstance(items, list):
                             for item in items:
                                 if isinstance(item, dict):
-                                    # Use label as ID if no explicit ID
-                                    # Ideally Editor should assign IDs, but for now we create a workable structure
                                     blocks.append(item.get('id') or item.get('label'))
                                 elif isinstance(item, str):
                                     blocks.append(item)
@@ -565,13 +562,26 @@ class StorageService:
                         })
                 
                 base['levels'] = levels
+            elif 'levels' in content and isinstance(content.get('levels'), list):
+                base['levels'] = content['levels']
+
+            if 'nodes' in content and isinstance(content.get('nodes'), list):
+                base['nodes'] = content['nodes']
+
+            if 'display_mode' in content and content.get('display_mode'):
+                base['display_mode'] = str(content['display_mode']).strip().lower()
+
+            if 'color_differentiation' in content and content.get('color_differentiation') is not None:
+                base['color_differentiation'] = bool(content['color_differentiation'])
             
             # Map booleans
             if 'order_inside_matters' in content:
                 base['sequence_within_level_matters'] = content['order_inside_matters']
+            elif 'sequence_within_level_matters' in content:
+                base['sequence_within_level_matters'] = bool(content['sequence_within_level_matters'])
             
             if 'level_order_matters' in content:
-                base['level_order_matters'] = content['level_order_matters']
+                base['level_order_matters'] = bool(content['level_order_matters'])
 
             return base
             

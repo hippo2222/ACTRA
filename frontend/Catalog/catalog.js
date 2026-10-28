@@ -3381,9 +3381,15 @@
 
       setupCatalogOnboardingDemoObserver();
       bindEvents();
-      await loadCurrentUser();
-      await loadWorkspaceLimits();
-      await loadCatalogItems();
+      if (state.contentType === 'saved') {
+        await loadCurrentUser();
+        await Promise.all([loadWorkspaceLimits(), loadCatalogItems()]);
+      } else {
+        await Promise.all([loadCurrentUser(), loadWorkspaceLimits(), loadCatalogItems()]);
+        if (state.authenticated && state.items.length > 0 && state.statusByVersionKey.size === 0 && state.pendingStatusKeys.size === 0) {
+          refreshVisibleStatuses();
+        }
+      }
     } finally {
       global.PageBoot?.ready();
     }

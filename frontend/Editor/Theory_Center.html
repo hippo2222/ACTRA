@@ -9,6 +9,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title data-i18n="page.theory_center">Центр теории</title>
+    <link href="/assets/PageBoot.css" rel="stylesheet" />
+    <script src="/assets/PageBoot.js"></script>
     <link href="/assets/tailwind.css" rel="stylesheet" />
     <link href="/assets/fonts.css" rel="stylesheet" />
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
@@ -396,7 +398,12 @@
     </style>
 </head>
 
-<body class="text-text-main">
+<body class="actra-page-booting text-text-main">
+    <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+        <div class="actra-page-boot-card">
+            <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
     <div data-global-header data-app-section="theory"></div>
     <main class="theory-center-enter px-4 py-6 sm:px-6 lg:px-8" data-page-transition-root>
         <div class="theory-center-shell mx-auto flex flex-col gap-5">

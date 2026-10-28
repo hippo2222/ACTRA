@@ -2009,10 +2009,13 @@ def _log_http_request(response):
             duration,
         )
 
+        is_slow = duration > 1.0
+        is_error = isinstance(status_code, int) and status_code >= 400
+
         # Production logging policy:
         # - WARNING: slow requests (>1s)
         # - DEBUG: full request trace only in debug mode
-        if duration > 1.0:
+        if is_slow:
             logger.warning("%s - SLOW REQUEST", log_msg)
         elif FLASK_DEBUG_ENABLED:
             logger.debug(log_msg)
@@ -2022,7 +2025,11 @@ def _log_http_request(response):
             response.headers["X-Response-Time"] = "%.3fs" % duration
         except Exception:
             pass
-        _flush_log_handlers()
+
+        # Flush handlers only on slow requests, errors, or when debug logging is active.
+        # Avoids heavy synchronous disk fsync on every fast successful static asset request.
+        if FLASK_DEBUG_ENABLED or is_slow or is_error:
+            _flush_log_handlers()
     except Exception:
         pass
     return response

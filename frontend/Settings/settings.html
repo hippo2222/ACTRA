@@ -8,12 +8,12 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title data-i18n="page.settings">Настройки — ACTRA</title>
+    <link rel="stylesheet" href="/assets/PageBoot.css" />
+    <script src="/assets/PageBoot.js"></script>
     <link rel="stylesheet" href="/assets/tailwind.css" />
     <link rel="stylesheet" href="/assets/fonts.css" />
     <link rel="stylesheet" href="/assets/lightB-variables.css" />
     <link rel="stylesheet" href="/assets/lightB-components.css" />
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -393,7 +393,12 @@
     </style>
 </head>
 
-<body class="min-h-screen">
+<body class="actra-page-booting min-h-screen">
+    <div class="actra-page-boot-screen" role="status" aria-live="polite" aria-label="ACTRA">
+        <div class="actra-page-boot-card">
+            <img class="actra-page-boot-logo" src="/assets/logo_animated.svg" alt="ACTRA" />
+        </div>
+    </div>
     <header class="sticky top-0 z-30 border-b border-border-subtle bg-surface-1/90 backdrop-blur-sm">
         <div class="settings-shell settings-topbar mx-auto flex items-center gap-4 px-4 py-4 sm:px-6">
             <a href="/main"
