@@ -16,7 +16,8 @@ exclude =
     task_system,
     common,
     tests,
-    desktop-app/tests
+    desktop-app/tests,
+    exports
 filename =
     desktop-app/api/complexes_api.py,
     scripts/build_release.py,
