@@ -221,6 +221,149 @@ level_1: element_1
             parser._validate_single_task(tasks[0], 0)
             assert any(w.get('code') == 'unused_element' for w in parser.warnings)
 
+    def test_extract_inline_legend_from_prompt_exact_user_feedback(self):
+        """Test extracting level legend embedded in the prompt # from external AI"""
+        parser = SequenceParser()
+        text = """
+@SEQUENCE
+# Сгруппируйте патологические состояния по направлению смещения структур средостения (Уровень 1 — смещение в сторону затемнения; Уровень 2 — смещение от затемнения в противоположную сторону; Уровень 3 — отсутствие смещения средостения):
+element_1: Ателектаз доли
+element_2: Фиброторакс
+element_3: Клапанный пневмоторакс
+element_4: Напряжённый гидроторакс
+element_5: Очаговая пневмония
+element_6: Сухой плеврит
+level_1: element_1, element_2
+level_2: element_3, element_4
+level_3: element_5, element_6
+"""
+        tasks = parser.parse_text(text)
+        assert len(tasks) == 1
+        t = tasks[0]
+        # Prompt should be cleaned from the parenthesis legend
+        assert t['prompt'] == 'Сгруппируйте патологические состояния по направлению смещения структур средостения:'
+        level_names = t['data'].get('level_names', {})
+        assert level_names.get(1) == 'Смещение в сторону затемнения'
+        assert level_names.get(2) == 'Смещение от затемнения в противоположную сторону'
+        assert level_names.get(3) == 'Отсутствие смещения средостения'
+
+    def test_extract_inline_legend_multilingual(self):
+        """Test extracting inline level legends in English and Ukrainian"""
+        parser = SequenceParser()
+        en_text = """
+@SEQUENCE
+# Classify conditions by mediastinal shift (Level 1: Toward opacity; Level 2: Away from opacity; Level 3: No shift):
+element_1: Atelectasis
+element_2: Fibrothorax
+element_3: Pneumothorax
+level_1: element_1
+level_2: element_2
+level_3: element_3
+"""
+        tasks = parser.parse_text(en_text)
+        assert len(tasks) == 1
+        assert tasks[0]['prompt'] == 'Classify conditions by mediastinal shift:'
+        en_ln = tasks[0]['data']['level_names']
+        assert en_ln[1] == 'Toward opacity'
+        assert en_ln[2] == 'Away from opacity'
+        assert en_ln[3] == 'No shift'
+
+        uk_text = """
+@SEQUENCE
+# Згрупуйте патологічні стани за зміщенням середостіння (Рівень 1 — у бік затемнення; Рівень 2 — у протилежний бік):
+element_1: Ателектаз
+element_2: Пневмоторакс
+element_3: Пневмонія
+level_1: element_1
+level_2: element_2, element_3
+"""
+        tasks_uk = parser.parse_text(uk_text)
+        assert len(tasks_uk) == 1
+        assert tasks_uk[0]['prompt'] == 'Згрупуйте патологічні стани за зміщенням середостіння:'
+        uk_ln = tasks_uk[0]['data']['level_names']
+        assert uk_ln[1] == 'У бік затемнення'
+        assert uk_ln[2] == 'У протилежний бік'
+
+    def test_regular_parentheses_not_extracted_as_legend(self):
+        """Test that medical abbreviations in parentheses are NOT treated as legends"""
+        parser = SequenceParser()
+        text = """
+@SEQUENCE
+# Оцените степень тяжести ХОБЛ (хронической обструктивной болезни легких):
+element_1: Легкая степень
+element_2: Средняя степень
+element_3: Тяжелая степень
+level_1: element_1
+level_2: element_2
+level_3: element_3
+"""
+        tasks = parser.parse_text(text)
+        assert len(tasks) == 1
+        assert 'хронической обструктивной болезни легких' in tasks[0]['prompt']
+        assert tasks[0]['data']['level_names'] == {}
+
+    def test_resilient_level_line_parsing(self):
+        """Test parsing level lines with nested parentheses, dashes, quotes, and filtering tautological names"""
+        parser = SequenceParser()
+        text = """
+@SEQUENCE
+# Тест устойчивости парсера
+element_1: A
+element_2: B
+element_3: C
+element_4: D
+element_5: E
+level_1 [Смещение (в сторону затемнения)]: element_1
+level_2 (Смещение (в противоположную сторону)): element_2
+level_3 — Направление без изменений: element_3
+level_4 "Кавычки": element_4
+level_5 [Level 5]: element_5
+"""
+        tasks = parser.parse_text(text)
+        assert len(tasks) == 1
+        ln = tasks[0]['data']['level_names']
+        assert ln.get(1) == 'Смещение (в сторону затемнения)'
+        assert ln.get(2) == 'Смещение (в противоположную сторону)'
+        assert ln.get(3) == 'Направление без изменений'
+        assert ln.get(4) == 'Кавычки'
+        # Tautological "Level 5" is stripped
+        assert 5 not in ln
+
+    def test_explicit_level_title_overrides_legend_in_prompt(self):
+        """Test that explicit [Title] on level line has priority over prompt legend"""
+        parser = SequenceParser()
+        text = """
+@SEQUENCE
+# Сгруппируйте (Уровень 1 — Старый 1; Уровень 2 — Старый 2):
+element_1: E1
+element_2: E2
+level_1 [Новый заголовок 1]: element_1
+level_2: element_2
+"""
+        tasks = parser.parse_text(text)
+        assert len(tasks) == 1
+        ln = tasks[0]['data']['level_names']
+        assert ln.get(1) == 'Новый заголовок 1'
+        assert ln.get(2) == 'Старый 2'
+
+    def test_didactic_warnings_for_grouping_without_titles(self):
+        """Test that grouping tasks without titles trigger missing_group_titles warning"""
+        parser = SequenceParser()
+        text = """
+@SEQUENCE
+@ level_order_matters: false
+# Задача на группировку
+element_1: A
+element_2: B
+element_3: C
+level_1: element_1
+level_2: element_2, element_3
+"""
+        tasks = parser.parse_text(text)
+        assert len(tasks) == 1
+        parser._validate_single_task(tasks[0], 0)
+        assert any(w.get('code') == 'missing_group_titles' for w in parser.warnings)
+
 
 class TestClickTextParser:
     """Tests for ClickTextParser"""
@@ -347,6 +490,23 @@ level_1: element_1
         assert tasks[0]['name'] != tasks[1]['name']
         assert 'Открытый ответ' in tasks[0]['name']
 
+    def test_long_prompt_auto_name_preserved_without_premature_truncation(self):
+        """Verify that task names generated from long prompts are not truncated to 37 chars."""
+        long_prompt = "Опишите основные признаки очаговой пневмонии на обзорной рентгенограмме органов грудной клетки"
+        assert len(long_prompt) > 40
+        open_text = f"""
+@OPEN_ANSWER
+# {long_prompt}
+= Рентгенография ОГК
+* очаговая тень
+"""
+        open_tasks = OpenAnswerParser().parse_text(open_text)
+        assert len(open_tasks) == 1
+        name = open_tasks[0]['name']
+        assert "Открытый ответ - Опишите основные признаки" in name
+        assert not name.endswith("...")
+        assert len(name) > 50
+
     def test_explicit_title_metadata_preserved_across_all_parsers(self):
         """Test that @ title: and @ name: directives are respected without 37-char truncation."""
         long_title = "Клинический протокол расширенной сердечно-легочной реанимации при остановке сердца"
@@ -414,6 +574,85 @@ level_1: element_1
         assert len(open_tasks) == 1
         assert open_tasks[0]['name'] == long_title
         assert not open_tasks[0]['name'].endswith("...")
+
+
+class TestSequenceImportPayloadIntegration:
+    """Integration tests for Sequence import payload construction and tautology prevention."""
+
+    def test_sequence_import_routes_no_tautological_level_name(self):
+        import sys
+        from pathlib import Path
+        desktop_app_path = str(Path(__file__).resolve().parents[2] / 'desktop-app')
+        if desktop_app_path not in sys.path:
+            sys.path.insert(0, desktop_app_path)
+        from routes.import_routes import _build_imported_task_payload
+
+        text = """
+@SEQUENCE
+# Расположите этапы в порядке выполнения
+element_1: Осмотр
+element_2: Пальпация
+level_1: element_1
+level_2: element_2
+"""
+        tasks = SequenceParser().parse_text(text)
+        assert len(tasks) == 1
+        payload = _build_imported_task_payload(tasks[0], "task_seq_1", "m1", "t1", "user_1")
+        content = payload["content"]
+        assert content["levels"][0]["level_name"] == ""
+        assert content["levels"][1]["level_name"] == ""
+        assert content["sequence"][0]["title"] == ""
+        assert content["sequence"][1]["title"] == ""
+
+    def test_sequence_import_routes_filters_tautological_names(self):
+        import sys
+        from pathlib import Path
+        desktop_app_path = str(Path(__file__).resolve().parents[2] / 'desktop-app')
+        if desktop_app_path not in sys.path:
+            sys.path.insert(0, desktop_app_path)
+        from routes.import_routes import _build_imported_task_payload
+
+        text = """
+@SEQUENCE
+# Расположите этапы в порядке выполнения
+element_1: Осмотр
+element_2: Пальпация
+level_1 [Level 1]: element_1
+level_2 [Уровень 2]: element_2
+"""
+        tasks = SequenceParser().parse_text(text)
+        assert len(tasks) == 1
+        payload = _build_imported_task_payload(tasks[0], "task_seq_taut", "m1", "t1", "user_1")
+        content = payload["content"]
+        assert content["levels"][0]["level_name"] == ""
+        assert content["levels"][1]["level_name"] == ""
+        assert content["sequence"][0]["title"] == ""
+        assert content["sequence"][1]["title"] == ""
+
+    def test_sequence_import_routes_preserves_custom_group_names(self):
+        import sys
+        from pathlib import Path
+        desktop_app_path = str(Path(__file__).resolve().parents[2] / 'desktop-app')
+        if desktop_app_path not in sys.path:
+            sys.path.insert(0, desktop_app_path)
+        from routes.import_routes import _build_imported_task_payload
+
+        text = """
+@SEQUENCE
+# Сгруппируйте патологические состояния по направлению смещения
+element_1: Ателектаз
+element_2: Пневмоторакс
+level_1 [Смещение в сторону затемнения]: element_1
+level_2 [Смещение в противоположную сторону]: element_2
+"""
+        tasks = SequenceParser().parse_text(text)
+        assert len(tasks) == 1
+        payload = _build_imported_task_payload(tasks[0], "task_seq_group", "m1", "t1", "user_1")
+        content = payload["content"]
+        assert content["levels"][0]["level_name"] == "Смещение в сторону затемнения"
+        assert content["levels"][1]["level_name"] == "Смещение в противоположную сторону"
+        assert content["sequence"][0]["title"] == "Смещение в сторону затемнения"
+        assert content["sequence"][1]["title"] == "Смещение в противоположную сторону"
 
 
 if __name__ == '__main__':

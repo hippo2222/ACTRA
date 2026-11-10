@@ -131,8 +131,16 @@ class TaskImportParser(ABC):
                         metadata[key] = int(val)
                     except ValueError:
                         pass
-                elif key == 'case_sensitive':
-                    metadata['case_sensitive'] = val.lower() in ('true', '1', 'yes', 'да')
+                elif key in (
+                    'case_sensitive',
+                    'level_order_matters',
+                    'levels_order_matters',
+                    'sequence_within_level_matters',
+                    'order_inside_matters',
+                    'sequence_matters',
+                    'require_all_keywords'
+                ):
+                    metadata[key] = val.lower() in ('true', '1', 'yes', 'да')
                 else:
                     metadata[key] = val
             else:
@@ -154,7 +162,14 @@ class TaskImportParser(ABC):
             Сгенерированное или явное название
         """
         if title and str(title).strip():
-            return str(title).strip()
+            clean_title = " ".join(str(title).strip().split())
+            if len(clean_title) <= 150:
+                return clean_title
+            cut = clean_title[:147]
+            last_space = cut.rfind(" ")
+            if last_space > 100:
+                cut = cut[:last_space]
+            return f"{cut.rstrip()}..."
 
         type_names = {
             'open_answer': 'Открытый ответ',
@@ -166,15 +181,26 @@ class TaskImportParser(ABC):
         
         base_name = type_names.get(task_type, 'Задание')
         
-        # Если промпт короткий, добавляем его в название
-        if prompt and len(prompt) <= 40:
-            return f"{base_name} - {prompt}"
-        elif prompt:
-            # Если промпт длинный, берем первые 40 символов
-            return f"{base_name} - {prompt[:37]}..."
-        else:
-            # Если промпта нет, используем номер
+        clean_prompt = " ".join(str(prompt).strip().split()) if prompt else ""
+
+        if not clean_prompt:
             return f"{base_name} #{index + 1}"
+
+        if clean_prompt.startswith(f"{base_name} - "):
+            candidate = clean_prompt
+        elif clean_prompt.startswith(f"{base_name}: "):
+            candidate = f"{base_name} - {clean_prompt[len(base_name) + 2:].strip()}"
+        else:
+            candidate = f"{base_name} - {clean_prompt}"
+
+        if len(candidate) <= 150:
+            return candidate
+
+        candidate_cut = candidate[:147]
+        last_space = candidate_cut.rfind(" ")
+        if last_space > 100:
+            candidate_cut = candidate_cut[:last_space]
+        return f"{candidate_cut.rstrip()}..."
     
     def split_by_task_markers(self, text: str, markers: List[str]) -> List[tuple]:
         """

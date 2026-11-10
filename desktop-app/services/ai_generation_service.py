@@ -660,6 +660,8 @@ _GENERATION_PROMPTS = {
 - Каждый элемент должен быть использован ровно один раз: без пропусков, дублирования и пустых уровней.
 - Формулировки элементов должны быть краткими, сопоставимыми по длине и одного смыслового уровня.
 - Вопрос в строке # должен чётко указывать, что именно нужно собрать и по какому принципу: порядок, стадии, классификация, иерархия, ранжирование или распределение по уровням.
+- КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО включать расшифровку или легенду уровней в текст вопроса # (например, НЕ ПИШИ "# Сгруппируйте состояния (Уровень 1 — ..., Уровень 2 — ...):"). Строка # содержит только саму учебную задачу/принцип. Названия всех уровней, стадий или категорий группировки ОБЯЗАТЕЛЬНО указываются в квадратных скобках у самих строк: level_N [Название категории]: element_1, element_2.
+- Для любых заданий на классификацию, группировку по категориям, иерархию или этапы процесса названия уровней в квадратных скобках level_N [Название]: СТРОГО ОБЯЗАТЕЛЬНЫ.
 - Для хронологии, алгоритма или процесса используй SEQUENCE только если порядок шагов единственный и устойчивый.
 - Для классификации, группировки, иерархии или ранжирования используй SEQUENCE только если критерий группировки и относительный порядок уровней явно следуют из материала.
 - Если несколько элементов находятся на одном уровне, их совместное размещение должно быть однозначно подтверждено материалом.
@@ -685,7 +687,7 @@ level_3 [Название этапа/группы 3]: element_3
 
 Элементы нумеруются последовательно (element_1, element_2, ...).
 Уровни (level_N) задают правильную структуру и должны идти последовательно без пропусков.
-В квадратных скобках [Название этапа] указывай краткое осмысленное название фазы или категории.
+В квадратных скобках [Название этапа/группы] обязательно указывай краткое осмысленное название группы, категории или фазы процесса. Не дублируй это название в строке #.
 Каждый element_X должен встретиться ровно в одном level_N.
 Если два элемента должны оказаться в одной группе/на одном уровне — укажи их через запятую: level_2 [Название]: element_3, element_4.
 </output_format>""",
@@ -926,6 +928,8 @@ _GENERATION_GUARDRAILS = {
         "Create SEQUENCE only when the source defines an explicit structure: order, stages, classification, hierarchy, ranking, or grouping.",
         "Do not invent hidden structures if the source only lists terms or loosely related facts.",
         "State the structuring principle clearly in the # instruction.",
+        "CRITICAL: Never embed level legends/mappings like '(Уровень 1 — ..., Уровень 2 — ...)' or '(Level 1 - ...)' into the # instruction line. Put category or stage names inside square brackets on the level lines instead: `level_1 [Category Name]: element_1, element_2`.",
+        "For grouping, classification, hierarchy, or multi-stage tasks, level titles in square brackets level_N [Title]: are STRICTLY MANDATORY.",
         "Use shared levels for grouping/classification tasks when several elements belong together.",
         "If the structure is only loosely inferred, do not use SEQUENCE.",
     ],

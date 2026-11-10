@@ -158,7 +158,7 @@ ANALYSIS_PROMPT_ADDENDUM_RU = r"""
 - Add `target_language` to top-level JSON (`ru`, `uk`, `en`, or `mixed`) and keep generated task content in that language.
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
 - Prefer broad coverage and avoid recommending many tasks that test the same paragraph or fact repeatedly.
-- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
+- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology). In `design_candidates` for `SEQUENCE`, formulate blueprints using direct category/stage titles without parenthesized level legends like "(Уровень 1 — ...; Уровень 2 — ...)".
 - In `not_recommended`, include short user-oriented guidance for unsupported or poor-fit task types: whether the material is suitable in principle and whether manual authoring is recommended (especially image-based tasks when illustrations are present).
 - If `illustrations_detected=true`, explicitly tell the user that image-based tasks are not auto-generated here and should be created manually if visual recognition matters.
 - Treat CLICK_WORDS as suitable when the material contains concrete, locally distortable facts or relations — not only numbers and terminology, but also qualifiers, contrasts, negations, spatial relations, directions, and short factual claims — even if the source text itself has no mistakes.
@@ -287,6 +287,8 @@ _GENERATION_PROMPTS_RU = {
 - Каждый элемент должен быть использован ровно один раз: без пропусков, дублирования и пустых уровней.
 - Формулировки элементов должны быть краткими, сопоставимыми по длине и одного смыслового уровня.
 - Вопрос в строке # должен чётко указывать, что именно нужно собрать и по какому принципу: порядок, стадии, классификация, иерархия, ранжирование или распределение по уровням.
+- КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО включать расшифровку или легенду уровней в текст вопроса # (например, НЕ ПИШИ "# Сгруппируйте состояния (Уровень 1 — ..., Уровень 2 — ...):"). Строка # содержит только саму учебную задачу/принцип. Названия всех уровней, стадий или категорий группировки ОБЯЗАТЕЛЬНО указываются в квадратных скобках у самих строк: level_N [Название категории]: element_1, element_2.
+- Для любых заданий на классификацию, группировку по категориям, иерархию или этапы процесса названия уровней в квадратных скобках level_N [Название]: СТРОГО ОБЯЗАТЕЛЬНЫ.
 - Для хронологии, алгоритма или процесса используй SEQUENCE только если порядок шагов единственный и устойчивый.
 - Для классификации, группировки, иерархии или ранжирования используй SEQUENCE только если критерий группировки и относительный порядок уровней явно следуют из материала.
 - Если несколько элементов находятся на одном уровне, их совместное размещение должно быть однозначно подтверждено материалом.
@@ -312,7 +314,7 @@ level_3 [Название этапа/группы 3]: element_3
 
 Элементы нумеруются последовательно (element_1, element_2, ...).
 Уровни (level_N) задают правильную структуру и должны идти последовательно без пропусков.
-В квадратных скобках [Название этапа] указывай краткое осмысленное название фазы или категории.
+В квадратных скобках [Название этапа/группы] обязательно указывай краткое осмысленное название группы, категории или фазы процесса. Не дублируй это название в строке #.
 Каждый element_X должен встретиться ровно в одном level_N.
 Если два элемента должны оказаться в одной группе/на одном уровне — укажи их через запятую: level_2 [Название]: element_3, element_4.
 </output_format>""",
@@ -524,7 +526,8 @@ level_3 [Название этапа/группы 3]: element_3
 Критерии качества @SEQUENCE:
 - Подходит для процессов, хронологии, алгоритмов, классификации по группам, иерархий и ранжирования.
 - Содержит от 3 до 8 элементов (element_N) и от 2 до 5 уровней (level_N).
-- В квадратных скобках [Название] указывай краткое название фазы процесса или группы.
+- КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО выносить расшифровку/легенду уровней в строку # (например, "# Сгруппируйте ... (Уровень 1 — ...; Уровень 2 — ...)"). Строка # содержит только суть задачи.
+- В квадратных скобках [Название] обязательно указывай краткое название фазы процесса или группы; для группировки/категорий это строго обязательно.
 - Каждый элемент используется ровно в одном уровне. Если на одном уровне несколько элементов — перечисляются через запятую: level_2 [Название]: element_2, element_3.
 - Обязательно указывать директивы:
   @ level_order_matters: true (для порядка уровней) или false (для свободной группировки категорий).
@@ -714,7 +717,7 @@ ANALYSIS_PROMPT_ADDENDUM_EN = r"""
 - Add `target_language` to top-level JSON (`ru`, `uk`, `en`, or `mixed`) and keep generated task content in that language.
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
 - Prefer broad coverage and avoid recommending many tasks that test the same paragraph or fact repeatedly.
-- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
+- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology). In `design_candidates` for `SEQUENCE`, formulate blueprints using direct category/stage titles without parenthesized level legends like "(Уровень 1 — ...; Уровень 2 — ...)".
 - In `not_recommended`, include short user-oriented guidance for unsupported or poor-fit task types: whether the material is suitable in principle and whether manual authoring is recommended.
 - If `illustrations_detected=true`, explicitly tell the user that image-based tasks are not auto-generated here and should be created manually if visual recognition matters.
 - Treat CLICK_WORDS as suitable when the material contains concrete, locally distortable facts or relations — not only numbers and terminology, but also qualifiers, contrasts, negations, spatial relations, directions, and short factual claims.
@@ -843,6 +846,8 @@ Use this type only if every element can be unambiguously placed in the correct l
 - Each element must be used exactly once: no omissions, duplicates, or empty levels.
 - Formulations of elements must be concise, comparable in length, and at the same semantic level.
 - The prompt in line # must clearly specify what to assemble and by what principle: order, stages, classification, hierarchy, ranking, or level distribution.
+- STRICT NEGATIVE CONSTRAINT: NEVER embed a legend, mapping, or explanation of levels into the # prompt line (e.g. do NOT write "# Classify conditions (Level 1 — ..., Level 2 — ...):"). The # line must contain only the instruction itself. All stage, tier, or category names MUST be specified inside the square brackets of the level lines: level_N [Category/Stage Title]: element_1, element_2.
+- For any grouping, classification, hierarchy, or multi-phase tasks, level titles in square brackets level_N [Title]: are STRICTLY MANDATORY.
 - For chronology, algorithms, or processes, use SEQUENCE only if the step sequence is singular and stable.
 - For classification, grouping, hierarchy, or ranking, use SEQUENCE only if the grouping criterion and relative order of levels clearly follow from the material.
 - If multiple elements belong to the same level, their joint placement must be unambiguously verified by the material.
@@ -868,7 +873,7 @@ level_3 [Stage 3 Title]: element_3
 
 Elements are numbered sequentially (element_1, element_2, ...).
 Levels (level_N) define the correct structure and must be sequential without gaps.
-In brackets [Stage Title] provide a concise, meaningful title for the phase or category.
+In brackets [Stage/Category Title] provide a concise, meaningful title for the phase or category. Do not duplicate this title inside the # line.
 Each element_X must appear in exactly one level_N.
 If multiple elements belong to the same group/level, list them comma-separated: level_2 [Title]: element_3, element_4.
 </output_format>""",
@@ -1080,7 +1085,8 @@ level_3 [Phase 3 Title]: element_3
 Quality Criteria for @SEQUENCE:
 - Suitable for processes, chronology, algorithms, multi-level classification, hierarchy, or ranking.
 - Contains 3 to 8 elements (element_N) distributed across 2 to 5 levels (level_N).
-- Provide a concise phase or category name in brackets [Phase Title].
+- STRICT NEGATIVE CONSTRAINT: Never embed level explanations or legends in the # instruction (e.g., "# Classify ... (Level 1 — ...; Level 2 — ...)"). The # line contains only the instruction itself.
+- Provide a concise phase or category name in brackets [Phase Title]; mandatory for grouping and multi-phase tasks.
 - Every element must appear in exactly one level. Multiple items on the same level are comma-separated: level_2 [Title]: element_2, element_3.
 - Directives are mandatory:
   @ level_order_matters: true (for ordered progressions) or false (for category grouping).
@@ -1270,7 +1276,7 @@ ANALYSIS_PROMPT_ADDENDUM_UK = r"""
 - Add `target_language` to top-level JSON (`ru`, `uk`, `en`, or `mixed`) and keep generated task content in that language.
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
 - Prefer broad coverage and avoid recommending many tasks that test the same paragraph or fact repeatedly.
-- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
+- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology). In `design_candidates` for `SEQUENCE`, formulate blueprints using direct category/stage titles without parenthesized level legends like "(Уровень 1 — ...; Уровень 2 — ...)".
 - In `not_recommended`, include short user-oriented guidance for unsupported or poor-fit task types: whether the material is suitable in principle and whether manual authoring is recommended.
 - If `illustrations_detected=true`, explicitly tell the user that image-based tasks are not auto-generated here and should be created manually if visual recognition matters.
 - Treat CLICK_WORDS as suitable when the material contains concrete, locally distortable facts or relations — not only numbers and terminology, but also qualifiers, contrasts, negations, spatial relations, directions, and short factual claims.
@@ -1399,6 +1405,8 @@ _GENERATION_PROMPTS_UK = {
 - Кожен елемент має бути використаний рівно один раз: без пропусків, дублювання та порожніх рівнів.
 - Формулювання елементів мають бути короткими, порівнянними за довжиною та одного смислового рівня.
 - Питання в рядку # має чітко вказувати, що саме потрібно зібрати і за яким принципом: порядок, стадії, класифікація, ієрархія, ранжування або розподіл за рівнями.
+- СУВОРА ЗАБОРОНА: КАТЕГОРИЧНО ЗАБОРОНЕНО включати розшифровку чи легенду рівнів у текст запитання # (наприклад, НЕ ПИШИ "# Згрупуйте стани (Рівень 1 — ..., Рівень 2 — ...):"). Рядок # повинен містити лише саме навчальне завдання/принцип. Назви всіх рівнів, стадій або категорій групування ОБОВ'ЯЗКОВО вказуються у квадратних дужках у самих рядках: level_N [Назва категорії]: element_1, element_2.
+- Для будь-яких завдань на класифікацію, групування за категоріями, ієрархію або фази процесу назви рівнів у квадратних дужках level_N [Назва]: СТРОГО ОБОВ'ЯЗКОВІ.
 - Для хронології, алгоритму або процесу використовуй SEQUENCE тільки якщо порядок кроків єдиний і стійкий.
 - Для класифікації, групування, ієрархії або ранжування використовуй SEQUENCE тільки якщо критерій групування та відносний порядок рівнів явно випливають із матеріалу.
 - Якщо кілька елементів розташовані на одному рівні, їхнє спільне розміщення має бути однозначно підтверджено матеріалом.
@@ -1424,7 +1432,7 @@ level_3 [Назва етапу/групи 3]: element_3
 
 Елементи нумеруються послідовно (element_1, element_2, ...).
 Рівні (level_N) задають правильну структуру і повинні йти послідовно без пропусків.
-У квадратних дужках [Назва етапу] вкажи коротку змістовну назву фази або категорії.
+У квадратних дужках [Назва етапу/групи] обов'язково вкажи коротку змістовну назву фази або категорії. Не дублюй цю назву в рядку #.
 Кожен element_X повинен зустрітися рівно в одном level_N.
 Якщо два елементи повинні опинитися в одній групі/на одному рівні — вкажи їх через кому: level_2 [Назва]: element_3, element_4.
 </output_format>""",
@@ -1636,7 +1644,8 @@ level_3 [Назва етапу 3]: element_3
 Критерії якості @SEQUENCE:
 - Підходить для процесів, хронології, алгоритмів, класифікації за групами, ієрархій та ранжування.
 - Містить від 3 до 8 елементів (element_N) та від 2 до 5 рівнів (level_N).
-- У квадратних дужках [Назва] вказуй коротку назву фази процесу або групи.
+- СУВОРА ЗАБОРОНА: Заборонено виносити розшифровку або легенду рівнів у рядок # (наприклад, "# Згрупуйте ... (Рівень 1 — ...; Рівень 2 — ...)"). Рядок # містить лише суть завдання.
+- У квадратних дужках [Назва] обов'язково вказуй коротку назву фази процесу або групи; для завдань на групування це строго обов'язково.
 - Кожен елемент використовується рівно в одному рівні. Кілька елементів на одному рівні вказуються через кому: level_2 [Назва]: element_2, element_3.
 - Обов'язкові директиви:
   @ level_order_matters: true (для порядку рівнів) або false (для групування категорій).

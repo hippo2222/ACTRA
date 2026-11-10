@@ -223,6 +223,26 @@
             taskPreviewContentContainer: document.getElementById('task-preview-content-container'),
             previewTaskSelectCheckbox: document.getElementById('preview-task-select-checkbox'),
             btnPreviewToggleRaw: document.getElementById('btn-preview-toggle-raw'),
+            btnSandboxModeInspect: document.getElementById('btn-sandbox-mode-inspect'),
+            btnSandboxModeSolve: document.getElementById('btn-sandbox-mode-solve'),
+            btnSandboxLevel1: document.getElementById('btn-sandbox-level-1'),
+            btnSandboxLevel2: document.getElementById('btn-sandbox-level-2'),
+            btnSandboxLevel3: document.getElementById('btn-sandbox-level-3'), // may be null
+            sandboxQualityBadges: document.getElementById('sandbox-quality-badges'),
+            btnPreviewEditSource: document.getElementById('btn-preview-edit-source'),
+
+            // Stage 3 Quality Filters & Import Guard
+            showcaseQualityFilterPills: document.getElementById('showcase-quality-filter-pills'),
+            btnSelectValidOnly: document.getElementById('btn-select-valid-only'),
+            btnDeselectDefects: document.getElementById('btn-deselect-defects'),
+            modalImportGuard: document.getElementById('modal-import-guard'),
+            btnCloseImportGuard: document.getElementById('btn-close-import-guard'),
+            importGuardMessage: document.getElementById('import-guard-message'),
+            importGuardDefectsList: document.getElementById('import-guard-defects-list'),
+            btnGuardExcludeAndImport: document.getElementById('btn-guard-exclude-and-import'),
+            btnGuardImportAnyway: document.getElementById('btn-guard-import-anyway'),
+            btnGuardCancel: document.getElementById('btn-guard-cancel'),
+            labelGuardExcludeAndImport: document.getElementById('label-guard-exclude-and-import'),
 
             modalTopicSelector: document.getElementById('modal-topic-selector'),
             btnCloseTopicModal: document.getElementById('btn-close-topic-modal'),
@@ -382,6 +402,12 @@
         }
 
         StudioState.currentStep = stepNumber;
+
+        // Clear lingering toasts from previous stage
+        if (typeof document !== 'undefined') {
+            const toastContainer = document.getElementById('notification-toast-container') || document.querySelector('.notification-container');
+            if (toastContainer) toastContainer.innerHTML = '';
+        }
 
         // Update Stepper Nodes
         [DOM.stepNode1, DOM.stepNode2, DOM.stepNode3].forEach((node, idx) => {
@@ -1252,32 +1278,99 @@
 
         if (canonicalType === 'TEST') {
             const lines = ['@TEST'];
-            if (questionTitle) lines.push(`# ${questionTitle}`);
-            const options = extractTestOptions(task, data);
-            if (Array.isArray(options)) {
-                options.forEach((opt) => {
-                    const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
-                    const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
-                    lines.push(`${isCorrect ? '+' : '-'} ${optText}`);
+            const questions = Array.isArray(data.questions) && data.questions.length > 0 ? data.questions : null;
+            if (questions && questions.length > 1) {
+                if (questionTitle) lines.push(`# ${questionTitle}`);
+                questions.forEach((q, idx) => {
+                    const qText = (typeof q === 'object' && q) ? (q.text || q.question || q.title || q.prompt || '') : String(q);
+                    const fallbackQuestionTitle = t('open_answer_editor.tab_question_n', 'Вопрос {n}').replace('{n}', idx + 1);
+                    lines.push(`? ${qText || fallbackQuestionTitle}`);
+                    const answers = (typeof q === 'object' && q) ? (q.answers || q.options || []) : [];
+                    if (Array.isArray(answers)) {
+                        answers.forEach((opt) => {
+                            const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                            const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                            lines.push(`${isCorrect ? '+' : '-'} ${optText}`);
+                        });
+                    }
+                    const qExp = q && q.explanation;
+                    if (qExp && typeof qExp === 'string' && qExp.trim()) {
+                        lines.push(`// ${qExp.trim()}`);
+                    }
                 });
-            }
-            const explanation = data.explanation || (data.questions && data.questions[0] && data.questions[0].explanation) || task.explanation;
-            if (explanation && typeof explanation === 'string' && explanation.trim()) {
-                lines.push(`// ${explanation.trim()}`);
+            } else {
+                if (questionTitle) lines.push(`# ${questionTitle}`);
+                const options = extractTestOptions(task, data);
+                if (Array.isArray(options)) {
+                    options.forEach((opt) => {
+                        const isCorrect = Boolean(opt.is_correct ?? opt.correct ?? false);
+                        const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                        lines.push(`${isCorrect ? '+' : '-'} ${optText}`);
+                    });
+                }
+                const explanation = data.explanation || (data.questions && data.questions[0] && data.questions[0].explanation) || task.explanation;
+                if (explanation && typeof explanation === 'string' && explanation.trim()) {
+                    lines.push(`// ${explanation.trim()}`);
+                }
             }
             return lines.join('\n');
         }
 
         if (canonicalType === 'OPEN_ANSWER') {
             const lines = ['@OPEN_ANSWER'];
-            if (questionTitle) lines.push(`# ${questionTitle}`);
-            const stdAnswer = data.standard_answer || data.correct_answer || data.reference_answer || task.standard_answer || task.correct_answer || '';
-            if (stdAnswer) {
-                lines.push(`= ${String(stdAnswer).trim()}`);
+            const caseText = data.case_text || task.case_text || (data.metadata && data.metadata.case_text);
+            const displayMode = data.display_mode || task.display_mode || (data.metadata && data.metadata.display_mode);
+            if (caseText) {
+                lines.push(`@case_text: ${caseText}`);
             }
-            const criteria = data.criteria || data.rubric || task.criteria;
-            if (criteria && typeof criteria === 'string' && criteria.trim()) {
-                lines.push(`// ${criteria.trim()}`);
+            if (displayMode) {
+                lines.push(`@display_mode: ${displayMode}`);
+            }
+
+            const questions = Array.isArray(data.questions) && data.questions.length > 0 ? data.questions : null;
+            if (questions) {
+                questions.forEach((q, idx) => {
+                    const qText = (typeof q === 'object' && q) ? (q.question || q.text || q.prompt || '') : String(q);
+                    const levelsPart = (Array.isArray(q.levels) && q.levels.length > 0)
+                        ? ` [levels: ${q.levels.join(', ')}]`
+                        : '';
+                    const fallbackQuestionTitle = t('open_answer_editor.tab_question_n', 'Вопрос {n}').replace('{n}', idx + 1);
+                    lines.push(`? ${qText || fallbackQuestionTitle}${levelsPart}`);
+                    const std = (typeof q === 'object' && q) ? (q.reference_answer || q.standard_answer || q.correct_answer || '') : '';
+                    if (std) {
+                        lines.push(`= ${String(std).trim()}`);
+                    }
+                    const kws = (typeof q === 'object' && q) ? (q.keywords || []) : [];
+                    if (Array.isArray(kws)) {
+                        kws.forEach((kw) => {
+                            if (kw && String(kw).trim()) lines.push(`* ${String(kw).trim()}`);
+                        });
+                    }
+                    const hint = (typeof q === 'object' && q) ? (q.hint || '') : '';
+                    if (hint && String(hint).trim()) {
+                        lines.push(`~ ${String(hint).trim()}`);
+                    }
+                });
+            } else {
+                if (questionTitle) lines.push(`# ${questionTitle}`);
+                const stdAnswer = data.standard_answer || data.correct_answer || data.reference_answer || task.standard_answer || task.correct_answer || '';
+                if (stdAnswer) {
+                    lines.push(`= ${String(stdAnswer).trim()}`);
+                }
+                const kws = data.keywords || task.keywords || [];
+                if (Array.isArray(kws)) {
+                    kws.forEach((kw) => {
+                        if (kw && String(kw).trim()) lines.push(`* ${String(kw).trim()}`);
+                    });
+                }
+                const hint = data.hint || task.hint || '';
+                if (hint && String(hint).trim()) {
+                    lines.push(`~ ${String(hint).trim()}`);
+                }
+                const criteria = data.criteria || data.rubric || task.criteria;
+                if (criteria && typeof criteria === 'string' && criteria.trim()) {
+                    lines.push(`// ${criteria.trim()}`);
+                }
             }
             return lines.join('\n');
         }
@@ -1285,43 +1378,117 @@
         if (canonicalType === 'SEQUENCE') {
             const lines = ['@SEQUENCE'];
             if (questionTitle) lines.push(`# ${questionTitle}`);
-            let sequenceSteps = [];
-            if (data.elements && typeof data.elements === 'object') {
-                if (data.levels && typeof data.levels === 'object') {
-                    const levelKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
-                    levelKeys.forEach((lvlKey) => {
-                        const elIds = data.levels[lvlKey];
-                        if (Array.isArray(elIds)) {
-                            elIds.forEach((elId) => {
-                                const stepVal = data.elements[elId] || elId;
-                                const txt = typeof stepVal === 'object' && stepVal ? (stepVal.text || stepVal.title) : String(stepVal);
-                                if (txt) sequenceSteps.push(txt);
-                            });
-                        }
-                    });
-                }
-                if (sequenceSteps.length === 0) {
-                    Object.values(data.elements).forEach((val) => {
-                        const txt = typeof val === 'object' && val ? (val.text || val.title) : String(val);
-                        if (txt) sequenceSteps.push(txt);
-                    });
-                }
-            } else if (Array.isArray(data.levels)) {
-                data.levels.forEach((lvl) => {
-                    if (Array.isArray(lvl)) {
-                        lvl.forEach((s) => sequenceSteps.push(String(s)));
-                    }
+
+            const lom = data.level_order_matters ?? task.level_order_matters ?? (data.metadata && data.metadata.level_order_matters);
+            if (lom !== undefined) {
+                lines.push(`@ level_order_matters: ${Boolean(lom)}`);
+            }
+            const swlm = data.sequence_within_level_matters ?? task.sequence_within_level_matters ?? data.sequence_matters ?? task.sequence_matters ?? (data.metadata && data.metadata.sequence_within_level_matters);
+            if (swlm !== undefined) {
+                lines.push(`@ sequence_within_level_matters: ${Boolean(swlm)}`);
+            }
+
+            const elementsMap = new Map();
+            const levelMap = new Map();
+
+            if (data.elements && typeof data.elements === 'object' && !Array.isArray(data.elements)) {
+                Object.entries(data.elements).forEach(([k, v]) => {
+                    const txt = typeof v === 'object' && v ? (v.text || v.title || '') : String(v);
+                    elementsMap.set(k, txt);
                 });
-            } else if (Array.isArray(data.items) || Array.isArray(task.items)) {
-                const items = data.items || task.items;
-                items.forEach((it) => {
-                    const txt = typeof it === 'object' && it ? (it.text || it.title) : String(it);
-                    if (txt) sequenceSteps.push(txt);
+            } else if (Array.isArray(data.elements)) {
+                data.elements.forEach((elem, idx) => {
+                    const id = (typeof elem === 'object' && elem && elem.id) ? elem.id : `element_${idx + 1}`;
+                    const txt = (typeof elem === 'object' && elem) ? (elem.text || elem.title || '') : String(elem);
+                    elementsMap.set(id, txt);
                 });
             }
-            sequenceSteps.forEach((step, idx) => {
-                lines.push(`${idx + 1}. ${step}`);
+
+            const levelNames = data.level_names || task.level_names || {};
+            if (data.levels && typeof data.levels === 'object' && !Array.isArray(data.levels)) {
+                Object.entries(data.levels).forEach(([lvlKey, elIds]) => {
+                    const lvlNum = parseInt(lvlKey, 10) || 1;
+                    const name = levelNames[lvlKey] || levelNames[lvlNum] || '';
+                    levelMap.set(lvlNum, {
+                        name,
+                        elementIds: Array.isArray(elIds) ? elIds : [elIds]
+                    });
+                });
+            } else if (Array.isArray(data.levels)) {
+                data.levels.forEach((lvl, idx) => {
+                    const lvlNum = (typeof lvl === 'object' && lvl && (lvl.level || lvl.level_id))
+                        ? (parseInt(String(lvl.level || lvl.level_id).replace(/\D+/g, ''), 10) || (idx + 1))
+                        : (idx + 1);
+                    const name = (typeof lvl === 'object' && lvl && (lvl.level_name || lvl.name || lvl.title))
+                        ? (lvl.level_name || lvl.name || lvl.title)
+                        : (levelNames[lvlNum] || '');
+                    const rawBlocks = (typeof lvl === 'object' && lvl && (lvl.element_ids || lvl.blocks || lvl.items))
+                        ? (lvl.element_ids || lvl.blocks || lvl.items)
+                        : (Array.isArray(lvl) ? lvl : []);
+                    const elementIds = [];
+                    rawBlocks.forEach((item) => {
+                        if (typeof item === 'object' && item && item.id) {
+                            elementIds.push(item.id);
+                            if (item.label || item.text) {
+                                elementsMap.set(item.id, item.label || item.text);
+                            }
+                        } else {
+                            elementIds.push(String(item));
+                        }
+                    });
+                    levelMap.set(lvlNum, { name, elementIds });
+                });
+            }
+
+            const flatItems = Array.isArray(data.items) ? data.items : (Array.isArray(task.items) ? task.items : null);
+            if (flatItems && flatItems.length > 0 && lom === undefined && swlm === undefined && levelMap.size === 0) {
+                flatItems.forEach((it, idx) => {
+                    const txt = typeof it === 'object' && it ? (it.text || it.title || '') : String(it);
+                    if (txt) lines.push(`${idx + 1}. ${txt}`);
+                });
+                return lines.join('\n');
+            }
+
+            if (elementsMap.size === 0 && flatItems) {
+                flatItems.forEach((it, idx) => {
+                    const id = `element_${idx + 1}`;
+                    const txt = typeof it === 'object' && it ? (it.text || it.title || '') : String(it);
+                    elementsMap.set(id, txt);
+                });
+            }
+
+            if (levelMap.size === 0 && elementsMap.size > 0) {
+                let idx = 1;
+                elementsMap.forEach((_, elId) => {
+                    levelMap.set(idx, { name: '', elementIds: [elId] });
+                    idx++;
+                });
+            }
+
+            elementsMap.forEach((text, id) => {
+                let cleanId = id;
+                if (!/^element_\d+$/i.test(cleanId)) {
+                    const match = cleanId.match(/\d+/);
+                    cleanId = match ? `element_${match[0]}` : `element_${cleanId}`;
+                }
+                lines.push(`${cleanId}: ${text}`);
             });
+
+            const sortedLevels = Array.from(levelMap.entries()).sort((a, b) => a[0] - b[0]);
+            sortedLevels.forEach(([lvlNum, { name, elementIds }]) => {
+                const rawName = String(name || '').trim();
+                const isTautological = isTautologicalLevelLabel(rawName, lvlNum - 1);
+                const namePart = rawName && !isTautological ? ` [${rawName}]` : '';
+                const formattedIds = elementIds.map((id) => {
+                    if (!/^element_\d+$/i.test(id)) {
+                        const m = String(id).match(/\d+/);
+                        return m ? `element_${m[0]}` : `element_${id}`;
+                    }
+                    return id;
+                });
+                lines.push(`level_${lvlNum}${namePart}: ${formattedIds.join(', ')}`);
+            });
+
             return lines.join('\n');
         }
 
@@ -2195,12 +2362,22 @@
                 card.className = 'studio-committed-mini-card';
 
                 const { questionTitle } = extractTaskDisplayInfo(task, idx);
+                const cardAudit = auditTaskDidactics(task);
+                let committedBadgeHtml = '';
+                if (cardAudit.status === 'valid') {
+                    committedBadgeHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-success/15 text-success border border-success/30"><span class="w-1.5 h-1.5 rounded-full bg-success"></span><span>${t('studio.sandbox.badge_valid_short', 'Готово')}</span></span>`;
+                } else if (cardAudit.status === 'warning') {
+                    committedBadgeHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span><span>${t('studio.sandbox.badge_warning_short', 'Внимание')}</span></span>`;
+                } else {
+                    committedBadgeHtml = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-error/15 text-error border border-error/30"><span class="w-1.5 h-1.5 rounded-full bg-error"></span><span>${t('studio.sandbox.badge_defect_short', 'Дефект')}</span></span>`;
+                }
 
                 card.innerHTML = `
                     <div class="studio-committed-mini-card__header">
                         <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">№${idx + 1}</span>
                         <div class="flex items-center gap-1.5">
                             <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[taskType] || taskType}</span>
+                            ${committedBadgeHtml}
                             <button type="button" class="btn-preview-committed-task btn-action-ghost text-text-muted hover:text-primary transition-colors p-0.5 rounded cursor-pointer" title="${escapeHtml(t('studio.stage3.preview_btn_tooltip', 'Просмотреть задание целиком'))}">
                                 <span class="material-symbols-outlined text-[15px]">visibility</span>
                             </button>
@@ -2490,7 +2667,8 @@
                 return curNorm !== normType;
             });
             parsed.forEach((t) => {
-                t._selected_for_import = true;
+                const audit = auditTaskDidactics(t);
+                t._selected_for_import = audit.status !== 'defect';
                 t._studio_id = 't_' + Math.random().toString(36).substring(2, 9);
                 if (!t._import_type && taskType) {
                     t._import_type = taskType;
@@ -2514,6 +2692,7 @@
     // ---------------------------------------------------------------------------
 
     let showcaseFilterType = 'ALL';
+    let showcaseQualityFilter = 'ALL'; // 'ALL' | 'VALID' | 'WARNING' | 'DEFECT'
 
     const SHOWCASE_CATEGORIES = [
         {
@@ -2625,6 +2804,7 @@
             DOM.btnPreviewPrevTask.addEventListener('click', () => {
                 if (currentPreviewIndex > 0) {
                     currentPreviewIndex--;
+                    sandboxSolveState = null;
                     renderTaskPreviewModalContent();
                 }
             });
@@ -2635,6 +2815,7 @@
                 const tasks = StudioState.allTasks || [];
                 if (currentPreviewIndex < tasks.length - 1) {
                     currentPreviewIndex++;
+                    sandboxSolveState = null;
                     renderTaskPreviewModalContent();
                 }
             });
@@ -2657,6 +2838,92 @@
             DOM.btnPreviewToggleRaw.addEventListener('click', () => {
                 isRawSpecVisible = !isRawSpecVisible;
                 renderTaskPreviewModalContent();
+            });
+        }
+
+        if (DOM.btnSandboxModeInspect) {
+            DOM.btnSandboxModeInspect.addEventListener('click', () => {
+                sandboxMode = 'inspect';
+                updateSandboxToolbar();
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        if (DOM.btnSandboxModeSolve) {
+            DOM.btnSandboxModeSolve.addEventListener('click', () => {
+                sandboxMode = 'solve';
+                const tasks = StudioState.allTasks || [];
+                const currentTask = tasks[currentPreviewIndex];
+                if (currentTask && (!sandboxSolveState || sandboxSolveState.task !== currentTask)) {
+                    initSandboxSolveState(currentTask);
+                }
+                updateSandboxToolbar();
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        [DOM.btnSandboxLevel1, DOM.btnSandboxLevel2].forEach((btn) => {
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                const lvl = parseInt(btn.getAttribute('data-level'), 10) || 1;
+                sandboxLevel = lvl;
+                if (sandboxSolveState) {
+                    sandboxSolveState.isEvaluated = false;
+                }
+                updateSandboxToolbar();
+                renderTaskPreviewModalContent();
+            });
+        });
+
+        if (DOM.btnPreviewEditSource) {
+            DOM.btnPreviewEditSource.addEventListener('click', () => {
+                const tasks = StudioState.allTasks || [];
+                const currentTask = tasks[currentPreviewIndex];
+                if (currentTask) {
+                    jumpToTaskSourceInStage2(currentTask);
+                }
+            });
+        }
+
+        if (DOM.btnSelectValidOnly) {
+            DOM.btnSelectValidOnly.addEventListener('click', selectValidOnly);
+        }
+
+        if (DOM.btnDeselectDefects) {
+            DOM.btnDeselectDefects.addEventListener('click', deselectDefects);
+        }
+
+        if (DOM.btnCloseImportGuard) {
+            DOM.btnCloseImportGuard.addEventListener('click', closeImportGuardModal);
+        }
+
+        if (DOM.btnGuardCancel) {
+            DOM.btnGuardCancel.addEventListener('click', closeImportGuardModal);
+        }
+
+        if (DOM.btnGuardImportAnyway) {
+            DOM.btnGuardImportAnyway.addEventListener('click', () => {
+                closeImportGuardModal();
+                const selected = StudioState.allTasks.filter((t) => t._selected_for_import);
+                proceedWithImportExecution(selected);
+            });
+        }
+
+        if (DOM.btnGuardExcludeAndImport) {
+            DOM.btnGuardExcludeAndImport.addEventListener('click', () => {
+                const defectiveSelected = StudioState.allTasks.filter((t) => t._selected_for_import && auditTaskDidactics(t).status === 'defect');
+                defectiveSelected.forEach((t) => { t._selected_for_import = false; });
+                closeImportGuardModal();
+                renderShowcase();
+                updateStickyBar();
+                updateShowcaseSelectAllCheckbox();
+                markDirty();
+                const cleanSelected = StudioState.allTasks.filter((t) => t._selected_for_import);
+                if (cleanSelected.length > 0) {
+                    proceedWithImportExecution(cleanSelected);
+                } else {
+                    showToast(t('studio.toast.select_at_least_one', 'Выберите хотя бы одно задание для импорта'), 'warning');
+                }
             });
         }
     }
@@ -2682,8 +2949,11 @@
         }
     }
 
-    let currentPreviewIndex = 0;
+let currentPreviewIndex = 0;
     let isRawSpecVisible = false;
+    let sandboxMode = 'inspect'; // 'inspect' | 'solve'
+    let sandboxLevel = 1; // 1 | 2 | 3
+    let sandboxSolveState = null;
 
     function openTaskPreviewModal(task, targetIndex) {
         const tasks = StudioState.allTasks || [];
@@ -2712,6 +2982,1162 @@
             DOM.modalTaskPreview.classList.add('hidden');
         }
         isRawSpecVisible = false;
+        sandboxSolveState = null;
+    }
+
+    function updateSandboxToolbar() {
+        if (DOM.btnSandboxModeInspect && DOM.btnSandboxModeSolve) {
+            if (sandboxMode === 'inspect') {
+                DOM.btnSandboxModeInspect.classList.add('studio-seg-btn--active');
+                DOM.btnSandboxModeSolve.classList.remove('studio-seg-btn--active');
+            } else {
+                DOM.btnSandboxModeSolve.classList.add('studio-seg-btn--active');
+                DOM.btnSandboxModeInspect.classList.remove('studio-seg-btn--active');
+            }
+        }
+
+        const tasks = StudioState.allTasks || [];
+        const currentTask = tasks[currentPreviewIndex];
+        const canonicalType = currentTask ? normalizeTaskType(currentTask) : 'TEST';
+
+        const diffGroup = document.getElementById('sandbox-difficulty-control-group');
+        if (diffGroup) {
+            // Only TEST has an alternate answer mode (Multiple choice L1 vs Text input L2)
+            if (sandboxMode === 'solve' && canonicalType === 'TEST') {
+                diffGroup.classList.remove('hidden');
+            } else {
+                diffGroup.classList.add('hidden');
+            }
+        }
+
+        const levelBtns = [
+            { el: DOM.btnSandboxLevel1, lvl: 1 },
+            { el: DOM.btnSandboxLevel2, lvl: 2 }
+        ];
+
+        levelBtns.forEach(({ el, lvl }) => {
+            if (!el) return;
+            if (lvl === sandboxLevel) {
+                el.classList.add('studio-seg-btn--active');
+            } else {
+                el.classList.remove('studio-seg-btn--active');
+            }
+        });
+    }
+
+    function isTautologicalLevelLabel(label, index) {
+        if (!label) return true;
+        const s = String(label).trim();
+        if (!s) return true;
+        if (index != null && (s === String(index + 1) || s === `#${index + 1}`)) return true;
+        return /^(?:level|уровень|рівень|этап|етап|stage|группа|група|group)[_\s-]*\d+$/i.test(s);
+    }
+
+    function extractSequenceLevels(task, data) {
+        if (!data && task) data = task.data || task.task_data || task.content || task;
+        if (!data) return [];
+
+        const elementsMap = new Map();
+        if (data.elements && typeof data.elements === 'object' && !Array.isArray(data.elements)) {
+            Object.entries(data.elements).forEach(([k, v]) => {
+                const txt = typeof v === 'object' && v ? (v.text || v.title || '') : String(v);
+                elementsMap.set(k, txt);
+            });
+        } else if (Array.isArray(data.elements)) {
+            data.elements.forEach((elem, idx) => {
+                const id = (typeof elem === 'object' && elem && elem.id) ? elem.id : `element_${idx + 1}`;
+                const txt = (typeof elem === 'object' && elem) ? (elem.text || elem.title || '') : String(elem);
+                elementsMap.set(id, txt);
+            });
+        }
+
+        const levelNames = data.level_names || task.level_names || {};
+        const result = [];
+
+        if (Array.isArray(data.levels) && data.levels.length > 0) {
+            data.levels.forEach((lvl, idx) => {
+                const lvlNum = (typeof lvl === 'object' && lvl && (lvl.level || lvl.level_id))
+                    ? (parseInt(String(lvl.level || lvl.level_id).replace(/\D+/g, ''), 10) || (idx + 1))
+                    : (idx + 1);
+                let rawTitle = (typeof lvl === 'object' && lvl && (lvl.level_name || lvl.name || lvl.title))
+                    ? (lvl.level_name || lvl.name || lvl.title)
+                    : (levelNames[lvlNum] || levelNames[String(lvlNum)] || '');
+                rawTitle = String(rawTitle || '').trim();
+                const title = isTautologicalLevelLabel(rawTitle, idx) ? '' : rawTitle;
+
+                const rawBlocks = (typeof lvl === 'object' && lvl && (lvl.element_ids || lvl.blocks || lvl.items))
+                    ? (lvl.element_ids || lvl.blocks || lvl.items)
+                    : (Array.isArray(lvl) ? lvl : []);
+
+                const items = [];
+                rawBlocks.forEach((item) => {
+                    if (typeof item === 'object' && item && item.id) {
+                        items.push(item.label || item.text || elementsMap.get(item.id) || item.id);
+                    } else {
+                        const strId = String(item);
+                        items.push(elementsMap.get(strId) || strId);
+                    }
+                });
+                result.push({ levelNum: lvlNum, title, items });
+            });
+        } else if (Array.isArray(data.sequence) && data.sequence.length > 0) {
+            data.sequence.forEach((lvl, idx) => {
+                const rawTitle = String(lvl.title || lvl.level_name || '').trim();
+                const title = isTautologicalLevelLabel(rawTitle, idx) ? '' : rawTitle;
+                const items = (lvl.items || []).map(it => (typeof it === 'object' && it ? (it.label || it.text || '') : String(it)));
+                result.push({ levelNum: idx + 1, title, items });
+            });
+        } else if (data.levels && typeof data.levels === 'object' && !Array.isArray(data.levels)) {
+            const sortedKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
+            sortedKeys.forEach((lvlKey, idx) => {
+                const lvlNum = parseInt(lvlKey, 10) || (idx + 1);
+                const rawTitle = String(levelNames[lvlKey] || levelNames[lvlNum] || '').trim();
+                const title = isTautologicalLevelLabel(rawTitle, idx) ? '' : rawTitle;
+                const elIds = Array.isArray(data.levels[lvlKey]) ? data.levels[lvlKey] : [data.levels[lvlKey]];
+                const items = elIds.map(id => elementsMap.get(id) || String(id));
+                result.push({ levelNum: lvlNum, title, items });
+            });
+        }
+
+        return result;
+    }
+
+    function extractSequenceSteps(task, data) {
+        if (!data && task) data = task.data || task.task_data || task.content || task;
+        if (!data) return [];
+
+        const cleanStep = (str) => {
+            if (!str || typeof str !== 'string') return '';
+            return str.replace(/^\s*(?:шаг\s*)?\d+\s*[-–—\.\)\:]\s*/i, '').trim();
+        };
+
+        const sequenceSteps = [];
+        if (data.elements && typeof data.elements === 'object') {
+            if (data.levels && typeof data.levels === 'object') {
+                const levelKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
+                levelKeys.forEach((lvlKey) => {
+                    const elIds = data.levels[lvlKey];
+                    if (Array.isArray(elIds)) {
+                        elIds.forEach((elId) => {
+                            const stepVal = data.elements[elId] || elId;
+                            const txt = typeof stepVal === 'object' && stepVal ? (stepVal.text || stepVal.title) : String(stepVal);
+                            const cleaned = cleanStep(txt);
+                            if (cleaned) sequenceSteps.push(cleaned);
+                        });
+                    }
+                });
+            }
+            if (sequenceSteps.length === 0) {
+                Object.values(data.elements).forEach((val) => {
+                    const txt = typeof val === 'object' && val ? (val.text || val.title) : String(val);
+                    const cleaned = cleanStep(txt);
+                    if (cleaned) sequenceSteps.push(cleaned);
+                });
+            }
+        } else if (Array.isArray(data.levels)) {
+            data.levels.forEach((lvl) => {
+                if (Array.isArray(lvl)) {
+                    lvl.forEach((s) => {
+                        const cleaned = cleanStep(String(s));
+                        if (cleaned) sequenceSteps.push(cleaned);
+                    });
+                }
+            });
+        } else if (Array.isArray(data.items) || (task && Array.isArray(task.items))) {
+            const items = data.items || (task && task.items);
+            items.forEach((it) => {
+                const txt = typeof it === 'object' && it ? (it.text || it.title) : String(it);
+                const cleaned = cleanStep(txt);
+                if (cleaned) sequenceSteps.push(cleaned);
+            });
+        } else if (Array.isArray(data.steps) || (task && Array.isArray(task.steps))) {
+            const steps = data.steps || (task && task.steps);
+            steps.forEach((st) => {
+                const txt = typeof st === 'object' && st ? (st.text || st.title) : String(st);
+                const cleaned = cleanStep(txt);
+                if (cleaned) sequenceSteps.push(cleaned);
+            });
+        }
+        return sequenceSteps;
+    }
+
+    function resolveTaskErrorSpans(task, data, text) {
+        if (!data && task) data = task.data || task.task_data || task.content || task;
+        if (!text && data) text = String(data.text || task.text || (task.content && task.content.text) || '');
+
+        const rawSpans = data?.error_spans || task?.error_spans || (task?.content && task.content.error_spans);
+        if (Array.isArray(rawSpans) && rawSpans.length > 0) return rawSpans;
+
+        const rawIndices = data?.error_indices || task?.error_indices || (task?.content && task.content.error_indices);
+        if (Array.isArray(rawIndices) && rawIndices.length > 0) return rawIndices;
+
+        const rawErrors = data?.errors || task?.errors || (task?.content && task.content.errors);
+        if (Array.isArray(rawErrors) && rawErrors.length > 0 && typeof text === 'string' && text.length > 0) {
+            let cleanText = text.trim();
+            const prefixMatch = cleanText.match(/^text:\s*/i);
+            const prefixLen = prefixMatch ? prefixMatch[0].length : 0;
+            const textToSearch = prefixLen ? cleanText.slice(prefixLen) : cleanText;
+
+            const generatedSpans = [];
+            rawErrors.forEach((err) => {
+                const targetPhrase = typeof err === 'object' && err ? (err.target || err.phrase || err.text || err.error) : String(err);
+                if (targetPhrase && typeof targetPhrase === 'string') {
+                    const targetClean = targetPhrase.trim();
+                    if (targetClean) {
+                        let searchIdx = 0;
+                        while (searchIdx < textToSearch.length) {
+                            const foundAt = textToSearch.indexOf(targetClean, searchIdx);
+                            if (foundAt === -1) break;
+                            generatedSpans.push({
+                                start: foundAt + prefixLen,
+                                end: foundAt + prefixLen + targetClean.length,
+                                target: targetClean,
+                                correction: (typeof err === 'object' && err ? err.correction : '') || '',
+                            });
+                            searchIdx = foundAt + targetClean.length;
+                        }
+                    }
+                }
+            });
+            if (generatedSpans.length > 0) {
+                return generatedSpans;
+            }
+        }
+
+        return [];
+    }
+
+    function auditTaskDidactics(task) {
+        if (!task || typeof task !== 'object') {
+            return {
+                status: 'defect',
+                verdictKey: 'audit_defect',
+                verdictText: t('studio.sandbox.audit_defect', 'Есть дефекты'),
+                verdictClass: 'bg-error/15 text-error border-error/30',
+                verdictIcon: 'error',
+                defects: [t('studio.sandbox.badge_std_missing', 'Нет эталона!')],
+                warnings: [],
+                badges: [],
+            };
+        }
+        if (task._audit && typeof task._audit === 'object' && task._audit.status) {
+            return task._audit;
+        }
+
+        const canonicalType = normalizeTaskType(task);
+        const data = task.data || task.task_data || task.content || task || {};
+        const defects = [];
+        const warnings = [];
+        const badges = [];
+
+        // 1. Check prompt / title
+        const { questionTitle } = extractTaskDisplayInfo(task);
+        if (!questionTitle || !questionTitle.trim()) {
+            defects.push(t('studio.sandbox.badge_std_missing', 'Нет эталона!'));
+        }
+
+        // 2. Type-specific checks
+        if (canonicalType === 'TEST') {
+            const options = extractTestOptions(task, data) || [];
+            const correct = options.filter((o) => Boolean(o.is_correct ?? o.correct));
+            if (options.length === 0) {
+                defects.push(t('studio.sandbox.badge_no_correct', 'Нет правильного ответа!'));
+            } else if (correct.length === 0) {
+                defects.push(t('studio.sandbox.badge_no_correct', 'Нет правильного ответа!'));
+            } else if (correct.length === 1) {
+                badges.push({ text: t('studio.sandbox.badge_single_choice', 'Один правильный ответ'), classes: 'bg-primary-light/30 text-primary border-primary/20' });
+            } else {
+                badges.push({ text: t('studio.sandbox.badge_multi_choice', 'Множественный выбор'), classes: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/20' });
+            }
+        } else if (canonicalType === 'OPEN_ANSWER') {
+            const stdAnswer = data.standard_answer || data.correct_answer || task.standard_answer || task.correct_answer;
+            if (!stdAnswer || !String(stdAnswer).trim()) {
+                defects.push(t('studio.sandbox.badge_std_missing', 'Нет эталона!'));
+            } else {
+                badges.push({ text: t('studio.sandbox.badge_std_present', 'Эталон задан'), classes: 'bg-success/15 text-success border-success/20' });
+            }
+
+            const keywords = data.keywords || (data.questions && data.questions[0] && data.questions[0].keywords) || task.keywords;
+            if (Array.isArray(keywords) && keywords.length > 0) {
+                badges.push({
+                    text: t('studio.sandbox.badge_keywords_count', '{count} ключевых слов').replace('{count}', keywords.length),
+                    classes: 'bg-primary-light/30 text-primary border-primary/20'
+                });
+            } else {
+                warnings.push(t('studio.sandbox.badge_no_keywords', 'Без ключевых слов'));
+                badges.push({ text: t('studio.sandbox.badge_no_keywords', 'Без ключевых слов'), classes: 'bg-surface-3 text-text-muted border-border-subtle' });
+            }
+
+            const hint = data.hint || (data.questions && data.questions[0] && data.questions[0].hint) || task.hint;
+            if (hint && String(hint).trim()) {
+                badges.push({ text: t('studio.sandbox.badge_hint_present', 'С подсказкой'), classes: 'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/20' });
+            } else {
+                badges.push({ text: t('studio.sandbox.badge_hint_missing', 'Без подсказки'), classes: 'bg-surface-3 text-text-muted border-border-subtle' });
+            }
+        } else if (canonicalType === 'SEQUENCE') {
+            const steps = extractSequenceSteps(task, data);
+            const levels = extractSequenceLevels(task, data);
+            const lom = data.level_order_matters ?? task.level_order_matters ?? (data.metadata && data.metadata.level_order_matters);
+            const isGrouping = lom === false || levels.some(l => l.items && l.items.length > 1);
+
+            if (steps.length === 0) {
+                defects.push(t('studio.sandbox.badge_std_missing', 'Нет эталона!'));
+            } else {
+                if (isGrouping) {
+                    badges.push({
+                        text: t('studio.sandbox.badge_grouping', 'Группировка'),
+                        classes: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/20'
+                    });
+                    const hasUnnamedGroups = levels.some(l => !l.title);
+                    if (hasUnnamedGroups && levels.length > 1) {
+                        warnings.push(t('studio.sandbox.warn_missing_group_titles', 'Рекомендуется указать названия групп вместо числовых уровней'));
+                    }
+                } else {
+                    badges.push({
+                        text: t('studio.sandbox.badge_steps_count', '{count} этапов').replace('{count}', steps.length),
+                        classes: 'bg-primary-light/30 text-primary border-primary/20'
+                    });
+                }
+            }
+
+            if (questionTitle && /\((?:уровень|level|рівень)\s*\d+[^)]*\)/i.test(questionTitle)) {
+                warnings.push(t('studio.sandbox.warn_level_legend_in_prompt', 'Легенда уровней обнаружена в тексте задания. Названия уровней лучше задавать в [заголовках]'));
+            }
+        } else if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+            const text = String(data.text || task.text || (task.content && task.content.text) || '');
+            const errorSpans = resolveTaskErrorSpans(task, data, text);
+            const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
+            const { phraseCount } = getErrorAnalysis(text, errorSpans, errorIndices);
+            if (phraseCount === 0) {
+                defects.push(t('studio.sandbox.badge_std_missing', 'Нет эталона!'));
+            } else {
+                badges.push({
+                    text: t('studio.sandbox.badge_errors_count', '{count} дефектов').replace('{count}', phraseCount),
+                    classes: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                });
+            }
+        } else if (canonicalType === 'CLICK_TEXT') {
+            const options = extractTestOptions(task, data) || [];
+            const correct = options.filter((o) => Boolean(o.is_correct ?? o.correct));
+            if (correct.length === 0) {
+                defects.push(t('studio.sandbox.badge_no_correct', 'Нет правильного ответа!'));
+            } else {
+                badges.push({
+                    text: `${correct.length} / ${options.length}`,
+                    classes: 'bg-primary-light/30 text-primary border-primary/20'
+                });
+            }
+        }
+
+        let status = 'valid';
+        let verdictText = t('studio.sandbox.audit_valid', 'Готово к публикации');
+        let verdictKey = 'audit_valid';
+        let verdictClass = 'bg-success/15 text-success border-success/30';
+        let verdictIcon = 'verified';
+
+        if (defects.length > 0) {
+            status = 'defect';
+            verdictText = t('studio.sandbox.audit_defect', 'Есть дефекты');
+            verdictKey = 'audit_defect';
+            verdictClass = 'bg-error/15 text-error border-error/30';
+            verdictIcon = 'error';
+        } else if (warnings.length > 0) {
+            status = 'warning';
+            verdictText = t('studio.sandbox.audit_warning', 'Требует внимания');
+            verdictKey = 'audit_warning';
+            verdictClass = 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30';
+            verdictIcon = 'warning';
+        }
+
+        task._audit = {
+            status,
+            verdictKey,
+            verdictText,
+            verdictClass,
+            verdictIcon,
+            defects,
+            warnings,
+            badges,
+        };
+        return task._audit;
+    }
+
+    function renderDidacticQualityBadges(task, canonicalType) {
+        if (!DOM.sandboxQualityBadges) return;
+        if (!task) {
+            DOM.sandboxQualityBadges.innerHTML = '';
+            return;
+        }
+
+        const audit = auditTaskDidactics(task);
+        DOM.sandboxQualityBadges.innerHTML = `
+            <div class="flex items-center gap-2 flex-wrap text-xs w-full">
+                <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.sandbox.quality_audit_title', 'Дидактический аудит:')}</span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${audit.verdictClass}">
+                    <span class="material-symbols-outlined text-[13px]">${audit.verdictIcon}</span>
+                    <span>${escapeHtml(audit.verdictText)}</span>
+                </span>
+                ${audit.defects.map((d) => `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-error/15 text-error border border-error/30">
+                        <span class="material-symbols-outlined text-[12px]">cancel</span>
+                        <span>${escapeHtml(d)}</span>
+                    </span>
+                `).join('')}
+                ${audit.badges.map((b) => `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border ${b.classes}">
+                        <span>${escapeHtml(b.text)}</span>
+                    </span>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function jumpToTaskSourceInStage2(task) {
+        if (!task) return;
+        const canonicalType = normalizeTaskType(task);
+        closeTaskPreviewModal();
+        switchStep(2);
+        selectGenerationType(canonicalType);
+
+        const draft = StudioState.typeDrafts[canonicalType];
+        if (draft && draft.isCommitted) {
+            switchToEditMode();
+        }
+
+        if (DOM.typeResponseInput) {
+            const curVal = DOM.typeResponseInput.value || '';
+            const { questionTitle } = extractTaskDisplayInfo(task);
+            if (!curVal.trim()) {
+                const serialized = serializeTaskToText(task);
+                DOM.typeResponseInput.value = serialized;
+                if (!StudioState.typeDrafts[canonicalType]) {
+                    StudioState.typeDrafts[canonicalType] = { responseText: '', parsedTasks: [], isCommitted: false };
+                }
+                StudioState.typeDrafts[canonicalType].responseText = serialized;
+                StudioState.typeDrafts[canonicalType].isCommitted = false;
+                runClientRegexCounter(serialized, canonicalType);
+                updateTypeTabStatus(canonicalType);
+                markDirty();
+            }
+            DOM.typeResponseInput.focus();
+            if (questionTitle && DOM.typeResponseInput.value.includes(questionTitle)) {
+                const idx = DOM.typeResponseInput.value.indexOf(questionTitle);
+                DOM.typeResponseInput.setSelectionRange(idx, idx + questionTitle.length);
+            }
+        }
+        showToast(t('studio.sandbox.jumped_to_source', 'Открыт черновик задания на Шаге 2'), 'info');
+    }
+
+    function initSandboxSolveState(task) {
+        if (!task) return;
+        const canonicalType = normalizeTaskType(task);
+        const { data } = extractTaskDisplayInfo(task, currentPreviewIndex);
+
+        sandboxSolveState = {
+            task,
+            canonicalType,
+            isEvaluated: false,
+            score: null,
+            status: null,
+            feedback: null,
+            selectedOptionIndices: [],
+            textInput: '',
+            showHint: false,
+            steps: [],
+            selectedWordIndices: [],
+        };
+
+        if (canonicalType === 'SEQUENCE') {
+            const rawSteps = extractSequenceSteps(task, data);
+            const stepObjects = rawSteps.map((txt, idx) => ({ originalIndex: idx, text: txt }));
+            if (stepObjects.length >= 2) {
+                sandboxSolveState.steps = stepObjects.slice().reverse();
+            } else {
+                sandboxSolveState.steps = stepObjects;
+            }
+        }
+    }
+
+    function renderSandboxSolveMode(task, data, canonicalType) {
+        const { questionTitle } = extractTaskDisplayInfo(task, currentPreviewIndex);
+
+        let bodyHtml = '';
+
+        // Informational banner ONLY for TEST when in free text input mode
+        if (canonicalType === 'TEST' && sandboxLevel === 2) {
+            bodyHtml += `
+                <div class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs text-text-secondary">
+                    <span class="material-symbols-outlined text-primary text-[16px] flex-shrink-0">tune</span>
+                    <span class="leading-relaxed font-medium">${t('studio.sandbox.level_note_test_l2', 'Режим свободного ввода: варианты скрыты, студент вводит ответ текстом.')}</span>
+                </div>
+            `;
+        }
+
+        bodyHtml += `
+            <div class="flex flex-col gap-1.5">
+                <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.modal_prompt_label', 'Текст вопроса / задание:')}</span>
+                <div class="text-sm font-semibold text-text-main p-3 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed">
+                    ${escapeHtml(questionTitle)}
+                </div>
+            </div>
+        `;
+
+        // 1. TEST or CLICK_TEXT
+        if (canonicalType === 'TEST' || canonicalType === 'CLICK_TEXT') {
+            const options = extractTestOptions(task, data) || [];
+            const isClickText = canonicalType === 'CLICK_TEXT';
+            const isMulti = options.filter((o) => Boolean(o.is_correct ?? o.correct)).length > 1;
+
+            if (sandboxLevel >= 2 && !isClickText) {
+                bodyHtml += `
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.sandbox.free_input_label', 'Ваш ответ (свободный ввод):')}</span>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" id="btn-sandbox-paste-std" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">content_paste</span>
+                                    <span>${t('studio.sandbox.paste_standard_btn', 'Вставить эталон')}</span>
+                                </button>
+                                <button type="button" id="btn-sandbox-reset" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">restart_alt</span>
+                                    <span>${t('studio.sandbox.reset_btn', 'Сбросить')}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="text" id="sandbox-test-text-input" class="studio-input w-full text-xs" placeholder="${t('studio.sandbox.solve_input_placeholder', 'Введите ваш ответ для проверки...')}" value="${escapeHtml(sandboxSolveState.textInput || '')}" />
+                    </div>
+                `;
+            } else {
+                const hintText = isClickText
+                    ? t('studio.stage3.statements_label', 'Утверждения (верные и мифы):')
+                    : isMulti
+                        ? t('studio.sandbox.solve_multi_choice_hint', 'Выберите один или несколько вариантов ответа и нажмите кнопку проверки.')
+                        : t('studio.sandbox.solve_single_choice_hint', 'Выберите один вариант ответа и проверьте результат.');
+
+                bodyHtml += `
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.modal_options_label', 'Варианты ответов:')}</span>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button" id="btn-sandbox-preset-correct" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">check</span>
+                                    <span>${t('studio.sandbox.paste_standard_btn', 'Вставить эталон')}</span>
+                                </button>
+                                <button type="button" id="btn-sandbox-reset" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">restart_alt</span>
+                                    <span>${t('studio.sandbox.reset_btn', 'Сбросить')}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-text-muted">${hintText}</p>
+                        <div class="flex flex-col gap-1.5" id="sandbox-test-options-list">
+                            ${options.map((opt, optIdx) => {
+                                const optText = typeof opt === 'object' && opt ? (opt.text || opt.title || opt.value || '') : String(opt);
+                                const isSelected = sandboxSolveState.selectedOptionIndices.includes(optIdx);
+                                return `
+                                    <button type="button" class="sandbox-choice-card w-full text-left p-2.5 px-3 rounded-lg border transition-all flex items-start gap-2.5 cursor-pointer ${isSelected ? 'border-primary bg-primary-light/15 font-semibold text-primary' : 'border-border-subtle bg-surface-2 text-text-main hover:bg-surface-3'}" data-opt-idx="${optIdx}">
+                                        <span class="w-4 h-4 rounded ${isMulti ? 'rounded-md' : 'rounded-full'} border flex items-center justify-center text-[10px] font-bold mt-0.5 flex-shrink-0 ${isSelected ? 'border-primary bg-primary text-white' : 'border-border-strong bg-surface-1 text-transparent'}">${isSelected ? '✓' : ''}</span>
+                                        <span class="text-xs leading-relaxed flex-1">${escapeHtml(optText)}</span>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 2. OPEN_ANSWER
+        if (canonicalType === 'OPEN_ANSWER') {
+            const caseText = data.case_text || task.case_text;
+            if (caseText && String(caseText).trim()) {
+                bodyHtml += `
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.clinical_case_label', 'Клинический случай:')}</span>
+                        <div class="text-xs text-text-secondary p-3 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed whitespace-pre-wrap">
+                            ${escapeHtml(caseText.trim())}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const hint = data.hint || (data.questions && data.questions[0] && data.questions[0].hint) || task.hint;
+            const canShowHint = sandboxLevel === 1 && hint && String(hint).trim();
+
+            bodyHtml += `
+                <div class="flex flex-col gap-2">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.open_answer_input_title', 'Развернутый ответ студента:')}</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${canShowHint ? `
+                                    <button type="button" id="btn-sandbox-toggle-hint" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                        <span class="material-symbols-outlined text-[13px]">lightbulb</span>
+                                        <span>${sandboxSolveState.showHint ? t('studio.sandbox.badge_hint_missing', 'Без подсказки') : t('studio.sandbox.badge_hint_present', 'С подсказкой')}</span>
+                                    </button>
+                                ` : ''}
+                                <button type="button" id="btn-sandbox-paste-std" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">content_paste</span>
+                                    <span>${t('studio.sandbox.paste_standard_btn', 'Вставить эталон')}</span>
+                                </button>
+                                <button type="button" id="btn-sandbox-paste-partial" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">edit_note</span>
+                                    <span>${t('studio.sandbox.paste_partial_btn', 'Вставить часть')}</span>
+                                </button>
+                                <button type="button" id="btn-sandbox-reset" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                    <span class="material-symbols-outlined text-[13px]">restart_alt</span>
+                                    <span>${t('studio.sandbox.reset_btn', 'Сбросить')}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-[11px] text-text-muted leading-relaxed">${t('studio.sandbox.solve_open_answer_hint', 'Введите клиническое обоснование или развернутый ответ для проверки ключевых слов...')}</p>
+                    </div>
+                    ${sandboxSolveState.showHint && canShowHint ? `
+                        <div class="p-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-xs text-sky-800 dark:text-sky-200 flex items-start gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-sky-500 flex-shrink-0 mt-0.5">lightbulb</span>
+                            <div class="leading-relaxed font-medium">${escapeHtml(hint.trim())}</div>
+                        </div>
+                    ` : ''}
+                    <textarea id="sandbox-open-answer-input" class="studio-textarea w-full min-h-[90px] text-xs font-sans leading-relaxed" placeholder="${t('studio.sandbox.solve_open_answer_hint', 'Введите клиническое обоснование или развернутый ответ для проверки ключевых слов...')}">${escapeHtml(sandboxSolveState.textInput || '')}</textarea>
+${sandboxSolveState.isEvaluated && ((sandboxSolveState.matchedKeywords && sandboxSolveState.matchedKeywords.length > 0) || (sandboxSolveState.missingKeywords && sandboxSolveState.missingKeywords.length > 0)) ? `
+    <div class="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-2 border border-border-subtle mt-1 text-xs">
+        ${sandboxSolveState.matchedKeywords && sandboxSolveState.matchedKeywords.length > 0 ? `
+            <div class="flex flex-col gap-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-text-muted">${t('studio.sandbox.matched_keywords_label', 'Распознанные ключевые понятия:')}</span>
+                <div class="flex flex-wrap gap-1">
+                    ${sandboxSolveState.matchedKeywords.map((kw) => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-success/20 text-success text-[11px] font-semibold border border-success/30">✓ ${escapeHtml(kw)}</span>`).join('')}
+                </div>
+            </div>
+        ` : ''}
+        ${sandboxSolveState.missingKeywords && sandboxSolveState.missingKeywords.length > 0 ? `
+            <div class="flex flex-col gap-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-text-muted">${t('studio.sandbox.missing_keywords_label', 'Ненайденные ключевые понятия:')}</span>
+                <div class="flex flex-wrap gap-1">
+                    ${sandboxSolveState.missingKeywords.map((kw) => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-error/20 text-error text-[11px] font-semibold border border-error/30">• ${escapeHtml(kw)}</span>`).join('')}
+                </div>
+            </div>
+        ` : ''}
+    </div>
+` : ''}
+                </div>
+            `;
+        }
+
+        // 3. SEQUENCE
+        if (canonicalType === 'SEQUENCE') {
+            bodyHtml += `
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.sequence_steps_label', 'Правильный порядок шагов:')}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" id="btn-sandbox-preset-correct" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                <span class="material-symbols-outlined text-[13px]">check</span>
+                                <span>${t('studio.sandbox.paste_standard_btn', 'Вставить эталон')}</span>
+                            </button>
+                            <button type="button" id="btn-sandbox-shuffle" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                <span class="material-symbols-outlined text-[13px]">shuffle</span>
+                                <span>${t('studio.sandbox.shuffle_btn', 'Перемешать')}</span>
+                            </button>
+                            <button type="button" id="btn-sandbox-reset" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                <span class="material-symbols-outlined text-[13px]">restart_alt</span>
+                                <span>${t('studio.sandbox.reset_btn', 'Сбросить')}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-text-muted">${t('studio.sandbox.solve_sequence_hint', 'Используйте стрелки для расстановки этапов в правильном порядке.')}</p>
+                    <div class="flex flex-col gap-1.5" id="sandbox-sequence-list">
+                        ${sandboxSolveState.steps.map((st, idx) => `
+                            <div class="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs text-text-main" data-step-idx="${idx}">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <span class="w-6 h-6 rounded-full bg-primary text-white font-bold text-[11px] flex items-center justify-center flex-shrink-0">${idx + 1}</span>
+                                    <span class="font-medium leading-relaxed break-words whitespace-normal text-left">${escapeHtml(st.text)}</span>
+                                </div>
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button type="button" class="btn-seq-move-up studio-btn studio-btn--xs studio-btn--secondary p-1 ${idx === 0 ? 'opacity-30 cursor-not-allowed' : ''}" data-idx="${idx}" title="${t('studio.sandbox.move_up_title', 'Переместить вверх')}" ${idx === 0 ? 'disabled' : ''}>
+                                        <span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+                                    </button>
+                                    <button type="button" class="btn-seq-move-down studio-btn studio-btn--xs studio-btn--secondary p-1 ${idx === sandboxSolveState.steps.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" data-idx="${idx}" title="${t('studio.sandbox.move_down_title', 'Переместить вниз')}" ${idx === sandboxSolveState.steps.length - 1 ? 'disabled' : ''}>
+                                        <span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. CLICK_WORDS
+        if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+            const text = String(data.text || task.text || (task.content && task.content.text) || '');
+            let cleanText = text.trim();
+            const prefixMatch = cleanText.match(/^text:\s*/i);
+            if (prefixMatch) cleanText = cleanText.slice(prefixMatch[0].length);
+
+            const tokens = cleanText.split(/(\s+)/);
+
+            bodyHtml += `
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.error_text_title', 'Клинический текст с ошибками:')}</span>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" id="btn-sandbox-preset-correct" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                <span class="material-symbols-outlined text-[13px]">check</span>
+                                <span>${t('studio.sandbox.paste_standard_btn', 'Вставить эталон')}</span>
+                            </button>
+                            <button type="button" id="btn-sandbox-reset" class="studio-btn studio-btn--xs studio-btn--secondary">
+                                <span class="material-symbols-outlined text-[13px]">restart_alt</span>
+                                <span>${t('studio.sandbox.reset_btn', 'Сбросить')}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-text-muted">${t('studio.sandbox.solve_words_hint', 'Нажимайте на слова в тексте, чтобы выделить ошибочные формулировки.')}</p>
+                    <div class="text-xs text-text-main p-3.5 rounded-lg bg-surface-2 border border-border-subtle leading-relaxed whitespace-pre-wrap select-none" id="sandbox-words-container">${tokens.map((tok, tokIdx) => {
+                            if (/^\s+$/.test(tok)) return tok;
+                            const isSelected = sandboxSolveState.selectedWordIndices.includes(tokIdx);
+                            return `<span class="sandbox-word-token ${isSelected ? 'sandbox-word-token--selected' : ''}" data-token-idx="${tokIdx}">${escapeHtml(tok)}</span>`;
+                        }).join('')}</div>
+                </div>
+            `;
+        }
+
+        // 5. CLICK / DRAW (Visual landmark inspection)
+        if (canonicalType === 'CLICK' || canonicalType === 'DRAW') {
+            const targets = data.targets || data.regions || task.targets || [];
+            bodyHtml += `
+                <div class="flex flex-col gap-2">
+                    <div class="p-3 rounded-lg bg-primary-light/10 border border-primary/20 text-xs text-primary leading-relaxed flex items-start gap-2">
+                        <span class="material-symbols-outlined text-[18px] flex-shrink-0 mt-0.5">info</span>
+                        <div>
+                            <p class="font-bold mb-1">${t('studio.sandbox.visual_solve_title', 'Интерактивная разметка ориентиров')}</p>
+                            <p class="text-text-secondary">${t('studio.sandbox.visual_solve_desc', 'Координатная разметка и контуры создаются в графическом редакторе Point/Draw. В симуляторе проверьте список ориентиров для поиска:')}</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.targets_label', 'Ориентиры / цели:')}</span>
+                        <div class="flex flex-col gap-1.5">
+                            ${Array.isArray(targets) && targets.length > 0 ? targets.map((tgt, tIdx) => {
+                                const tgtName = typeof tgt === 'object' && tgt ? (tgt.name || tgt.label || tgt.title) : String(tgt);
+                                const isChecked = (sandboxSolveState.selectedOptionIndices || []).includes(tIdx);
+                                return `
+                                    <button type="button" class="sandbox-visual-target-chip text-left p-2.5 rounded-lg border transition-all flex items-center justify-between gap-3 cursor-pointer ${isChecked ? 'bg-primary-light/15 border-primary text-primary font-semibold' : 'bg-surface-2 border-border-subtle text-text-main hover:bg-surface-3'}" data-target-idx="${tIdx}">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-4 h-4 rounded-md border flex items-center justify-center text-[10px] font-bold ${isChecked ? 'border-primary bg-primary text-white' : 'border-border-strong bg-surface-1 text-transparent'}">${isChecked ? '✓' : ''}</span>
+                                            <span class="text-xs">${tIdx + 1}. ${escapeHtml(tgtName || '—')}</span>
+                                        </div>
+                                        <span class="text-[10px] uppercase font-bold text-text-muted">${isChecked ? t('studio.sandbox.target_located', 'Найдено') : t('studio.sandbox.target_click_to_find', 'Клик для отметки')}</span>
+                                    </button>
+                                `;
+                            }).join('') : `
+                                <div class="text-xs text-text-secondary p-3 rounded-lg bg-surface-2 border border-border-subtle">${t('studio.stage2.visual_target_default', 'Локализуйте ключевые визуальные ориентиры и анатомические структуры по материалу лекции')}</div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Action Check Button & Sticky Result Footer
+        let checkBtnLabel = t('studio.sandbox.check_answer_btn', 'Проверить ответ');
+        if (canonicalType === 'SEQUENCE') {
+            checkBtnLabel = t('studio.sandbox.check_sequence_btn', 'Проверить порядок');
+        } else if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+            checkBtnLabel = t('studio.sandbox.check_errors_btn', 'Проверить найденные ошибки');
+        }
+
+        let evalResultHtml = '';
+        if (sandboxSolveState.isEvaluated) {
+            const isCorrect = sandboxSolveState.status === 'correct';
+            const isPartial = sandboxSolveState.status === 'partial';
+
+            let resultBadgeClass = 'sandbox-verdict-inline--incorrect';
+            let resultText = t('studio.sandbox.verdict_incorrect_short', 'Ответ неверный');
+            let resultIcon = 'cancel';
+
+            if (isCorrect) {
+                resultBadgeClass = 'sandbox-verdict-inline--correct';
+                resultText = t('studio.sandbox.verdict_correct_short', 'Ответ верный');
+                resultIcon = 'check_circle';
+            } else if (isPartial) {
+                resultBadgeClass = 'sandbox-verdict-inline--partial';
+                resultText = t('studio.sandbox.verdict_partial_short', 'Частично верно');
+                resultIcon = 'error_outline';
+            }
+
+            evalResultHtml = `
+                <div id="sandbox-eval-result" class="sandbox-verdict-inline ${resultBadgeClass}">
+                    <span class="material-symbols-outlined text-[15px]">${resultIcon}</span>
+                    <span>${resultText} · ${sandboxSolveState.score}%</span>
+                </div>
+            `;
+        }
+
+        bodyHtml += `
+            <div class="sandbox-solve-footer">
+                <button type="button" id="btn-sandbox-check-answer" class="studio-btn studio-btn--md studio-btn--primary">
+                    <span class="material-symbols-outlined text-[18px]">verified</span>
+                    <span>${checkBtnLabel}</span>
+                </button>
+                ${evalResultHtml}
+            </div>
+        `;
+
+        return bodyHtml;
+    }
+
+    function evaluateSandboxAnswer(task, data, canonicalType) {
+        if (!sandboxSolveState) return;
+
+        let score = 0;
+        let status = 'incorrect';
+        let matchedKeywords = [];
+        let missingKeywords = [];
+
+        if (canonicalType === 'TEST' || canonicalType === 'CLICK_TEXT') {
+            const options = extractTestOptions(task, data) || [];
+            const isClickText = canonicalType === 'CLICK_TEXT';
+
+            if (sandboxLevel >= 2 && !isClickText) {
+                const userText = (sandboxSolveState.textInput || '').trim().toLowerCase();
+                const correctTexts = options
+                    .filter((o) => Boolean(o.is_correct ?? o.correct))
+                    .map((o) => (typeof o === 'object' && o ? (o.text || o.title || o.value || '') : String(o)).trim().toLowerCase());
+
+                if (userText && correctTexts.some((ct) => ct && userText.includes(ct))) {
+                    score = 100;
+                    status = 'correct';
+                } else {
+                    score = 0;
+                    status = 'incorrect';
+                }
+            } else {
+                const correctIndices = options
+                    .map((o, idx) => (Boolean(o.is_correct ?? o.correct) ? idx : -1))
+                    .filter((idx) => idx >= 0);
+
+                const userSelected = sandboxSolveState.selectedOptionIndices || [];
+                const correctSelected = userSelected.filter((idx) => correctIndices.includes(idx));
+                const incorrectSelected = userSelected.filter((idx) => !correctIndices.includes(idx));
+
+                if (incorrectSelected.length === 0 && correctSelected.length === correctIndices.length && correctIndices.length > 0) {
+                    score = 100;
+                    status = 'correct';
+                } else if (incorrectSelected.length === 0 && correctSelected.length > 0) {
+                    score = Math.round((correctSelected.length / correctIndices.length) * 100);
+                    status = 'partial';
+                } else {
+                    score = 0;
+                    status = 'incorrect';
+                }
+            }
+        } else if (canonicalType === 'OPEN_ANSWER') {
+            const userText = (sandboxSolveState.textInput || '').trim().toLowerCase();
+            const keywords = data.keywords || (data.questions && data.questions[0] && data.questions[0].keywords) || task.keywords || [];
+            const stdAnswer = data.standard_answer || data.correct_answer || task.standard_answer || task.correct_answer || '';
+
+            if (Array.isArray(keywords) && keywords.length > 0) {
+                keywords.forEach((kw) => {
+                    const cleanKw = String(kw).trim().toLowerCase();
+                    if (cleanKw && userText.includes(cleanKw)) {
+                        matchedKeywords.push(String(kw));
+                    } else if (cleanKw) {
+                        missingKeywords.push(String(kw));
+                    }
+                });
+                score = Math.round((matchedKeywords.length / keywords.length) * 100);
+                status = score === 100 ? 'correct' : score > 0 ? 'partial' : 'incorrect';
+            } else {
+                if (userText && stdAnswer && userText.includes(String(stdAnswer).toLowerCase().slice(0, 15))) {
+                    score = 100;
+                    status = 'correct';
+                } else if (userText) {
+                    score = 75;
+                    status = 'partial';
+                } else {
+                    score = 0;
+                    status = 'incorrect';
+                }
+            }
+        } else if (canonicalType === 'SEQUENCE') {
+            const steps = sandboxSolveState.steps || [];
+            if (steps.length > 0) {
+                const correctPositions = steps.filter((st, idx) => st.originalIndex === idx).length;
+                score = Math.round((correctPositions / steps.length) * 100);
+                status = score === 100 ? 'correct' : score > 0 ? 'partial' : 'incorrect';
+            }
+        } else if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+            const text = String(data.text || task.text || (task.content && task.content.text) || '');
+            let cleanText = text.trim();
+            const prefixMatch = cleanText.match(/^text:\s*/i);
+            if (prefixMatch) cleanText = cleanText.slice(prefixMatch[0].length);
+
+            const errorSpans = resolveTaskErrorSpans(task, data, cleanText);
+            const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
+            const { clusters } = getErrorAnalysis(cleanText, errorSpans, errorIndices);
+
+            const tokens = cleanText.split(/(\s+)/);
+            const targetTokenIndices = [];
+
+            let charPos = 0;
+            tokens.forEach((tok, tokIdx) => {
+                const start = charPos;
+                const end = charPos + tok.length;
+                charPos = end;
+                if (!/^\s+$/.test(tok)) {
+                    if (clusters.some((cl) => Math.max(start, cl.start) < Math.min(end, cl.end))) {
+                        targetTokenIndices.push(tokIdx);
+                    }
+                }
+            });
+
+            const userSelected = sandboxSolveState.selectedWordIndices || [];
+            const tp = userSelected.filter((idx) => targetTokenIndices.includes(idx)).length;
+            const fp = userSelected.filter((idx) => !targetTokenIndices.includes(idx)).length;
+
+            if (targetTokenIndices.length > 0) {
+                const recall = tp / targetTokenIndices.length;
+                score = Math.max(0, Math.round((recall - (fp * 0.2)) * 100));
+                status = score === 100 ? 'correct' : score > 0 ? 'partial' : 'incorrect';
+            } else {
+                score = 0;
+                status = 'incorrect';
+            }
+        } else if (canonicalType === 'CLICK' || canonicalType === 'DRAW') {
+            const targets = data.targets || data.regions || task.targets || [];
+            const userSelected = sandboxSolveState.selectedOptionIndices || [];
+            if (targets.length > 0) {
+                score = Math.round((userSelected.length / targets.length) * 100);
+                status = score === 100 ? 'correct' : score > 0 ? 'partial' : 'incorrect';
+            } else {
+                score = 0;
+                status = 'incorrect';
+            }
+        }
+
+        sandboxSolveState.isEvaluated = true;
+        sandboxSolveState.score = score;
+        sandboxSolveState.status = status;
+        sandboxSolveState.matchedKeywords = matchedKeywords;
+        sandboxSolveState.missingKeywords = missingKeywords;
+    }
+
+    function attachSandboxSolveListeners(task, data, canonicalType) {
+        if (!DOM.taskPreviewContentContainer) return;
+
+        // Choice cards
+        const choiceCards = DOM.taskPreviewContentContainer.querySelectorAll('.sandbox-choice-card');
+        choiceCards.forEach((card) => {
+            card.addEventListener('click', () => {
+                const optIdx = parseInt(card.getAttribute('data-opt-idx'), 10);
+                const options = extractTestOptions(task, data) || [];
+                const isMulti = options.filter((o) => Boolean(o.is_correct ?? o.correct)).length > 1;
+
+                if (isMulti) {
+                    if (sandboxSolveState.selectedOptionIndices.includes(optIdx)) {
+                        sandboxSolveState.selectedOptionIndices = sandboxSolveState.selectedOptionIndices.filter((i) => i !== optIdx);
+                    } else {
+                        sandboxSolveState.selectedOptionIndices.push(optIdx);
+                    }
+                } else {
+                    sandboxSolveState.selectedOptionIndices = [optIdx];
+                }
+                sandboxSolveState.isEvaluated = false;
+                renderTaskPreviewModalContent();
+            });
+        });
+
+        // Test Level 2 Text Input
+        const testTextInput = DOM.taskPreviewContentContainer.querySelector('#sandbox-test-text-input');
+        if (testTextInput) {
+            testTextInput.addEventListener('input', (e) => {
+                sandboxSolveState.textInput = e.target.value;
+            });
+        }
+
+        // Open Answer Textarea
+        const openAnswerInput = DOM.taskPreviewContentContainer.querySelector('#sandbox-open-answer-input');
+        if (openAnswerInput) {
+            openAnswerInput.addEventListener('input', (e) => {
+                sandboxSolveState.textInput = e.target.value;
+            });
+        }
+
+        // Hint toggle
+        const btnToggleHint = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-toggle-hint');
+        if (btnToggleHint) {
+            btnToggleHint.addEventListener('click', () => {
+                sandboxSolveState.showHint = !sandboxSolveState.showHint;
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        // Presets: Correct / Standard
+        const btnPresetCorrect = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-preset-correct');
+        if (btnPresetCorrect) {
+            btnPresetCorrect.addEventListener('click', () => {
+                if (canonicalType === 'TEST' || canonicalType === 'CLICK_TEXT') {
+                    const options = extractTestOptions(task, data) || [];
+                    sandboxSolveState.selectedOptionIndices = options
+                        .map((o, idx) => (Boolean(o.is_correct ?? o.correct) ? idx : -1))
+                        .filter((idx) => idx >= 0);
+                } else if (canonicalType === 'SEQUENCE') {
+                    sandboxSolveState.steps.sort((a, b) => a.originalIndex - b.originalIndex);
+                } else if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
+                    const text = String(data.text || task.text || (task.content && task.content.text) || '');
+                    let cleanText = text.trim();
+                    const prefixMatch = cleanText.match(/^text:\s*/i);
+                    if (prefixMatch) cleanText = cleanText.slice(prefixMatch[0].length);
+
+                    const errorSpans = resolveTaskErrorSpans(task, data, cleanText);
+                    const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
+                    const { clusters } = getErrorAnalysis(cleanText, errorSpans, errorIndices);
+
+                    const tokens = cleanText.split(/(\s+)/);
+                    const targetTokenIndices = [];
+                    let charPos = 0;
+                    tokens.forEach((tok, tokIdx) => {
+                        const start = charPos;
+                        const end = charPos + tok.length;
+                        charPos = end;
+                        if (!/^\s+$/.test(tok)) {
+                            if (clusters.some((cl) => Math.max(start, cl.start) < Math.min(end, cl.end))) {
+                                targetTokenIndices.push(tokIdx);
+                            }
+                        }
+                    });
+                    sandboxSolveState.selectedWordIndices = targetTokenIndices;
+                }
+                sandboxSolveState.isEvaluated = false;
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        // Presets: Paste Standard (Open answer or L2 test)
+        const btnPasteStd = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-paste-std');
+        if (btnPasteStd) {
+            btnPasteStd.addEventListener('click', () => {
+                if (canonicalType === 'OPEN_ANSWER') {
+                    const std = data.standard_answer || data.correct_answer || task.standard_answer || task.correct_answer || '';
+                    sandboxSolveState.textInput = String(std);
+                } else if (canonicalType === 'TEST') {
+                    const options = extractTestOptions(task, data) || [];
+                    const firstCorrect = options.find((o) => Boolean(o.is_correct ?? o.correct));
+                    if (firstCorrect) {
+                        sandboxSolveState.textInput = typeof firstCorrect === 'object' && firstCorrect ? (firstCorrect.text || firstCorrect.title || '') : String(firstCorrect);
+                    }
+                }
+                sandboxSolveState.isEvaluated = false;
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        // Presets: Paste Partial (Open answer)
+        const btnPastePartial = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-paste-partial');
+        if (btnPastePartial) {
+            btnPastePartial.addEventListener('click', () => {
+                const keywords = data.keywords || (data.questions && data.questions[0] && data.questions[0].keywords) || task.keywords || [];
+                if (Array.isArray(keywords) && keywords.length > 0) {
+                    sandboxSolveState.textInput = keywords.slice(0, Math.ceil(keywords.length / 2)).join(', ');
+                } else {
+                    const std = data.standard_answer || task.standard_answer || '';
+                    sandboxSolveState.textInput = String(std).slice(0, 30);
+                }
+                sandboxSolveState.isEvaluated = false;
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        // Presets: Shuffle (Sequence)
+        const btnShuffle = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-shuffle');
+        if (btnShuffle) {
+            btnShuffle.addEventListener('click', () => {
+                sandboxSolveState.steps.sort(() => Math.random() - 0.5);
+                sandboxSolveState.isEvaluated = false;
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        // Presets: Reset
+        const btnReset = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-reset');
+        if (btnReset) {
+            btnReset.addEventListener('click', () => {
+                initSandboxSolveState(task);
+                renderTaskPreviewModalContent();
+            });
+        }
+
+        // Sequence Up / Down arrows
+        const seqList = DOM.taskPreviewContentContainer.querySelector('#sandbox-sequence-list');
+        if (seqList) {
+            seqList.querySelectorAll('.btn-seq-move-up').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                    if (idx > 0) {
+                        const temp = sandboxSolveState.steps[idx];
+                        sandboxSolveState.steps[idx] = sandboxSolveState.steps[idx - 1];
+                        sandboxSolveState.steps[idx - 1] = temp;
+                        sandboxSolveState.isEvaluated = false;
+                        renderTaskPreviewModalContent();
+                    }
+                });
+            });
+
+            seqList.querySelectorAll('.btn-seq-move-down').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.getAttribute('data-idx'), 10);
+                    if (idx < sandboxSolveState.steps.length - 1) {
+                        const temp = sandboxSolveState.steps[idx];
+                        sandboxSolveState.steps[idx] = sandboxSolveState.steps[idx + 1];
+                        sandboxSolveState.steps[idx + 1] = temp;
+                        sandboxSolveState.isEvaluated = false;
+                        renderTaskPreviewModalContent();
+                    }
+                });
+            });
+        }
+
+        // Word tokens
+        const wordsContainer = DOM.taskPreviewContentContainer.querySelector('#sandbox-words-container');
+        if (wordsContainer) {
+            wordsContainer.querySelectorAll('.sandbox-word-token').forEach((tok) => {
+                tok.addEventListener('click', () => {
+                    const tokIdx = parseInt(tok.getAttribute('data-token-idx'), 10);
+                    if (sandboxSolveState.selectedWordIndices.includes(tokIdx)) {
+                        sandboxSolveState.selectedWordIndices = sandboxSolveState.selectedWordIndices.filter((i) => i !== tokIdx);
+                    } else {
+                        sandboxSolveState.selectedWordIndices.push(tokIdx);
+                    }
+                    sandboxSolveState.isEvaluated = false;
+                    renderTaskPreviewModalContent();
+                });
+            });
+        }
+
+        // Visual targets click
+        const visualChips = DOM.taskPreviewContentContainer.querySelectorAll('.sandbox-visual-target-chip');
+        visualChips.forEach((chip) => {
+            chip.addEventListener('click', () => {
+                const tIdx = parseInt(chip.getAttribute('data-target-idx'), 10);
+                if (sandboxSolveState.selectedOptionIndices.includes(tIdx)) {
+                    sandboxSolveState.selectedOptionIndices = sandboxSolveState.selectedOptionIndices.filter((i) => i !== tIdx);
+                } else {
+                    sandboxSolveState.selectedOptionIndices.push(tIdx);
+                }
+                sandboxSolveState.isEvaluated = false;
+                renderTaskPreviewModalContent();
+            });
+        });
+
+        // Check Answer Button
+        const btnCheck = DOM.taskPreviewContentContainer.querySelector('#btn-sandbox-check-answer');
+        if (btnCheck) {
+            btnCheck.addEventListener('click', () => {
+                evaluateSandboxAnswer(task, data, canonicalType);
+                renderTaskPreviewModalContent();
+            });
+        }
     }
 
     function renderTaskPreviewModalContent() {
@@ -2726,7 +4152,11 @@
         const { questionTitle, data } = extractTaskDisplayInfo(task, currentPreviewIndex);
 
         if (DOM.modalPreviewTitle) {
-            DOM.modalPreviewTitle.textContent = questionTitle || t('studio.modal.preview_title', 'Просмотр задания');
+            if (questionTitle && questionTitle.length <= 45) {
+                DOM.modalPreviewTitle.textContent = questionTitle;
+            } else {
+                DOM.modalPreviewTitle.textContent = t('studio.sandbox.title_task_num_fmt', '{prefix} · Задание №{n}').replace('{prefix}', t('studio.sandbox.title_prefix', 'Песочница приёмки')).replace('{n}', currentPreviewIndex + 1);
+            }
             DOM.modalPreviewTitle.title = questionTitle || '';
         }
         if (DOM.previewTaskTypeBadge) {
@@ -2754,6 +4184,9 @@
             }
         }
 
+        updateSandboxToolbar();
+        renderDidacticQualityBadges(task, canonicalType);
+
         if (!DOM.taskPreviewContentContainer) return;
 
         if (isRawSpecVisible) {
@@ -2766,6 +4199,18 @@
             return;
         }
 
+        if (sandboxMode === 'solve') {
+            if (!sandboxSolveState || sandboxSolveState.task !== task) {
+                initSandboxSolveState(task);
+            }
+            DOM.taskPreviewContentContainer.innerHTML = renderSandboxSolveMode(task, data, canonicalType);
+            attachSandboxSolveListeners(task, data, canonicalType);
+            return;
+        }
+
+        // -------------------------------------------------------------
+        // Inspect Mode: Standard Reference View
+        // -------------------------------------------------------------
         let bodyHtml = `
             <div class="flex flex-col gap-1.5">
                 <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.modal_prompt_label', 'Текст вопроса / задание:')}</span>
@@ -2804,7 +4249,7 @@
                                 `;
                             } else {
                                 return `
-                                    <div class="flex items-start justify-between gap-3 p-2.5 rounded-lg border ${isCorrect ? 'bg-success/5 border-success/30' : 'bg-surface-2 border-border-subtle'}">
+                                    <div class="inspect-option-card flex items-start justify-between gap-3 p-2.5 rounded-lg border cursor-pointer hover:border-primary/50 transition-colors select-none ${isCorrect ? 'bg-success/5 border-success/30' : 'bg-surface-2 border-border-subtle'}" data-opt-idx="${options.indexOf(opt)}" title="${t('studio.sandbox.inspect_click_to_toggle_correct', 'Нажмите на вариант, чтобы изменить правильный ответ')}">
                                         <div class="flex items-start gap-2">
                                             <span class="text-xs font-bold ${isCorrect ? 'text-success' : 'text-text-muted'} mt-0.5">${isCorrect ? '✓' : '•'}</span>
                                             <span class="text-xs text-text-main leading-relaxed ${isCorrect ? 'font-semibold' : ''}">${escapeHtml(optText)}</span>
@@ -2813,7 +4258,12 @@
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0 bg-success/15 text-success">
                                                 <span>${t('studio.stage3.correct_answer_badge', 'Правильный ответ')}</span>
                                             </span>
-                                        ` : ''}
+                                        ` : `
+                                            <span class="text-[10px] text-text-muted flex items-center gap-0.5 opacity-70">
+                                                <span class="material-symbols-outlined text-[12px]">touch_app</span>
+                                                <span>${t('studio.sandbox.btn_guard_fix', 'Исправить')}</span>
+                                            </span>
+                                        `}
                                     </div>
                                 `;
                             }
@@ -2866,62 +4316,56 @@
 
         // 3. SEQUENCE
         if (canonicalType === 'SEQUENCE') {
-            let sequenceSteps = [];
-            if (data.elements && typeof data.elements === 'object') {
-                if (data.levels && typeof data.levels === 'object') {
-                    const levelKeys = Object.keys(data.levels).sort((a, b) => Number(a) - Number(b));
-                    levelKeys.forEach((lvlKey) => {
-                        const elIds = data.levels[lvlKey];
-                        if (Array.isArray(elIds)) {
-                            elIds.forEach((elId) => {
-                                const stepVal = data.elements[elId] || elId;
-                                const txt = typeof stepVal === 'object' && stepVal ? (stepVal.text || stepVal.title) : String(stepVal);
-                                if (txt) sequenceSteps.push(txt);
-                            });
-                        }
-                    });
-                }
-                if (sequenceSteps.length === 0) {
-                    Object.values(data.elements).forEach((val) => {
-                        const txt = typeof val === 'object' && val ? (val.text || val.title) : String(val);
-                        if (txt) sequenceSteps.push(txt);
-                    });
-                }
-            } else if (Array.isArray(data.levels)) {
-                data.levels.forEach((lvl) => {
-                    if (Array.isArray(lvl)) {
-                        lvl.forEach((s) => sequenceSteps.push(String(s)));
-                    }
-                });
-            } else if (Array.isArray(data.items) || Array.isArray(task.items)) {
-                const items = data.items || task.items;
-                items.forEach((it) => {
-                    const txt = typeof it === 'object' && it ? (it.text || it.title) : String(it);
-                    if (txt) sequenceSteps.push(txt);
-                });
-            }
+            const seqLevels = extractSequenceLevels(task, data);
+            const hasCustomTitlesOrGroups = seqLevels.length > 0 && seqLevels.some(l => l.title || (l.items && l.items.length > 1));
 
-            if (sequenceSteps.length > 0) {
+            if (hasCustomTitlesOrGroups) {
                 bodyHtml += `
-                    <div class="flex flex-col gap-1.5">
-                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.sequence_steps_label', 'Правильный порядок шагов:')}</span>
-                        <div class="flex flex-col gap-1.5">
-                            ${sequenceSteps.map((step, sIdx) => `
-                                <div class="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs text-text-main">
-                                    <span class="w-6 h-6 rounded-full bg-primary text-white font-bold text-[11px] flex items-center justify-center flex-shrink-0">${sIdx + 1}</span>
-                                    <span class="font-medium leading-relaxed">${escapeHtml(step)}</span>
+                    <div class="flex flex-col gap-2">
+                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.sequence_groups_label', 'Группы и элементы:')}</span>
+                        <div class="flex flex-col gap-2">
+                            ${seqLevels.map((lvl) => `
+                                <div class="p-2.5 rounded-lg bg-surface-2 border border-border-subtle flex flex-col gap-1.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-5 h-5 rounded-full bg-primary text-white font-bold text-[10px] flex items-center justify-center flex-shrink-0">${lvl.levelNum}</span>
+                                        ${lvl.title
+                                            ? `<span class="font-bold text-xs text-text-main">${escapeHtml(lvl.title)}</span>`
+                                            : `<span class="text-xs text-text-muted font-medium">${t('studio.stage3.level_unnamed', 'Уровень')} ${lvl.levelNum}</span>`}
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5 pl-7">
+                                        ${(lvl.items || []).map((item) => `
+                                            <span class="px-2 py-0.5 rounded bg-surface-1 border border-border-subtle text-xs text-text-secondary">${escapeHtml(String(item))}</span>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
                 `;
+            } else {
+                const sequenceSteps = extractSequenceSteps(task, data);
+                if (sequenceSteps.length > 0) {
+                    bodyHtml += `
+                        <div class="flex flex-col gap-1.5">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">${t('studio.stage3.sequence_steps_label', 'Правильный порядок шагов:')}</span>
+                            <div class="flex flex-col gap-1.5">
+                                ${sequenceSteps.map((step, sIdx) => `
+                                    <div class="flex items-center gap-3 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs text-text-main">
+                                        <span class="w-6 h-6 rounded-full bg-primary text-white font-bold text-[11px] flex items-center justify-center flex-shrink-0">${sIdx + 1}</span>
+                                        <span class="font-medium leading-relaxed">${escapeHtml(step)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
             }
         }
 
         // 4. CLICK_WORDS (error text and fragmented breakdown)
         if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors') {
             const text = String(data.text || task.text || (task.content && task.content.text) || '');
-            const errorSpans = data.error_spans || task.error_spans || (task.content && task.content.error_spans);
+            const errorSpans = resolveTaskErrorSpans(task, data, text);
             const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
 
             const { phraseCount, totalWords, clusters } = getErrorAnalysis(text, errorSpans, errorIndices);
@@ -3011,6 +4455,42 @@
         }
 
         DOM.taskPreviewContentContainer.innerHTML = bodyHtml;
+
+        // In-Place Quick Fix for TEST options in Inspect mode
+        if (canonicalType === 'TEST') {
+            DOM.taskPreviewContentContainer.querySelectorAll('.inspect-option-card').forEach((card) => {
+                card.addEventListener('click', () => {
+                    const optIdx = parseInt(card.getAttribute('data-opt-idx'), 10);
+                    const options = extractTestOptions(task, data);
+                    if (Array.isArray(options) && options[optIdx]) {
+                        const cur = Boolean(options[optIdx].is_correct ?? options[optIdx].correct);
+                        options[optIdx].is_correct = !cur;
+                        options[optIdx].correct = !cur;
+
+                        if (data.questions && data.questions[0] && Array.isArray(data.questions[0].options)) {
+                            data.questions[0].options = options;
+                        } else if (Array.isArray(data.options)) {
+                            data.options = options;
+                        } else if (Array.isArray(task.options)) {
+                            task.options = options;
+                        }
+
+                        delete task._audit;
+                        const audit = auditTaskDidactics(task);
+                        if (audit.status !== 'defect') {
+                            task._selected_for_import = true;
+                        }
+
+                        syncTypeDraftsWithAllTasks();
+                        markDirty();
+                        renderTaskPreviewModalContent();
+                        renderShowcase();
+                        updateStickyBar();
+                        showToast(t('studio.toast.option_updated', 'Правильный ответ обновлен'), 'success');
+                    }
+                });
+            });
+        }
     }
 
     function createShowcaseTaskCard(task, allTasksIndex) {
@@ -3020,6 +4500,31 @@
 
         const canonicalType = normalizeTaskType(task);
         const { questionTitle } = extractTaskDisplayInfo(task, allTasksIndex);
+        const audit = auditTaskDidactics(task);
+
+        let auditBadgeHtml = '';
+        if (audit.status === 'valid') {
+            auditBadgeHtml = `
+                <button type="button" class="btn-card-audit-badge inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-success/15 text-success border border-success/30 hover:bg-success/25 transition-colors cursor-pointer" title="${escapeHtml(audit.verdictText)}">
+                    <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                    <span>${t('studio.sandbox.badge_valid_short', 'Готово')}</span>
+                </button>
+            `;
+        } else if (audit.status === 'warning') {
+            auditBadgeHtml = `
+                <button type="button" class="btn-card-audit-badge inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer" title="${escapeHtml(audit.verdictText)}">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <span>${t('studio.sandbox.badge_warning_short', 'Внимание')}</span>
+                </button>
+            `;
+        } else {
+            auditBadgeHtml = `
+                <button type="button" class="btn-card-audit-badge inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-error/15 text-error border border-error/30 hover:bg-error/25 transition-colors cursor-pointer" title="${escapeHtml(audit.verdictText)}">
+                    <span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                    <span>${t('studio.sandbox.badge_defect_short', 'Дефект')}</span>
+                </button>
+            `;
+        }
 
         card.innerHTML = `
             <div class="studio-task-card__top">
@@ -3027,6 +4532,7 @@
                     <input type="checkbox" class="task-select-checkbox rounded border-border-strong text-primary w-4 h-4"
                         ${task._selected_for_import ? 'checked' : ''} />
                     <span class="studio-unit-badge bg-primary-light text-primary font-bold">${TASK_TYPE_LABELS[canonicalType] || canonicalType}</span>
+                    ${auditBadgeHtml}
                 </label>
                 <div class="flex items-center gap-1">
                     <button type="button" class="btn-preview-task text-text-muted hover:text-primary transition-colors p-1" title="${t('studio.stage3.preview_task', 'Просмотр задания')}">
@@ -3039,7 +4545,7 @@
             </div>
 
             <div class="flex flex-col gap-1 flex-1">
-                <p class="studio-task-card-title text-xs font-bold text-text-main line-clamp-2 cursor-pointer hover:text-primary transition-colors" title="${t('studio.stage3.preview_task', 'Просмотр задания')}">${escapeHtml(questionTitle)}</p>
+                <p class="studio-task-card-title text-xs font-bold text-text-main line-clamp-2 cursor-pointer hover:text-primary transition-colors" title="${escapeHtml(questionTitle)}">${escapeHtml(questionTitle)}</p>
                 ${renderTaskPreviewSnippet(task)}
             </div>
         `;
@@ -3101,6 +4607,14 @@
             });
         }
 
+        const auditBadgeBtn = card.querySelector('.btn-card-audit-badge');
+        if (auditBadgeBtn) {
+            auditBadgeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openTaskPreviewModal(task, allTasksIndex);
+            });
+        }
+
         // Expand snippet events (+ ещё N вар. / + ещё N шаг. / + ещё N / Читать полностью)
         attachSnippetExpansionListeners(card);
 
@@ -3126,6 +4640,7 @@
         }
 
         renderShowcaseFilterPills();
+        renderShowcaseQualityFilterPills();
         updateShowcaseSelectAllCheckbox();
 
         // Group tasks by category
@@ -3134,6 +4649,11 @@
         const otherGroup = { cat: OTHER_CATEGORY, tasks: [] };
 
         tasks.forEach((task) => {
+            const audit = auditTaskDidactics(task);
+            if (showcaseQualityFilter === 'VALID' && audit.status !== 'valid') return;
+            if (showcaseQualityFilter === 'WARNING' && audit.status !== 'warning') return;
+            if (showcaseQualityFilter === 'DEFECT' && audit.status !== 'defect') return;
+
             const canonicalType = normalizeTaskType(task);
             const group = tasksByCategory.get(canonicalType) || (
                 canonicalType === 'CLICK' || canonicalType === 'DRAW' ? tasksByCategory.get('VISUAL') : otherGroup
@@ -3247,6 +4767,76 @@
         });
     }
 
+    function renderShowcaseQualityFilterPills() {
+        if (!DOM.showcaseQualityFilterPills) return;
+        DOM.showcaseQualityFilterPills.innerHTML = '';
+
+        const tasks = StudioState.allTasks || [];
+        const qualityCounts = { ALL: tasks.length, VALID: 0, WARNING: 0, DEFECT: 0 };
+
+        tasks.forEach((t) => {
+            const audit = auditTaskDidactics(t);
+            if (audit.status === 'valid') qualityCounts.VALID++;
+            else if (audit.status === 'warning') qualityCounts.WARNING++;
+            else if (audit.status === 'defect') qualityCounts.DEFECT++;
+        });
+
+        const qualityConfigs = [
+            { key: 'ALL', label: t('studio.stage3.quality_filter_all', 'Все качества'), count: qualityCounts.ALL, activeClass: 'bg-surface-3 text-text-main font-bold border-border-strong' },
+            { key: 'VALID', label: t('studio.stage3.quality_filter_valid', 'Готовые'), count: qualityCounts.VALID, activeClass: 'bg-success/20 text-success font-bold border-success/40' },
+            { key: 'WARNING', label: t('studio.stage3.quality_filter_warning', 'Требуют внимания'), count: qualityCounts.WARNING, activeClass: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border-amber-500/40' },
+            { key: 'DEFECT', label: t('studio.stage3.quality_filter_defect', 'С дефектами'), count: qualityCounts.DEFECT, activeClass: 'bg-error/20 text-error font-bold border-error/40' },
+        ];
+
+        qualityConfigs.forEach((cfg) => {
+            const pill = document.createElement('button');
+            pill.type = 'button';
+            const isActive = showcaseQualityFilter === cfg.key;
+            pill.className = `px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all border ${
+                isActive ? cfg.activeClass : 'bg-surface-2 text-text-secondary border-border-subtle hover:bg-surface-3'
+            }`;
+            pill.textContent = `${cfg.label} (${cfg.count})`;
+            pill.addEventListener('click', () => {
+                showcaseQualityFilter = cfg.key;
+                renderShowcase();
+            });
+            DOM.showcaseQualityFilterPills.appendChild(pill);
+        });
+    }
+
+    function selectValidOnly() {
+        const tasks = StudioState.allTasks || [];
+        let validCount = 0;
+        tasks.forEach((t) => {
+            const audit = auditTaskDidactics(t);
+            const isValid = audit.status === 'valid';
+            t._selected_for_import = isValid;
+            if (isValid) validCount++;
+        });
+        renderShowcase();
+        updateStickyBar();
+        updateShowcaseSelectAllCheckbox();
+        markDirty();
+        showToast(t('studio.toast.only_valid_selected', 'Выбрано {count} готовых заданий').replace('{count}', validCount), 'success');
+    }
+
+    function deselectDefects() {
+        const tasks = StudioState.allTasks || [];
+        let defectCount = 0;
+        tasks.forEach((t) => {
+            const audit = auditTaskDidactics(t);
+            if (audit.status === 'defect') {
+                if (t._selected_for_import) defectCount++;
+                t._selected_for_import = false;
+            }
+        });
+        renderShowcase();
+        updateStickyBar();
+        updateShowcaseSelectAllCheckbox();
+        markDirty();
+        showToast(t('studio.toast.defects_deselected', 'Дефектные задания исключены из выбора ({count})').replace('{count}', defectCount), 'info');
+    }
+
     function renderShowcaseFilterPills() {
         if (!DOM.showcaseFilterPills) return;
         DOM.showcaseFilterPills.innerHTML = '';
@@ -3338,7 +4928,7 @@
         // 3. For click_words or text_errors, fallback to data.text
         if (!questionTitle && (canonicalType === 'CLICK_WORDS' || normalizedType.includes('click_words') || data.mode === 'text_errors') && data.text) {
             const sample = clean(data.text);
-            questionTitle = sample.length > 90 ? sample.slice(0, 87) + '...' : sample;
+            questionTitle = sample;
         }
 
         // 4. Try title / name (avoid generic placeholders like "Task #1" or "Задание 1")
@@ -3586,6 +5176,41 @@
             });
         }
 
+        const seqLevels = extractSequenceLevels(task, data);
+        const hasCustomTitlesOrGroups = seqLevels.length > 0 && seqLevels.some(l => l.title || (l.items && l.items.length > 1));
+
+        if (hasCustomTitlesOrGroups) {
+            const previewLevels = seqLevels.slice(0, 3);
+            const remainingLevels = seqLevels.slice(3);
+            const formatLevelSnippet = (lvl) => {
+                const titleStr = lvl.title ? escapeHtml(lvl.title) : `${t('studio.stage3.level_unnamed', 'Уровень')} ${lvl.levelNum}`;
+                const itemsStr = lvl.items && lvl.items.length > 0
+                    ? lvl.items.map(it => escapeHtml(String(it))).join(', ')
+                    : '';
+                return `
+                    <div class="flex items-baseline gap-1.5 text-[11px] leading-tight">
+                        <span class="font-bold text-primary text-[10px] flex-shrink-0">[${titleStr}]:</span>
+                        <span class="text-text-secondary truncate max-w-[260px]">${itemsStr}</span>
+                    </div>
+                `;
+            };
+
+            return `
+                <div class="mt-1 flex flex-col gap-1 text-[11px] text-text-secondary">
+                    ${previewLevels.map(formatLevelSnippet).join('')}
+                    ${remainingLevels.length > 0 ? `
+                        <div class="task-extra-steps hidden flex flex-col gap-1">
+                            ${remainingLevels.map(formatLevelSnippet).join('')}
+                        </div>
+                        <button type="button" class="btn-expand-snippet text-primary hover:underline text-[10px] font-semibold flex items-center gap-0.5 mt-0.5 w-fit" data-action="toggle-steps" data-more-fmt="+ ${t('studio.stage3.more_steps_fmt', 'ещё {n} шаг.').replace('{n}', remainingLevels.length)}" data-collapse-text="${t('studio.stage3.collapse', 'Свернуть')}">
+                            <span class="material-symbols-outlined text-[12px]">expand_more</span>
+                            <span class="expand-btn-text">+ ${t('studio.stage3.more_steps_fmt', 'ещё {n} шаг.').replace('{n}', remainingLevels.length)}</span>
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
         if (sequenceSteps.length > 0) {
             const previewSteps = sequenceSteps.slice(0, 3);
             const remainingSteps = sequenceSteps.slice(3);
@@ -3616,7 +5241,7 @@
         // 4. CLICK_WORDS / text_errors (error count badge & highlighted snippet)
         if (canonicalType === 'CLICK_WORDS' || data.mode === 'text_errors' || rawType.includes('click_words')) {
             const text = String(data.text || task.text || (task.content && task.content.text) || '');
-            const errorSpans = data.error_spans || task.error_spans || (task.content && task.content.error_spans);
+            const errorSpans = resolveTaskErrorSpans(task, data, text);
             const errorIndices = data.error_indices || task.error_indices || (task.content && task.content.error_indices);
 
             const { phraseCount, totalWords, clusters } = getErrorAnalysis(text, errorSpans, errorIndices);
@@ -3708,24 +5333,78 @@
         }
     }
 
-    async function executeImport() {
-        const selected = StudioState.allTasks.filter((t) => t._selected_for_import);
-        if (selected.length === 0) {
-            showToast(t('studio.toast.select_at_least_one', 'Выберите хотя бы одно задание для импорта'), 'warning');
-            return;
+    function closeImportGuardModal() {
+        if (DOM.modalImportGuard) {
+            DOM.modalImportGuard.classList.add('hidden');
+        }
+    }
+
+    function openImportGuardModal(defectiveSelected, allSelected) {
+        if (!DOM.modalImportGuard) return;
+
+        if (!Array.isArray(defectiveSelected)) defectiveSelected = [];
+        if (!Array.isArray(allSelected)) {
+            allSelected = (StudioState.allTasks || []).filter((t) => t._selected_for_import);
         }
 
-        if (!StudioState.selectedModuleId || !StudioState.selectedTopicId) {
-            openTopicModal();
-            if (DOM.btnSelectTopic) {
-                DOM.btnSelectTopic.classList.remove('studio-field-pulse');
-                void DOM.btnSelectTopic.offsetWidth;
-                DOM.btnSelectTopic.classList.add('studio-field-pulse');
+        if (DOM.importGuardMessage) {
+            DOM.importGuardMessage.textContent = t('studio.modal.import_guard_warning_fmt', 'Среди выбранных заданий обнаружено {count} с критическими дефектами (отсутствует правильный ответ или эталон). Студенты не смогут корректно решить такие задания.').replace('{count}', defectiveSelected.length);
+        }
+
+        const cleanCount = Math.max(0, allSelected.length - defectiveSelected.length);
+        if (DOM.labelGuardExcludeAndImport) {
+            DOM.labelGuardExcludeAndImport.textContent = t('studio.modal.btn_guard_exclude_import_fmt', 'Исключить дефекты и импортировать ({count})').replace('{count}', cleanCount);
+        }
+        if (DOM.btnGuardExcludeAndImport) {
+            DOM.btnGuardExcludeAndImport.disabled = cleanCount === 0;
+            if (cleanCount === 0) {
+                DOM.btnGuardExcludeAndImport.title = t('studio.sandbox.guard_zero_valid_warning', 'Все выбранные задания содержат критические дефекты. Исправьте их перед импортом.');
+            } else {
+                DOM.btnGuardExcludeAndImport.removeAttribute('title');
             }
-            showToast(t('studio.toast.select_target_topic', 'Выберите целевую тему курса для импорта'), 'warning');
-            return;
         }
 
+        if (DOM.importGuardDefectsList) {
+            DOM.importGuardDefectsList.innerHTML = defectiveSelected.map((defTask) => {
+                const canonicalType = normalizeTaskType(defTask);
+                const { questionTitle } = extractTaskDisplayInfo(defTask);
+                const audit = auditTaskDidactics(defTask);
+                return `
+                    <div class="flex items-start justify-between gap-3 p-2.5 rounded-lg bg-surface-2 border border-border-subtle text-xs">
+                        <div class="flex flex-col gap-1 min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="studio-unit-badge bg-primary-light text-primary font-bold text-[10px]">${TASK_TYPE_LABELS[canonicalType] || canonicalType}</span>
+                                <span class="font-semibold text-text-main truncate">${escapeHtml(questionTitle)}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1 mt-0.5">
+                                ${audit.defects.map((d) => `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-error/15 text-error border border-error/30">${escapeHtml(d)}</span>`).join('')}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-guard-fix-task studio-btn studio-btn--xs studio-btn--secondary flex items-center gap-1 text-primary hover:bg-primary/10 flex-shrink-0" data-studio-id="${defTask._studio_id}" data-task-idx="${StudioState.allTasks.indexOf(defTask)}" title="${t('studio.sandbox.btn_guard_fix', 'Исправить')}">
+                            <span class="material-symbols-outlined text-[13px]">visibility</span>
+                            <span>${t('studio.sandbox.btn_guard_fix', 'Исправить')}</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            DOM.importGuardDefectsList.querySelectorAll('.btn-guard-fix-task').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.getAttribute('data-task-idx'), 10);
+                    const task = StudioState.allTasks[idx];
+                    closeImportGuardModal();
+                    if (task) {
+                        openTaskPreviewModal(task, idx >= 0 ? idx : 0);
+                    }
+                });
+            });
+        }
+
+        DOM.modalImportGuard.classList.remove('hidden');
+    }
+
+    async function proceedWithImportExecution(selectedTasks) {
         const idempotencyKey = 'imp_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
         showToast(t('studio.toast.importing_tasks', 'Импорт заданий в тему курса...'), 'info');
 
@@ -3736,7 +5415,7 @@
                 body: JSON.stringify({
                     module_id: StudioState.selectedModuleId,
                     topic_id: StudioState.selectedTopicId,
-                    tasks: selected,
+                    tasks: selectedTasks,
                     import_context: {
                         source: 'studio',
                         source_file_name: StudioState.sourceFileName || null,
@@ -3756,7 +5435,7 @@
             await saveSessionToBackend('imported');
 
             clearLocalStorageDraft();
-            showToast(`🎉 ` + t('studio.toast.import_success_fmt', 'Успешно импортировано {count} заданий!').replace('{count}', data.imported || selected.length), 'success');
+            showToast(`🎉 ` + t('studio.toast.import_success_fmt', 'Успешно импортировано {count} заданий!').replace('{count}', data.imported || selectedTasks.length), 'success');
 
             // Redirect back to dashboard topic after short delay
             setTimeout(() => {
@@ -3766,6 +5445,34 @@
             console.error('[Studio] Execute import error:', e);
             showToast(t('studio.toast.network_import_error', 'Сетевая ошибка импорта'), 'error');
         }
+    }
+
+    async function executeImport() {
+        const selected = StudioState.allTasks.filter((t) => t._selected_for_import);
+        if (selected.length === 0) {
+            showToast(t('studio.toast.select_at_least_one', 'Выберите хотя бы одно задание для импорта'), 'warning');
+            return;
+        }
+
+        if (!StudioState.selectedModuleId || !StudioState.selectedTopicId) {
+            openTopicModal();
+            if (DOM.btnSelectTopic) {
+                DOM.btnSelectTopic.classList.remove('studio-field-pulse');
+                void DOM.btnSelectTopic.offsetWidth;
+                DOM.btnSelectTopic.classList.add('studio-field-pulse');
+            }
+            showToast(t('studio.toast.select_target_topic', 'Выберите целевую тему курса для импорта'), 'warning');
+            return;
+        }
+
+        // Didactic verification guard
+        const defectiveSelected = selected.filter((t) => auditTaskDidactics(t).status === 'defect');
+        if (defectiveSelected.length > 0 && DOM.modalImportGuard) {
+            openImportGuardModal(defectiveSelected, selected);
+            return;
+        }
+
+        await proceedWithImportExecution(selected);
     }
 
     // ---------------------------------------------------------------------------
@@ -3920,11 +5627,15 @@
         }
 
         // Close modals when clicking on background backdrop
-        [DOM.modalTopicSelector, DOM.modalSessionHistory].forEach((modal) => {
+        [DOM.modalTopicSelector, DOM.modalSessionHistory, DOM.modalTaskPreview, DOM.modalImportGuard, DOM.modalNavGuard, DOM.modalResetDraft].forEach((modal) => {
             if (!modal) return;
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
-                    modal.classList.add('hidden');
+                    if (modal === DOM.modalTaskPreview) closeTaskPreviewModal();
+                    else if (modal === DOM.modalImportGuard) closeImportGuardModal();
+                    else if (modal === DOM.modalNavGuard) closeNavGuardModal();
+                    else if (modal === DOM.modalResetDraft) closeResetModal();
+                    else modal.classList.add('hidden');
                 }
             });
         });
@@ -3937,6 +5648,7 @@
                 closeNavGuardModal();
                 closeTaskPreviewModal();
                 closeResetModal();
+                closeImportGuardModal();
             } else if (DOM.modalTaskPreview && !DOM.modalTaskPreview.classList.contains('hidden')) {
                 if (e.key === 'ArrowLeft') {
                     if (currentPreviewIndex > 0) {
@@ -4081,6 +5793,39 @@
             closeTaskPreviewModal,
             renderTaskPreviewModalContent,
             getCurrentPreviewIndex: () => currentPreviewIndex,
+            setSandboxMode: (mode) => {
+                sandboxMode = mode;
+                updateSandboxToolbar();
+                renderTaskPreviewModalContent();
+            },
+            getSandboxMode: () => sandboxMode,
+            setSandboxLevel: (level) => {
+                sandboxLevel = level;
+                if (sandboxSolveState) sandboxSolveState.isEvaluated = false;
+                updateSandboxToolbar();
+                renderTaskPreviewModalContent();
+            },
+            getSandboxLevel: () => sandboxLevel,
+            getSandboxSolveState: () => sandboxSolveState,
+            initSandboxSolveState,
+            evaluateSandboxAnswer,
+            isTautologicalLevelLabel,
+            extractSequenceLevels,
+            extractSequenceSteps,
+            resolveTaskErrorSpans,
+            auditTaskDidactics,
+            renderDidacticQualityBadges,
+            jumpToTaskSourceInStage2,
+            setShowcaseQualityFilter: (filter) => {
+                showcaseQualityFilter = filter;
+                renderShowcase();
+            },
+            getShowcaseQualityFilter: () => showcaseQualityFilter,
+            selectValidOnly,
+            deselectDefects,
+            openImportGuardModal,
+            closeImportGuardModal,
+            executeImport,
             createShowcaseTaskCard,
             serializeTaskToText,
             serializeTasksToText,

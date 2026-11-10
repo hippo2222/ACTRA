@@ -84,10 +84,13 @@ class TestImportParser(TaskImportParser):
             a_match = answer_pattern.match(line_stripped)
             if a_match:
                 if current_question is None:
-                    self.errors.append(
-                        f"Задание #{index + 1}: ответ без вопроса: '{line_stripped}'"
-                    )
-                    continue
+                    if prompt is not None:
+                        current_question = prompt
+                    else:
+                        self.errors.append(
+                            f"Задание #{index + 1}: ответ без вопроса: '{line_stripped}'"
+                        )
+                        continue
                 is_correct = a_match.group(1) == '+'
                 answer_text = a_match.group(2).strip()
                 current_answers.append({

@@ -105,6 +105,9 @@ class ClickWordsParser(TaskImportParser):
             self.errors.append(f"Задание #{index + 1}: не найден текст с ошибками")
             return None
         
+        # Очищаем префикс 'text:' или 'текст:', который выводит ИИ согласно промпту DSL
+        text_content = re.sub(r'^(?:text|текст):\s*', '', text_content.strip(), flags=re.IGNORECASE)
+        
         # Поддержка inline-маркировки [слово]/[фраза] как альтернативы числовым индексам
         if not error_indices and '[' in text_content:
             clean_words = []

@@ -438,18 +438,36 @@
             <div class="stage-3-container">
                 <!-- Showcase Header Toolbar -->
                 <div class="studio-showcase-header">
-                    <div class="flex items-center gap-3">
-                        <label class="flex items-center gap-2 text-xs font-semibold text-text-main cursor-pointer">
-                            <input type="checkbox" id="showcase-select-all" class="rounded border-border-strong text-primary focus:ring-primary w-4 h-4" checked />
-                            <span><span data-i18n="studio.stage3.select_all">Выбрать все</span> (<span id="showcase-total-count">0</span>)</span>
-                        </label>
-                        <span class="text-border-subtle">|</span>
-                        <div id="showcase-filter-pills" class="flex items-center gap-1.5">
-                            <!-- Filter pills by task type -->
+                    <div class="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider" data-i18n="studio.stage3.filter_label">Фильтры:</span>
+                            <div id="showcase-filter-pills" class="flex items-center gap-1.5 flex-wrap">
+                                <!-- Filter pills by task type -->
+                            </div>
+                            <span class="text-border-subtle">|</span>
+                            <div id="showcase-quality-filter-pills" class="flex items-center gap-1.5 flex-wrap">
+                                <!-- Quality filter pills: All, Ready, Warnings, Defects -->
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 pl-3 border-l border-border-subtle flex-wrap">
+                            <label class="flex items-center gap-1.5 text-xs font-semibold text-text-main cursor-pointer select-none">
+                                <input type="checkbox" id="showcase-select-all" class="rounded border-border-strong text-primary focus:ring-primary w-4 h-4" checked />
+                                <span><span data-i18n="studio.stage3.select_all">Выбрать все</span> (<span id="showcase-total-count">0</span>)</span>
+                            </label>
+                            <span class="text-border-subtle">·</span>
+                            <button id="btn-select-valid-only" type="button" class="studio-btn studio-btn--xs studio-btn--secondary text-success border-success/30 hover:bg-success/10 flex items-center gap-1" data-i18n="studio.stage3.btn_select_valid_only" title="Выбрать для импорта только проверенные задания без дефектов" data-i18n-title="studio.stage3.btn_select_valid_only_title">
+                                <span class="material-symbols-outlined text-[13px]">verified</span>
+                                <span data-i18n="studio.stage3.btn_select_valid_only">Только готовые</span>
+                            </button>
+                            <button id="btn-deselect-defects" type="button" class="studio-btn studio-btn--xs studio-btn--secondary text-error border-error/30 hover:bg-error/10 flex items-center gap-1" data-i18n="studio.stage3.btn_deselect_defects" title="Снять отметку со всех заданий с критическими ошибками" data-i18n-title="studio.stage3.btn_deselect_defects_title">
+                                <span class="material-symbols-outlined text-[13px]">block</span>
+                                <span data-i18n="studio.stage3.btn_deselect_defects">Исключить дефекты</span>
+                            </button>
                         </div>
                     </div>
 
-                    <button id="btn-back-to-step-2" type="button" class="studio-btn studio-btn--sm studio-btn--secondary">
+                    <button id="btn-back-to-step-2" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex-shrink-0">
                         <span class="material-symbols-outlined text-[16px]">arrow_back</span>
                         <span data-i18n="studio.stage3.btn_add_more_types">Добавить ещё типы</span>
                     </button>
@@ -508,9 +526,9 @@
 
     <!-- Modal: Task Full Preview / Inspector -->
     <div id="modal-task-preview" class="studio-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-preview-title">
-        <div class="studio-modal-card max-w-[720px] max-h-[88vh] flex flex-col">
+        <div class="studio-modal-card max-w-[820px] max-h-[88vh] flex flex-col">
             <div class="studio-modal-header flex-shrink-0">
-                <div class="flex items-center gap-2.5 min-w-0">
+                <div class="flex items-center gap-2.5 flex-1 min-w-0">
                     <span id="preview-task-type-badge" class="studio-unit-badge bg-primary-light text-primary font-bold"></span>
                     <h3 id="modal-preview-title" class="text-sm font-bold text-text-main truncate" data-i18n="studio.modal.preview_title">Просмотр задания</h3>
                 </div>
@@ -528,8 +546,35 @@
                 </div>
             </div>
 
+            <!-- Acceptance Sandbox Subheader: Mode Switcher & Difficulty Level -->
+            <div class="px-4 py-1.5 border-b border-border-subtle bg-surface-1 flex items-center justify-between gap-2 flex-shrink-0">
+                <div class="flex items-center gap-1 p-0.5 rounded-lg bg-surface-2 border border-border-subtle">
+                    <button id="btn-sandbox-mode-inspect" type="button" class="studio-seg-btn studio-seg-btn--active" data-i18n="studio.sandbox.mode_inspect">
+                        <span class="material-symbols-outlined text-[14px]">visibility</span>
+                        <span data-i18n="studio.sandbox.mode_inspect">Инспекция эталона</span>
+                    </button>
+                    <button id="btn-sandbox-mode-solve" type="button" class="studio-seg-btn" data-i18n="studio.sandbox.mode_solve">
+                        <span class="material-symbols-outlined text-[14px]">sports_esports</span>
+                        <span data-i18n="studio.sandbox.mode_solve">Симулятор решения</span>
+                    </button>
+                </div>
+
+                <div id="sandbox-difficulty-control-group" class="hidden flex items-center gap-2">
+                    <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider" data-i18n="studio.sandbox.test_mode_label">Режим ответа:</span>
+                    <div class="flex items-center gap-1 p-0.5 rounded-lg bg-surface-2 border border-border-subtle">
+                        <button id="btn-sandbox-level-1" type="button" class="studio-seg-btn studio-seg-btn--active px-2.5" data-level="1" data-i18n="studio.sandbox.test_mode_choices" title="Тест с вариантами ответа">С вариантами</button>
+                        <button id="btn-sandbox-level-2" type="button" class="studio-seg-btn px-2.5" data-level="2" data-i18n="studio.sandbox.test_mode_text_input" title="Свободный ввод ответа без вариантов">Свободный ввод</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Didactic Quality Badges Bar -->
+            <div id="sandbox-quality-badges" class="px-4 py-2 border-b border-border-subtle bg-surface-2/60 flex flex-wrap items-center gap-2 flex-shrink-0">
+                <!-- Dynamically populated with didactic quality metrics -->
+            </div>
+
             <div class="studio-modal-body flex-1 overflow-y-auto p-4 flex flex-col gap-4" id="task-preview-content-container">
-                <!-- Dynamically filled with rich task preview -->
+                <!-- Dynamically filled with rich task preview or interactive sandbox -->
             </div>
 
             <div class="p-3 border-t border-border-subtle flex items-center justify-between gap-3 bg-surface-1 flex-shrink-0">
@@ -538,6 +583,10 @@
                     <span data-i18n="studio.modal.preview_select_for_import">Включить в импорт</span>
                 </label>
                 <div class="flex items-center gap-2">
+                    <button id="btn-preview-edit-source" type="button" class="studio-btn studio-btn--sm studio-btn--secondary flex items-center gap-1.5" data-i18n="studio.sandbox.btn_edit_source" title="Перейти к редактированию исходного текста этого задания на Шаге 2" data-i18n-title="studio.sandbox.btn_edit_source_title">
+                        <span class="material-symbols-outlined text-[15px]">edit_note</span>
+                        <span data-i18n="studio.sandbox.btn_edit_source">В черновик (Шаг 2)</span>
+                    </button>
                     <button id="btn-preview-toggle-raw" type="button" class="studio-btn studio-btn--sm studio-btn--secondary" data-i18n="studio.modal.preview_toggle_raw">
                         JSON / Спецификация
                     </button>
@@ -605,6 +654,47 @@
                 <button id="btn-reset-confirm" type="button" class="studio-btn studio-btn--md studio-btn--danger text-xs" data-i18n="studio.modal.reset_confirm">
                     Сбросить всё
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Pre-Import Didactic Verification Modal -->
+    <div id="modal-import-guard" class="studio-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-import-guard-title">
+        <div class="studio-modal-card max-w-[620px] max-h-[85vh] flex flex-col">
+            <div class="studio-modal-header flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-error text-[20px]">warning</span>
+                    <h3 id="modal-import-guard-title" class="text-sm font-bold text-text-main" data-i18n="studio.modal.import_guard_title">Дидактический контроль перед импортом</h3>
+                </div>
+                <button id="btn-close-import-guard" type="button" class="text-text-muted hover:text-text-main p-1 rounded-lg hover:bg-surface-2 transition-colors" title="Закрыть" data-i18n-title="common.close" aria-label="Закрыть" data-i18n-aria="common.close">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <div class="studio-modal-body flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                <div class="p-3 rounded-lg bg-error/10 border border-error/25 text-xs text-text-main flex items-start gap-2.5">
+                    <span class="material-symbols-outlined text-error text-[18px] flex-shrink-0 mt-0.5">error</span>
+                    <p id="import-guard-message" class="leading-relaxed font-medium" data-i18n="studio.modal.import_guard_warning_fmt">Среди выбранных заданий обнаружено {count} с критическими дефектами. Студенты не смогут корректно решить такие задания.</p>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider" data-i18n="studio.modal.import_guard_defects_list_title">Задания с обнаруженными дефектами:</span>
+                    <div id="import-guard-defects-list" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                        <!-- Populated dynamically with defective tasks -->
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 border-t border-border-subtle flex flex-wrap items-center justify-between gap-2.5 bg-surface-1 flex-shrink-0">
+                <button id="btn-guard-import-anyway" type="button" class="studio-btn studio-btn--sm studio-btn--secondary text-text-secondary" data-i18n="studio.modal.btn_guard_import_anyway">
+                    Импортировать все равно
+                </button>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="btn-guard-cancel" type="button" class="studio-btn studio-btn--sm studio-btn--secondary" data-i18n="studio.modal.reset_cancel">
+                        Отмена
+                    </button>
+                    <button id="btn-guard-exclude-and-import" type="button" class="studio-btn studio-btn--sm studio-btn--primary bg-success hover:bg-success/90 text-white border-transparent flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">verified</span>
+                        <span id="label-guard-exclude-and-import" data-i18n="studio.modal.btn_guard_exclude_import_fmt">Исключить дефекты и импортировать</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>

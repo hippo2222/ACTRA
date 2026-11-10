@@ -542,7 +542,7 @@ def _build_imported_task_payload(
     user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build canonical task payload for imported task persistence."""
-    h = _ih()
+    h = _ih() or {}
     import_context = import_context if isinstance(import_context, dict) else {}
     import_source = str(import_context.get("source") or "text").strip().lower() or "text"
     ai_run_id = str(import_context.get("ai_run_id") or "").strip() or None
@@ -581,7 +581,7 @@ def _build_imported_task_payload(
             "topic": topic_id,
             "id": task_id,
             "name": task.get("name", task_id),
-            "task_schema_version": h["CURRENT_SCHEMA_VERSION"],
+            "task_schema_version": h.get("CURRENT_SCHEMA_VERSION", 1) if isinstance(h, dict) else 1,
         },
     }
 
@@ -598,6 +598,13 @@ def _build_imported_task_payload(
         for passthrough_key in ("language", "source_file_name"):
             if passthrough_key in task_metadata and passthrough_key not in task_json_data["meta"]:
                 task_json_data["meta"][passthrough_key] = task_metadata[passthrough_key]
+
+    audit_info = task.get("_audit") or task.get("metadata", {}).get("_audit") or task_metadata.get("_audit")
+    if isinstance(audit_info, dict):
+        if "status" in audit_info:
+            task_json_data["meta"]["didactic_quality"] = audit_info["status"]
+        if "defects" in audit_info:
+            task_json_data["meta"]["didactic_defects"] = audit_info["defects"]
 
     if ai_run_id:
         task_json_data["meta"]["ai_run_id"] = ai_run_id
@@ -673,7 +680,10 @@ def _build_imported_task_payload(
 
     # Add type-specific data
     if canonical_task_type == "open_answer":
-        oa_data = task.get("data", {})
+        oa_data = task.get("data") if isinstance(task.get("data"), dict) and task.get("data") else (task.get("content") if isinstance(task.get("content"), dict) else {})
+        if isinstance(oa_data.get("content"), dict):
+            oa_nested = oa_data["content"]
+            oa_data = {**oa_nested, **oa_data}
         oa_content = {
             "question": oa_data.get("question", task.get("prompt", "")),
             "prompt": oa_data.get("question", task.get("prompt", "")),
@@ -682,6 +692,18 @@ def _build_imported_task_payload(
             oa_content["keywords"] = oa_data["keywords"]
         if oa_data.get("reference_answer"):
             oa_content["reference_answer"] = oa_data["reference_answer"]
+        if oa_data.get("hint"):
+            oa_content["hint"] = oa_data["hint"]
+        if oa_data.get("case_text"):
+            oa_content["case_text"] = oa_data["case_text"]
+        if oa_data.get("display_mode"):
+            oa_content["display_mode"] = oa_data["display_mode"]
+        if isinstance(oa_data.get("questions"), list) and oa_data["questions"]:
+            oa_content["questions"] = oa_data["questions"]
+        if "sequence_matters" in oa_data:
+            oa_content["sequence_matters"] = bool(oa_data["sequence_matters"])
+        if oa_data.get("criteria"):
+            oa_content["criteria"] = oa_data["criteria"]
         if oa_data.get("max_length"):
             oa_content["max_length"] = oa_data["max_length"]
         if isinstance(oa_data.get("min_keywords"), int):
@@ -690,6 +712,7 @@ def _build_imported_task_payload(
             oa_content["require_all_keywords"] = oa_data["require_all_keywords"]
         task_json_data["content"] = oa_content
     elif canonical_task_type == "sequence_assembly":
+        from task_system.models.parsers.sequence_parser import SequenceParser
         data = task.get("data", {})
         elements_map = data.get("elements", {}) if isinstance(data.get("elements"), dict) else {}
         raw_levels = data.get("levels", {}) if isinstance(data.get("levels"), dict) else {}
@@ -714,12 +737,10 @@ def _build_imported_task_payload(
             level_elements = [
                 str(element_id) for element_id in raw_levels.get(level_num, []) if element_id
             ]
-            level_title = (
-                str(
-                    raw_level_names.get(level_num) or raw_level_names.get(str(level_num)) or ""
-                ).strip()
-                or f"Level {level_num}"
-            )
+            raw_title = str(
+                raw_level_names.get(level_num) or raw_level_names.get(str(level_num)) or ""
+            ).strip()
+            level_title = raw_title if not SequenceParser.is_tautological_level_name(int(level_num), raw_title) else ""
             level_items = []
             for element_id in level_elements:
                 element_text = elements_map.get(element_id, element_id)
@@ -957,23 +978,65 @@ def export_tasks_to_text() -> Any:
                 lines.append(f"* {kw}")
             lines.append("")
         elif ttype == "sequence_assembly":
+            from task_system.models.parsers.sequence_parser import SequenceParser
+
             lines.append("@SEQUENCE")
+
+            # Export explicit directives if set
+            level_order = content.get("level_order_matters")
+            if level_order is None and isinstance(task.get("settings"), dict):
+                level_order = task["settings"].get("level_order_matters")
+            if level_order is not None:
+                lines.append(f"@ level_order_matters: {str(bool(level_order)).lower()}")
+
+            seq_order = content.get("sequence_within_level_matters")
+            if seq_order is None and isinstance(task.get("settings"), dict):
+                seq_order = task["settings"].get("sequence_within_level_matters")
+            if seq_order is not None:
+                lines.append(f"@ sequence_within_level_matters: {str(bool(seq_order)).lower()}")
+
             lines.append(f"# {content.get('prompt', '')}")
+
             seq = content.get("sequence", [])
-            elem_idx = 1
-            for level in seq:
-                for item in level.get("items", []):
-                    lines.append(f"element_{elem_idx}: {item.get('label', '')}")
-                    elem_idx += 1
-            level_idx = 1
-            elem_counter = 1
-            for level in seq:
-                ids = []
-                for item in level.get("items", []):
-                    ids.append(f"element_{elem_counter}")
-                    elem_counter += 1
-                lines.append(f"level_{level_idx}: {', '.join(ids)}")
-                level_idx += 1
+            elements = content.get("elements", [])
+            levels = content.get("levels", [])
+
+            if seq and isinstance(seq, list):
+                elem_idx = 1
+                for level in seq:
+                    for item in level.get("items", []):
+                        lines.append(f"element_{elem_idx}: {item.get('label', '')}")
+                        elem_idx += 1
+                elem_counter = 1
+                for level_idx, level in enumerate(seq, 1):
+                    ids = []
+                    for item in level.get("items", []):
+                        ids.append(f"element_{elem_counter}")
+                        elem_counter += 1
+                    raw_title = str(level.get("title") or level.get("level_name") or "").strip()
+                    title_part = (
+                        f" [{raw_title}]"
+                        if raw_title and not SequenceParser.is_tautological_level_name(level_idx, raw_title)
+                        else ""
+                    )
+                    lines.append(f"level_{level_idx}{title_part}: {', '.join(ids)}")
+            elif elements and levels and isinstance(elements, list) and isinstance(levels, list):
+                elem_id_to_num = {}
+                for idx, elem in enumerate(elements, 1):
+                    eid = elem.get("id") or f"elem_{idx}"
+                    etext = elem.get("text") or elem.get("label") or ""
+                    elem_id_to_num[eid] = f"element_{idx}"
+                    lines.append(f"element_{idx}: {etext}")
+                for level_idx, level in enumerate(levels, 1):
+                    blocks = level.get("blocks", [])
+                    mapped_ids = [elem_id_to_num.get(b, b) for b in blocks if b in elem_id_to_num]
+                    raw_title = str(level.get("level_name") or level.get("title") or "").strip()
+                    title_part = (
+                        f" [{raw_title}]"
+                        if raw_title and not SequenceParser.is_tautological_level_name(level_idx, raw_title)
+                        else ""
+                    )
+                    lines.append(f"level_{level_idx}{title_part}: {', '.join(mapped_ids)}")
             lines.append("")
         elif ttype == "image_labeling":
             lines.append("@IMAGE_LABELING")

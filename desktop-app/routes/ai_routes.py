@@ -791,7 +791,8 @@ def ai_generate() -> Any:
             return (
                 f"Format recovery mode. Return exactly {expected_count_local} @SEQUENCE blocks and no extra text. "
                 "Use strict parser syntax only: @SEQUENCE, one # line, at least 3 lines like 'element_1: ...', "
-                "then one or more lines like 'level_1 [Stage Title]: element_1, element_2' (or 'level_1: element_1, element_2'). Levels must reference existing element_X IDs only."
+                "then one or more lines like 'level_1 [Stage/Category Title]: element_1, element_2'. "
+                "Levels must reference existing element_X IDs only. Do not put level legends in the # line; put category/stage titles inside brackets [Title] on level lines."
             )
         if task_type_local == "TEST":
             return (
@@ -1250,8 +1251,8 @@ def ai_generate() -> Any:
             else:
                 repair_hint = (
                     f"Repair mode. Return exactly {repair_count} @SEQUENCE blocks and no extra blocks. "
-                    "Use strict parser syntax only: @SEQUENCE, one # line, at least 3 element_X lines, then level_X lines "
-                    "that reference only existing element_X IDs. Include the ordering principle in the # line. No prose or Markdown."
+                    "Use strict parser syntax only: @SEQUENCE, one # line, at least 3 element_X lines, then lines like 'level_N [Stage/Category Title]: element_1, element_2' "
+                    "that reference only existing element_X IDs. Do not put level legends in # line. Include the structuring principle in the # line. No prose or Markdown."
                 )
             try:
                 repair_raw_response, repair_provider_name, repair_chain_attempts = _generate_raw_with_parse_escalation(
@@ -1359,7 +1360,8 @@ def ai_generate() -> Any:
                 sequence_fill_hint = (
                     f"Iterative fill repair round {sequence_fill_round}. Return exactly {fill_count} @SEQUENCE blocks and no extra blocks. "
                     "Strict parser syntax only: @SEQUENCE, one # line, at least 3 lines 'element_N: text', and one or more "
-                    "lines 'level_N [Stage Title]: element_1, element_2' (or 'level_N: element_1, element_2'). Levels must reference only declared element_N IDs. No prose or Markdown."
+                    "lines 'level_N [Stage/Category Title]: element_1, element_2'. Levels must reference only declared element_N IDs. "
+                    "Do not put level legends in the # line; specify category titles in [brackets]. No prose or Markdown."
                 )
                 try:
                     seq_fill_raw_response, seq_fill_provider_name, seq_fill_chain_attempts = _generate_raw_with_parse_escalation(
@@ -1517,8 +1519,8 @@ def ai_generate() -> Any:
                 cleanup_sequence_count = max(1, min(requested_count, remaining_sequence_repairable))
                 cleanup_sequence_hint = (
                     f"Cleanup repair mode. Return exactly {cleanup_sequence_count} @SEQUENCE blocks and no extra blocks. "
-                    "Strict parser syntax only: @SEQUENCE, one # line, at least 3 element_N lines, and level_N lines "
-                    "using only declared element_N IDs. Use all elements in levels and avoid duplicate element IDs."
+                    "Strict parser syntax only: @SEQUENCE, one # line, at least 3 element_N lines, and lines like 'level_N [Stage/Category Title]: element_1, element_2' "
+                    "using only declared element_N IDs. Do not put level legends in #. Use all elements in levels and avoid duplicate element IDs."
                 )
                 try:
                     cleanup_sequence_raw, cleanup_sequence_provider, cleanup_sequence_chain = _generate_raw_with_parse_escalation(
