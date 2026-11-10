@@ -1556,7 +1556,7 @@ class BaseEditor {
                             <h3 class="font-bold text-text-main text-sm" data-i18n="editor_base.author_note_edit_title">
                                 ${wt('editor_base.author_note_edit_title', 'Заметка автора к заданию')}
                             </h3>
-                            ${dateFormatted ? `<p class="text-[11px] text-text-muted mt-0.5">Последнее изменение: ${dateFormatted}</p>` : ''}
+                            ${dateFormatted ? `<p class="text-[11px] text-text-muted mt-0.5">${wt('editor_base.author_note_last_modified', 'Последнее изменение: {date}').replace('{date}', dateFormatted)}</p>` : ''}
                         </div>
                     </div>
                     <button type="button" class="modal-close-btn text-text-subtle hover:text-text-main p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer" aria-label="Close">
@@ -1574,7 +1574,7 @@ class BaseEditor {
                         placeholder="${wt('editor_base.author_note_placeholder', 'Текст вашей заметки...')}"
                         data-i18n-placeholder="editor_base.author_note_placeholder"></textarea>
                     <div class="flex justify-between items-center text-xs text-text-subtle">
-                        <span class="text-[11px] text-text-dim">Приватная заметка: видна только автору задания</span>
+                        <span class="text-[11px] text-text-dim" data-i18n="editor_base.author_note_privacy_hint">${wt('editor_base.author_note_privacy_hint', 'Приватная заметка: видна только автору задания')}</span>
                         <span id="editor-author-note-char-count">0 / 1000</span>
                     </div>
                 </div>

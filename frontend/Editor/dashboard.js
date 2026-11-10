@@ -6350,7 +6350,7 @@ class EditorDashboard {
         this.refreshCurrentView(); // Re-render current view to update UI state
     }
 
-    cancelSelection({ rerender = false } = {}) {
+    cancelSelection({ rerender = true } = {}) {
         this.selectionMode = false;
         this.selectedTasks.clear();
         this.lastSelectedTaskId = null;
@@ -7437,9 +7437,10 @@ class EditorDashboard {
         if (task.type === 'image_labeling') icon = 'image';
         if (task.type === 'open_answer') icon = 'edit_note';
 
+        const esc = (s) => (typeof this.escapeHtml === 'function' ? this.escapeHtml(s) : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">${icon}</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${this.escapeHtml(task.full_name || task.name || task.id)}">${this.escapeHtml(task.name || task.id)}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${esc(task.full_name || task.name || task.id)}">${esc(task.name || task.id)}</span>
             ${task.isDraftOnly ? wt('db.k316', '<span class="inline-flex h-5 items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-1.5 py-0 text-[10px] font-semibold leading-none text-warning-darker">Черновик</span>') : ''}
         `;
 
@@ -8399,16 +8400,98 @@ class EditorDashboard {
         }
 
         const tasksToDelete = [];
+        let draftsCleanedCount = 0;
+        let localDraftOnlyCount = 0;
+
         Array.from(this.selectedTasks).forEach(idStr => {
             const [moduleId, topicId, ...taskIdParts] = String(idStr || '').split(':');
             const taskId = taskIdParts.join(':');
-            if (moduleId && topicId && taskId) {
-                tasksToDelete.push({ module_id: moduleId, topic_id: topicId, task_id: taskId });
+            if (!moduleId || !topicId || !taskId) return;
+
+            const draftKeys = this.getTaskDraftStorageKeysForSelection(moduleId, topicId, taskId);
+            const context = this.getCatalogTaskContext(moduleId, topicId, taskId);
+            draftsCleanedCount += this.removeTaskDraftsForSelection(moduleId, topicId, taskId);
+
+            if (draftKeys.size > 0 && !context.task) {
+                localDraftOnlyCount += 1;
+                return;
             }
+
+            tasksToDelete.push({ module_id: moduleId, topic_id: topicId, task_id: taskId });
         });
 
-        this.cancelSelection({ rerender: false });
-        this.executeSoftDeleteTasks(tasksToDelete);
+        if (!tasksToDelete.length) {
+            const currentModuleId = this.activeModuleId;
+            const currentTopicId = this.activeTopicId;
+
+            this.selectedTasks.clear();
+            this.cancelSelection({ rerender: false });
+
+            if (currentModuleId) this.activeModuleId = currentModuleId;
+            if (currentTopicId) this.activeTopicId = currentTopicId;
+
+            this.renderSidebar();
+            this.refreshCurrentView();
+            this.renderRecoveryCenter();
+
+            this.showVoiceToast({
+                severity: 'success',
+                what: `${wt('db.k358', 'Удалено черновиков:')} ${draftsCleanedCount || localDraftOnlyCount}.`,
+                impact: wt('db.k359', 'Локальные черновики удалены с этого устройства.'),
+                next: wt('db.k360', 'Список заданий обновлён.'),
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/editor/tasks/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tasks: tasksToDelete })
+            });
+
+            const data = await response.json();
+
+            if (data.ok) {
+                const currentModuleId = this.activeModuleId;
+                const currentTopicId = this.activeTopicId;
+
+                this.selectedTasks.clear();
+                this.cancelSelection({ rerender: false });
+
+                await this.loadCatalog();
+
+                if (currentModuleId) this.activeModuleId = currentModuleId;
+                if (currentTopicId) this.activeTopicId = currentTopicId;
+
+                this.renderSidebar();
+                this.refreshCurrentView();
+                this.renderRecoveryCenter();
+
+                const countDeleted = data.deleted || tasksToDelete.length;
+                this.showVoiceToast({
+                    severity: 'success',
+                    what: `${wt('db.k361', 'Удалено заданий:')} ${countDeleted}.`,
+                    impact: wt('db.k362', 'Задания удалены из каталога курса.'),
+                    next: wt('db.k363', 'Список заданий обновлён.'),
+                });
+            } else {
+                this.showVoiceToast({
+                    severity: 'error',
+                    what: wt('db.k364', 'Не удалось удалить выбранные задания.'),
+                    impact: data.error || wt('db.k365', 'Сервер вернул ошибку при удалении.'),
+                    next: wt('db.k366', 'Попробуйте повторить удаление ещё раз.'),
+                });
+            }
+        } catch (error) {
+            console.error('[Dashboard] Bulk delete error:', error);
+            this.showVoiceToast({
+                severity: 'error',
+                what: wt('db.k367', 'Ошибка связи при удалении заданий.'),
+                impact: wt('db.k368', 'Не удалось связаться с сервером.'),
+                next: wt('db.k369', 'Проверьте соединение и обновите страницу.'),
+            });
+        }
     }
 
     startRenameTask(task, titleElement) {

@@ -9857,5 +9857,7 @@
   "editor_base.author_note_delete_btn": "Видалити",
   "editor_base.author_note_btn_label": "Замітка",
   "editor_base.author_note_tooltip": "Замітка автора",
+  "editor_base.author_note_last_modified": "Остання зміна: {date}",
+  "editor_base.author_note_privacy_hint": "Приватна замітка: видна лише автору завдання",
   "editor_base.author_note_resolve_error": "Не вдалося оновити статус замітки"
 }

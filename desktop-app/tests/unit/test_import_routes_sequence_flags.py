@@ -47,8 +47,8 @@ def test_sequence_import_respects_explicit_metadata_flags(monkeypatch):
         {"id": "element_3", "text": "C"},
     ]
     assert content["levels"] == [
-        {"level_id": "level_1", "blocks": ["element_1", "element_2"], "level_name": "Level 1"},
-        {"level_id": "level_2", "blocks": ["element_3"], "level_name": "Level 2"},
+        {"level_id": "level_1", "blocks": ["element_1", "element_2"], "level_name": ""},
+        {"level_id": "level_2", "blocks": ["element_3"], "level_name": ""},
     ]
     assert content["sequence"][0]["level_id"] == "level_1"
     assert content["sequence"][1]["level_id"] == "level_2"

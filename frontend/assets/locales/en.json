@@ -9857,5 +9857,7 @@
   "editor_base.author_note_delete_btn": "Delete",
   "editor_base.author_note_btn_label": "Note",
   "editor_base.author_note_tooltip": "Author note",
+  "editor_base.author_note_last_modified": "Last modified: {date}",
+  "editor_base.author_note_privacy_hint": "Private note: visible only to task author",
   "editor_base.author_note_resolve_error": "Failed to update note status"
 }
