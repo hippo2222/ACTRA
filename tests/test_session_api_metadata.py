@@ -1066,3 +1066,20 @@ def test_enrich_task_data_hosted_strips_path_only_media_refs(monkeypatch, tmp_pa
     assert "image_path" not in question
     assert "image_url" not in answer
     assert "image_path" not in answer
+
+
+def test_session_api_extract_task_display_name_recovers_legacy_truncation():
+    """Verify that SessionAPI._extract_task_display_name expands legacy truncated names."""
+    task_data = {
+        "type": "open_answer",
+        "meta": {
+            "name": "Открытый ответ - Что изображено на снимке..."
+        },
+        "content": {
+            "question": "Что изображено на обзорном рентгеновском снимке грудной клетки в прямой проекции?"
+        }
+    }
+    display_name = SessionAPI._extract_task_display_name(task_data)
+    assert not display_name.endswith("...")
+    assert "в прямой проекции?" in display_name
+    assert display_name.startswith("Открытый ответ - ")

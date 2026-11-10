@@ -107,6 +107,9 @@ class BaseEditor {
         if (this.theoryGrounding?.panelOpen && typeof this.renderTheoryGroundingPanel === 'function') {
             this.renderTheoryGroundingPanel();
         }
+        if (typeof this.renderAuthorNoteBanner === 'function') {
+            this.renderAuthorNoteBanner();
+        }
         if (typeof this.onLocaleChanged === 'function') {
             this.onLocaleChanged();
         }
@@ -326,6 +329,8 @@ class BaseEditor {
         } else if (typeof this.updateEditorChrome === 'function') {
             this.updateEditorChrome();
         }
+
+        this.renderAuthorNoteBanner();
 
         if (!restoredDraftSilently) {
             this.markSaved();
@@ -1307,6 +1312,422 @@ class BaseEditor {
         return true;
     }
 
+    // ===== AUTHOR REVISION NOTE =====
+
+    /**
+     * Format ISO date string to DD.MM HH:mm
+     * @param {string} isoStr
+     * @returns {string}
+     */
+    _formatAuthorNoteDate(isoStr) {
+        if (!isoStr) return '';
+        try {
+            const d = new Date(isoStr);
+            if (Number.isNaN(d.getTime())) return '';
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            return `${day}.${month} ${hours}:${mins}`;
+        } catch (_) {
+            return '';
+        }
+    }
+
+    /**
+     * Get active author revision note for the current task
+     * @returns {Object|null}
+     */
+    getAuthorNote() {
+        const raw = this.getAuthorNoteRaw();
+        if (!raw || typeof raw !== 'object') return null;
+        const text = String(raw.text || '').trim();
+        const status = String(raw.status || 'open').trim().toLowerCase();
+        if (!text || status === 'resolved') return null;
+        return {
+            ...raw,
+            text,
+            status,
+        };
+    }
+
+    /**
+     * Get raw author note regardless of resolved status
+     * @returns {Object|null}
+     */
+    getAuthorNoteRaw() {
+        const meta = this.task?.metadata?.author_note
+            || this.task?.task_data?.meta?.author_note
+            || this.task?.author_note
+            || null;
+        if (!meta || typeof meta !== 'object') return null;
+        return meta;
+    }
+
+    /**
+     * Render or update the pulsing author revision note button in the editor header
+     */
+    renderAuthorNoteButton() {
+        if (typeof document === 'undefined') return;
+
+        // Clean up legacy hanging banner if present
+        const legacyBanner = document.getElementById('editor-author-note-banner');
+        if (legacyBanner) legacyBanner.remove();
+
+        const note = this.getAuthorNote();
+        let btn = document.getElementById('editor-author-note-btn');
+
+        if (!note) {
+            if (btn) btn.remove();
+            return;
+        }
+
+        const dateFormatted = this._formatAuthorNoteDate(note.updated_at);
+        const tooltipText = `${wt('editor_base.author_note_tooltip', 'Заметка автора')}: ${note.text}${dateFormatted ? ` (${dateFormatted})` : ''}`;
+
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'editor-author-note-btn';
+            btn.type = 'button';
+
+            // Mount next to task title or before save status
+            const titleDisplay = document.getElementById('task-title-display') || document.querySelector('h2');
+            const saveStatus = document.getElementById('save-status-container');
+            const header = document.querySelector('header');
+
+            if (titleDisplay && titleDisplay.parentElement) {
+                titleDisplay.insertAdjacentElement('afterend', btn);
+            } else if (saveStatus && saveStatus.parentElement) {
+                saveStatus.parentElement.insertBefore(btn, saveStatus);
+            } else if (header) {
+                header.appendChild(btn);
+            }
+        }
+
+        btn.className = 'editor-author-note-btn author-note-btn--pulse inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 transition-all cursor-pointer shadow-xs shrink-0 ml-2';
+        btn.setAttribute('title', tooltipText);
+        btn.setAttribute('aria-label', tooltipText);
+        btn.innerHTML = `
+            <span class="material-symbols-outlined leading-none text-[16px] text-amber-600 dark:text-amber-400" style="font-variation-settings: 'FILL' 1;">flag</span>
+            <span class="font-semibold">${wt('editor_base.author_note_btn_label', 'Заметка')}</span>
+        `;
+
+        btn.onclick = (e) => {
+            e.preventDefault();
+            this.openAuthorNoteEditPrompt();
+        };
+    }
+
+    /**
+     * Legacy compatibility alias
+     */
+    renderAuthorNoteBanner() {
+        this.renderAuthorNoteButton();
+    }
+
+    /**
+     * Resolve the active author note (marks status as resolved)
+     */
+    async resolveAuthorNote() {
+        const currentNote = this.getAuthorNote();
+        if (!currentNote) return;
+
+        const ctx = this.getTaskContext();
+        const moduleId = this.moduleId || ctx.moduleId;
+        const topicId = this.topicId || ctx.topicId;
+        const taskId = this.taskId || ctx.taskId;
+
+        if (!moduleId || !topicId || !taskId) {
+            this.showToast(wt('editor_base.author_note_resolve_error', 'Не удалось обновить статус заметки'), 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/editor/task/${moduleId}/${topicId}/${taskId}/author-note`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: currentNote.text,
+                        status: 'resolved',
+                    }),
+                }
+            );
+
+            const result = await response.json();
+            if (response.ok && result.ok) {
+                const updatedNote = result.note || result.author_note || {
+                    ...currentNote,
+                    status: 'resolved',
+                    updated_at: new Date().toISOString(),
+                };
+                if (this.task) {
+                    if (this.task.metadata) this.task.metadata.author_note = updatedNote;
+                    if (this.task.task_data?.meta) this.task.task_data.meta.author_note = updatedNote;
+                }
+
+                // Remove pulsing button and modal
+                const btn = document.getElementById('editor-author-note-btn');
+                if (btn) btn.remove();
+                const modal = document.getElementById('editor-author-note-modal');
+                if (modal) modal.remove();
+
+                this.showToast(wt('editor_base.author_note_resolved_toast', 'Заметка автора отмечена как исправленная'), 'success');
+            } else {
+                this.showToast(result?.error || wt('editor_base.author_note_resolve_error', 'Не удалось обновить статус заметки'), 'error');
+            }
+        } catch (error) {
+            console.error('[BaseEditor] Error resolving author note:', error);
+            this.showToast(wt('editor_base.author_note_resolve_error', 'Не удалось обновить статус заметки'), 'error');
+        }
+    }
+
+    /**
+     * Delete active author note
+     */
+    async deleteAuthorNote() {
+        const ctx = this.getTaskContext();
+        const moduleId = this.moduleId || ctx.moduleId;
+        const topicId = this.topicId || ctx.topicId;
+        const taskId = this.taskId || ctx.taskId;
+
+        if (!moduleId || !topicId || !taskId) {
+            this.showToast(wt('editor_base.author_note_resolve_error', 'Не удалось удалить заметку'), 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/editor/task/${moduleId}/${topicId}/${taskId}/author-note`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ delete: true }),
+                }
+            );
+
+            const result = await response.json();
+            if (response.ok && result.ok) {
+                if (this.task) {
+                    if (this.task.metadata) delete this.task.metadata.author_note;
+                    if (this.task.task_data?.meta) delete this.task.task_data.meta.author_note;
+                }
+
+                const btn = document.getElementById('editor-author-note-btn');
+                if (btn) btn.remove();
+                const modal = document.getElementById('editor-author-note-modal');
+                if (modal) modal.remove();
+
+                this.showToast(wt('editor_base.author_note_deleted_toast', 'Заметка автора удалена'), 'success');
+            } else {
+                this.showToast(result?.error || wt('editor_base.author_note_resolve_error', 'Не удалось удалить заметку'), 'error');
+            }
+        } catch (error) {
+            console.error('[BaseEditor] Error deleting author note:', error);
+            this.showToast(wt('editor_base.author_note_resolve_error', 'Не удалось удалить заметку'), 'error');
+        }
+    }
+
+    /**
+     * Open author revision note modal dialog
+     */
+    openAuthorNoteEditPrompt() {
+        if (typeof document === 'undefined') return;
+
+        const currentNote = this.getAuthorNoteRaw() || {};
+        const initialText = String(currentNote.text || '').trim();
+        const dateFormatted = this._formatAuthorNoteDate(currentNote.updated_at);
+
+        const existingModal = document.getElementById('editor-author-note-modal');
+        if (existingModal) existingModal.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'editor-author-note-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150';
+        modal.innerHTML = `
+            <div class="bg-surface-1 border border-border-subtle rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-border-subtle">
+                    <div class="flex items-center gap-2.5">
+                        <span class="size-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                            <span class="material-symbols-outlined text-[17px]" style="font-variation-settings: 'FILL' 1;">flag</span>
+                        </span>
+                        <div>
+                            <h3 class="font-bold text-text-main text-sm" data-i18n="editor_base.author_note_edit_title">
+                                ${wt('editor_base.author_note_edit_title', 'Заметка автора к заданию')}
+                            </h3>
+                            ${dateFormatted ? `<p class="text-[11px] text-text-muted mt-0.5">Последнее изменение: ${dateFormatted}</p>` : ''}
+                        </div>
+                    </div>
+                    <button type="button" class="modal-close-btn text-text-subtle hover:text-text-main p-1.5 rounded-lg hover:bg-surface-2 transition-colors cursor-pointer" aria-label="Close">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="space-y-1.5">
+                    <textarea class="w-full bg-surface-2 border border-border-subtle rounded-lg p-3 text-sm text-text-main focus:outline-none focus:border-amber-500 min-h-[130px] resize-y"
+                        id="editor-author-note-textarea"
+                        maxlength="1000"
+                        placeholder="${wt('editor_base.author_note_placeholder', 'Текст вашей заметки...')}"
+                        data-i18n-placeholder="editor_base.author_note_placeholder"></textarea>
+                    <div class="flex justify-between items-center text-xs text-text-subtle">
+                        <span class="text-[11px] text-text-dim">Приватная заметка: видна только автору задания</span>
+                        <span id="editor-author-note-char-count">0 / 1000</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-3 border-t border-border-subtle gap-2">
+                    <!-- Left: Delete button -->
+                    <button type="button" id="author-note-delete-btn" class="author-note-delete-btn px-3 py-1.5 text-xs font-semibold rounded-lg text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-colors cursor-pointer flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        <span>${wt('editor_base.author_note_delete_btn', 'Удалить')}</span>
+                    </button>
+
+                    <!-- Right: Resolve, Save, Close -->
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="author-note-resolve-btn" class="author-note-resolve-btn px-3.5 py-1.5 text-xs font-semibold rounded-lg text-white transition-colors cursor-pointer shadow-sm flex items-center gap-1.5" style="background-color: #047857 !important; color: #ffffff !important;" data-i18n="editor_base.author_note_resolve">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>${wt('editor_base.author_note_resolve', 'Исправлено')}</span>
+                        </button>
+                        <button type="button" id="author-note-save-btn" class="modal-save-btn px-4 py-1.5 text-xs font-semibold rounded-lg text-white transition-colors cursor-pointer shadow-sm" style="background-color: #0284c7 !important; color: #ffffff !important;" data-i18n="editor_base.author_note_save_btn">
+                            ${wt('editor_base.author_note_save_btn', 'Сохранить')}
+                        </button>
+                        <button type="button" class="modal-cancel-btn px-3 py-1.5 text-xs font-medium rounded-lg text-text-subtle hover:text-text-main hover:bg-surface-2 transition-colors cursor-pointer" data-i18n="editor_base.author_note_cancel_btn">
+                            ${wt('editor_base.author_note_cancel_btn', 'Закрыть')}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const textarea = modal.querySelector('#editor-author-note-textarea');
+        const charCount = modal.querySelector('#editor-author-note-char-count');
+        const saveBtn = modal.querySelector('#author-note-save-btn');
+        const resolveBtn = modal.querySelector('#author-note-resolve-btn');
+        const deleteBtn = modal.querySelector('#author-note-delete-btn');
+        const cancelBtn = modal.querySelector('.modal-cancel-btn');
+        const closeBtn = modal.querySelector('.modal-close-btn');
+
+        const updateCharCount = () => {
+            if (charCount && textarea) {
+                charCount.textContent = `${textarea.value.length} / 1000`;
+            }
+        };
+
+        if (textarea) {
+            textarea.value = initialText;
+            updateCharCount();
+            textarea.addEventListener('input', updateCharCount);
+            setTimeout(() => {
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }, 50);
+        }
+
+        const closeModal = () => modal.remove();
+
+        closeBtn?.addEventListener('click', closeModal);
+        cancelBtn?.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleKeyDown);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+
+        resolveBtn?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            resolveBtn.disabled = true;
+            await this.resolveAuthorNote();
+        });
+
+        deleteBtn?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            deleteBtn.disabled = true;
+            await this.deleteAuthorNote();
+        });
+
+        saveBtn?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const newText = textarea ? textarea.value.trim() : '';
+
+            const ctx = this.getTaskContext();
+            const moduleId = this.moduleId || ctx.moduleId;
+            const topicId = this.topicId || ctx.topicId;
+            const taskId = this.taskId || ctx.taskId;
+
+            if (!moduleId || !topicId || !taskId) {
+                this.showToast(wt('editor_base.author_note_resolve_error', 'Не удалось обновить статус заметки'), 'error');
+                return;
+            }
+
+            saveBtn.disabled = true;
+            try {
+                const response = await fetch(
+                    `/api/editor/task/${moduleId}/${topicId}/${taskId}/author-note`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(
+                            newText
+                                ? { text: newText, status: 'open' }
+                                : { delete: true }
+                        ),
+                    }
+                );
+
+                const result = await response.json();
+                if (response.ok && result.ok) {
+                    const updatedNote = result.note || result.author_note || (
+                        newText
+                            ? { text: newText, status: 'open', updated_at: new Date().toISOString() }
+                            : null
+                    );
+                    if (this.task) {
+                        if (this.task.metadata) {
+                            if (updatedNote) {
+                                this.task.metadata.author_note = updatedNote;
+                            } else {
+                                delete this.task.metadata.author_note;
+                            }
+                        }
+                        if (this.task.task_data?.meta) {
+                            if (updatedNote) {
+                                this.task.task_data.meta.author_note = updatedNote;
+                            } else {
+                                delete this.task.task_data.meta.author_note;
+                            }
+                        }
+                    }
+                    closeModal();
+                    this.renderAuthorNoteButton();
+                    this.showToast(wt('editor_base.author_note_updated_toast', 'Заметка автора обновлена'), 'success');
+                } else {
+                    saveBtn.disabled = false;
+                    this.showToast(result?.error || wt('editor_base.author_note_resolve_error', 'Не удалось обновить статус заметки'), 'error');
+                }
+            } catch (err) {
+                console.error('[BaseEditor] Error saving note:', err);
+                saveBtn.disabled = false;
+                this.showToast(wt('editor_base.author_note_resolve_error', 'Не удалось обновить статус заметки'), 'error');
+            }
+        });
+    }
+
     // ===== SAVING =====
 
     /**
@@ -1353,6 +1774,11 @@ class BaseEditor {
             if (taskData.title) taskData.title = resolvedName;
             if (!taskData.type) {
                 taskData.type = this.taskTypeParam || this.task?.task_data?.type || '';
+            }
+
+            const existingAuthorNote = this.getAuthorNoteRaw();
+            if (existingAuthorNote && !meta.author_note) {
+                meta.author_note = existingAuthorNote;
             }
         }
 
@@ -1407,6 +1833,14 @@ class BaseEditor {
                 this.cleanupPersistedTaskRoute();
 
                 this.onTaskSaved(); // Hook for child classes
+                if (this.task && taskData?.meta?.author_note) {
+                    if (this.task.metadata) {
+                        this.task.metadata.author_note = taskData.meta.author_note;
+                    }
+                    if (this.task.task_data?.meta) {
+                        this.task.task_data.meta.author_note = taskData.meta.author_note;
+                    }
+                }
                 if (semanticWarnings.length) {
                     this.updateSaveStatus({
                         type: 'warning',

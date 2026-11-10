@@ -104,6 +104,21 @@ class ImportExportService:
     # EXPORT
     # =========================================================================
     
+    @staticmethod
+    def _sanitize_exported_task_payload(task_payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Strip private author notes and review metadata before packaging."""
+        if not isinstance(task_payload, dict):
+            return task_payload
+        for container_key in ("meta", "metadata"):
+            container = task_payload.get(container_key)
+            if isinstance(container, dict) and "author_note" in container:
+                container = dict(container)
+                container.pop("author_note", None)
+                task_payload[container_key] = container
+        if "author_note" in task_payload:
+            task_payload.pop("author_note", None)
+        return task_payload
+
     def create_export_archive(self, tasks_list: List[Dict[str, str]]) -> str:
         """
         Create a ZIP archive containing the specified tasks.
@@ -175,6 +190,7 @@ class ImportExportService:
                             allow_stage_external=True,
                             allow_asset_resolution=True,
                         )
+                        task_payload = self._sanitize_exported_task_payload(task_payload)
                         zf.writestr(
                             f"{arc_root}/task.json",
                             json.dumps(
@@ -217,6 +233,7 @@ class ImportExportService:
                                         allow_stage_external=True,
                                         allow_asset_resolution=True,
                                     )
+                                    task_payload = self._sanitize_exported_task_payload(task_payload)
                                     zf.writestr(
                                         arc_name,
                                         json.dumps(

@@ -234,6 +234,20 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
+        },
+
+        async getTaskAuthorNote(moduleId, topicId, taskId) {
+            return requestJson(SessionRoutes.API.TASK_AUTHOR_NOTE(moduleId, topicId, taskId), {
+                method: "GET"
+            });
+        },
+
+        async saveTaskAuthorNote(moduleId, topicId, taskId, payload = {}) {
+            return requestJson(SessionRoutes.API.TASK_AUTHOR_NOTE(moduleId, topicId, taskId), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
         }
     };
 }));

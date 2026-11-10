@@ -647,6 +647,8 @@ def _serialize_theory_payload(
         obj,
         current_user_id=current_user_id,
     )
+    if "author_note" in obj and not obj["ownership"].get("is_owned_by_current_user"):
+        obj.pop("author_note", None)
     return obj
 
 

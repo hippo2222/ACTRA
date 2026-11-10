@@ -859,12 +859,19 @@
             initUiStateAutosave();
         }
 
+        if (typeof AuthorNoteUI !== 'undefined' && typeof AuthorNoteUI.init === 'function') {
+            AuthorNoteUI.init();
+        }
+
         if (typeof window !== 'undefined') {
             window.syncTheoryButtonState = syncTheoryButtonState;
             window.renderTheorySessionContext = renderTheorySessionContext;
             window.addEventListener('i18n:changed', () => {
                 if (window.i18n) window.i18n.updateDOM();
                 syncTheoryButtonState(state.currentTask);
+                if (typeof AuthorNoteUI !== 'undefined' && typeof AuthorNoteUI.syncAuthorNoteButton === 'function') {
+                    AuthorNoteUI.syncAuthorNoteButton(state.currentTask);
+                }
             });
         }
 

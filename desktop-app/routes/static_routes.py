@@ -963,16 +963,19 @@ def _apply_static_cache_headers(resp: Any, filename: str) -> Any:
         elif lower.endswith((".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp")):
             resp.headers["Cache-Control"] = "public, max-age=86400, must-revalidate"
         elif is_hosted_web_runtime():
-            has_version = False
-            if has_request_context():
-                try:
-                    has_version = bool(request.args.get("v"))
-                except Exception:
-                    pass
-            if has_version:
-                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            if _is_flask_debug_enabled():
+                resp.headers["Cache-Control"] = "no-cache, must-revalidate"
             else:
-                resp.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
+                has_version = False
+                if has_request_context():
+                    try:
+                        has_version = bool(request.args.get("v"))
+                    except Exception:
+                        pass
+                if has_version:
+                    resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                else:
+                    resp.headers["Cache-Control"] = "public, max-age=3600, must-revalidate"
     except Exception:
         pass
     return resp

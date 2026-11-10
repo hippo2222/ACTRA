@@ -828,3 +828,40 @@ class TestAnswerKeySyncAndSelfHealing:
         assert len(disk_healed["targets"]) == 1
         assert disk_healed["targets"][0]["label"] == "Aorta"
 
+
+
+def test_resolve_task_display_names_recovers_legacy_truncation():
+    """Verify that StorageService._resolve_task_display_names recovers full name from prompt."""
+    task_data = {
+        "type": "open_answer",
+        "content": {
+            "question": "Опишите признаки острой крупозной пневмонии на обзорной рентгенограмме органов грудной клетки"
+        },
+    }
+    raw_name = "Открытый ответ - Опишите признаки острой..."
+    res = StorageService._resolve_task_display_names(task_data, raw_name, "task_01")
+    assert not res["full_name"].endswith("...")
+    assert "крупозной пневмонии" in res["full_name"]
+    assert res["name"] == res["full_name"]
+
+def test_resolve_task_display_names_preserves_explicit_title():
+    """Verify that non-truncated explicit titles are preserved untouched."""
+    task_data = {
+        "type": "test",
+        "content": {"prompt": "Вопрос теста"},
+    }
+    raw_name = "Клинический кейс #42"
+    res = StorageService._resolve_task_display_names(task_data, raw_name, "task_02")
+    assert res["name"] == "Клинический кейс #42"
+    assert res["full_name"] == "Клинический кейс #42"
+
+def test_resolve_task_display_names_respects_explicit_meta_full_name():
+    """Verify that explicit meta.full_name is prioritized."""
+    task_data = {
+        "type": "click",
+        "meta": {"full_name": "Полное каноническое название клик-задания"},
+        "content": {"prompt": "Кликните на очаг"},
+    }
+    raw_name = "Клик - Кликните..."
+    res = StorageService._resolve_task_display_names(task_data, raw_name, "task_03")
+    assert res["full_name"] == "Полное каноническое название клик-задания"

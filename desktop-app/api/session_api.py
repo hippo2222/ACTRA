@@ -1447,12 +1447,44 @@ class SessionAPI:
         questions = content.get("questions") if isinstance(content.get("questions"), list) else task_data.get("questions")
         return questions if isinstance(questions, list) else []
 
-    @staticmethod
-    def _extract_task_display_name(task_data: Dict[str, Any], fallback: str = "") -> str:
+    @classmethod
+    def _extract_task_full_prompt(cls, task_data: Dict[str, Any]) -> str:
+        if not isinstance(task_data, dict):
+            return ""
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        candidates = [
+            content.get("question"),
+            content.get("prompt"),
+            task_data.get("prompt"),
+            task_data.get("question"),
+        ]
+        questions = content.get("questions") if isinstance(content.get("questions"), list) else []
+        if questions and isinstance(questions[0], dict):
+            candidates.append(questions[0].get("question"))
+            candidates.append(questions[0].get("text"))
+            candidates.append(questions[0].get("title"))
+
+        for cand in candidates:
+            cand_str = " ".join(str(cand or "").strip().split())
+            if cand_str:
+                return cand_str
+        return ""
+
+    @classmethod
+    def _extract_task_display_name(cls, task_data: Dict[str, Any], fallback: str = "") -> str:
         if not isinstance(task_data, dict):
             return str(fallback or "").strip()
         meta = task_data.get("meta") if isinstance(task_data.get("meta"), dict) else {}
         content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+
+        # 1. First priority: explicit un-truncated full_name
+        for explicit_full in (meta.get("full_name"), task_data.get("full_name")):
+            explicit_str = " ".join(str(explicit_full or "").strip().split())
+            if explicit_str and not (explicit_str.endswith("...") or explicit_str.endswith("…")):
+                return explicit_str
+
+        # 2. Candidate raw display names
+        candidate_name = ""
         for value in (
             meta.get("name"),
             meta.get("title"),
@@ -1460,12 +1492,44 @@ class SessionAPI:
             task_data.get("title"),
             content.get("task_name"),
             content.get("title"),
-            fallback,
         ):
-            text = str(value or "").strip()
+            text = " ".join(str(value or "").strip().split())
             if text:
-                return text
-        return ""
+                candidate_name = text
+                break
+
+        full_prompt = cls._extract_task_full_prompt(task_data)
+
+        # 3. If candidate name is legacy truncated with ..., reconstruct full name from prompt
+        if candidate_name and (candidate_name.endswith("...") or candidate_name.endswith("…")) and full_prompt:
+            if " - " in candidate_name:
+                prefix, _, stem = candidate_name.partition(" - ")
+                clean_stem = stem.rstrip(".…").strip()
+                if clean_stem and (clean_stem.lower() in full_prompt.lower() or full_prompt.lower().startswith(clean_stem.lower()[:15])):
+                    return f"{prefix} - {full_prompt}"
+                return f"{prefix} - {full_prompt}"
+            else:
+                clean_stem = candidate_name.rstrip(".…").strip()
+                if clean_stem and (clean_stem.lower() in full_prompt.lower() or full_prompt.lower().startswith(clean_stem.lower()[:15])):
+                    return full_prompt
+                return full_prompt
+
+        if candidate_name:
+            return candidate_name
+
+        if full_prompt:
+            task_type = str(task_data.get("type") or meta.get("type") or "Задание")
+            type_names = {
+                "open_answer": "Открытый ответ",
+                "sequence_assembly": "Последовательность",
+                "click": "Клик",
+                "image_labeling": "Подписи на рисунке",
+                "test": "Тест",
+            }
+            base_name = type_names.get(task_type, "Задание")
+            return f"{base_name} - {full_prompt}"
+
+        return str(fallback or "").strip()
 
     def _ensure_test_shuffle_entry(
         self,
@@ -1798,6 +1862,11 @@ class SessionAPI:
                 restored_view_state = ui_state.get("view_state")
 
         task_name = self._extract_task_display_name(first_task_data)
+        if isinstance(first_task_data, dict):
+            first_task_data["task_name"] = task_name
+            first_task_data["full_name"] = task_name
+            if isinstance(first_task_data.get("meta"), dict):
+                first_task_data["meta"]["full_name"] = task_name
 
         return {
             "session_id": session_id,
@@ -1807,6 +1876,7 @@ class SessionAPI:
             "topic_id": first_parts[1],
             "task_id": first_parts[-1],
             "task_name": task_name,
+            "full_name": task_name,
             "iteration": getattr(session, "iteration", None),
             "difficulty": getattr(group[0][1], "difficulty", None),
             "is_retry": any(bool(getattr(slot, "is_retry", False)) for _, slot in group),
@@ -3700,6 +3770,50 @@ class SessionAPI:
                         current_task_ref,
                     )
 
+        # Resolve author status and author_note for current session user
+        task_metadata_map = task_data_full.get("metadata") if isinstance(task_data_full.get("metadata"), dict) else {}
+        task_data_meta_map = task_data.get("meta") if isinstance(task_data, dict) and isinstance(task_data.get("meta"), dict) else {}
+        creator_id = (
+            task_metadata_map.get("created_by_user_id")
+            or task_data_meta_map.get("created_by_user_id")
+        )
+        is_task_author = False
+        clean_user_id = str(user_id or getattr(session, "user_id", "") or "").strip()
+        if clean_user_id and clean_user_id != "guest":
+            if creator_id and str(creator_id).strip() == clean_user_id:
+                is_task_author = True
+            else:
+                ownership_map = task_metadata_map.get("ownership") or task_data_meta_map.get("ownership")
+                if isinstance(ownership_map, dict) and str(ownership_map.get("created_by_user_id") or "").strip() == clean_user_id:
+                    is_task_author = True
+
+        raw_author_note = task_metadata_map.get("author_note") or task_data_meta_map.get("author_note")
+        normalized_author_note = None
+        if is_task_author and raw_author_note:
+            if isinstance(raw_author_note, str):
+                text_val = raw_author_note.strip()
+                if text_val:
+                    normalized_author_note = {
+                        "text": text_val,
+                        "status": "open",
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+            elif isinstance(raw_author_note, dict):
+                text_val = str(raw_author_note.get("text") or "").strip()
+                status_val = str(raw_author_note.get("status") or "open").strip().lower()
+                if status_val not in ("open", "resolved"):
+                    status_val = "open"
+                normalized_author_note = {
+                    "text": text_val,
+                    "status": status_val,
+                    "updated_at": str(raw_author_note.get("updated_at") or datetime.now(timezone.utc).isoformat()),
+                }
+
+        author_meta = {
+            "is_author": is_task_author,
+            "author_note": normalized_author_note,
+        }
+
         return {
             "session_id": session_id,
             "complex_id": getattr(session, "complex_id", None),
@@ -3723,6 +3837,7 @@ class SessionAPI:
             "restored_evaluation_result": restored_evaluation_result,
             "restored_user_input": restored_user_input,
             "restored_view_state": restored_view_state,
+            "author_meta": author_meta,
         }
 
     def _normalize_test_answers_from_shuffle(

@@ -296,7 +296,111 @@ class StorageService:
         normalized["module"] = module_id
         normalized["topic_id"] = topic_id
         normalized["topic"] = topic_id
+        full_name = _normalize_optional_text(task_payload.get("full_name"))
+        if full_name:
+            normalized["full_name"] = full_name
         return normalized
+
+    @staticmethod
+    def _extract_task_content_prompt(task_data: Dict[str, Any]) -> str:
+        """Extract the full text prompt / question from task_data for full display names."""
+        if not isinstance(task_data, dict):
+            return ""
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        candidates = [
+            content.get("question"),
+            content.get("prompt"),
+            task_data.get("prompt"),
+            task_data.get("question"),
+        ]
+        questions = content.get("questions") if isinstance(content.get("questions"), list) else []
+        if questions and isinstance(questions[0], dict):
+            candidates.append(questions[0].get("question"))
+            candidates.append(questions[0].get("text"))
+            candidates.append(questions[0].get("title"))
+
+        for cand in candidates:
+            cand_str = " ".join(str(cand or "").strip().split())
+            if cand_str:
+                return cand_str
+        return ""
+
+    @classmethod
+    def _resolve_task_display_names(
+        cls,
+        task_data: Dict[str, Any],
+        raw_name: str,
+        fallback_id: str,
+    ) -> Dict[str, str]:
+        """
+        Resolve (name, full_name) for a task, recovering from legacy 37-char truncations (...).
+        """
+        raw_name_clean = " ".join(str(raw_name or "").strip().split())
+        full_prompt = cls._extract_task_content_prompt(task_data)
+        meta = {**task_data.get("meta", {}), **task_data.get("metadata", {})} if isinstance(task_data, dict) else {}
+
+        if meta.get("full_name") and str(meta.get("full_name")).strip():
+            full_name = " ".join(str(meta.get("full_name")).strip().split())
+        else:
+            full_name = ""
+
+        is_legacy_truncated = raw_name_clean.endswith("...") or raw_name_clean.endswith("…")
+
+        if not full_name and is_legacy_truncated and full_prompt:
+            if " - " in raw_name_clean:
+                prefix, _, stem = raw_name_clean.partition(" - ")
+                clean_stem = stem.rstrip(".…").strip()
+                if clean_stem and (clean_stem.lower() in full_prompt.lower() or full_prompt.lower().startswith(clean_stem.lower()[:15])):
+                    full_name = f"{prefix} - {full_prompt}"
+                else:
+                    full_name = f"{prefix} - {full_prompt}"
+            else:
+                clean_stem = raw_name_clean.rstrip(".…").strip()
+                if clean_stem and (clean_stem.lower() in full_prompt.lower() or full_prompt.lower().startswith(clean_stem.lower()[:15])):
+                    full_name = full_prompt
+                else:
+                    full_name = full_prompt
+
+        if not full_name:
+            if raw_name_clean:
+                full_name = raw_name_clean
+            elif full_prompt:
+                task_type = str(task_data.get("type") or meta.get("type") or "Задание")
+                type_names = {
+                    "open_answer": "Открытый ответ",
+                    "sequence_assembly": "Последовательность",
+                    "click": "Клик",
+                    "image_labeling": "Подписи на рисунке",
+                    "test": "Тест",
+                }
+                base_name = type_names.get(task_type, "Задание")
+                full_name = f"{base_name} - {full_prompt}"
+            else:
+                full_name = fallback_id
+
+        if is_legacy_truncated and full_name and full_name != raw_name_clean:
+            if len(full_name) <= 150:
+                name = full_name
+            else:
+                cut = full_name[:147]
+                last_space = cut.rfind(" ")
+                if last_space > 100:
+                    cut = cut[:last_space]
+                name = f"{cut.rstrip()}..."
+        else:
+            name = raw_name_clean or full_name
+
+        if len(name) > 150:
+            cut = name[:147]
+            last_space = cut.rfind(" ")
+            if last_space > 100:
+                cut = cut[:last_space]
+            name = f"{cut.rstrip()}..."
+
+        return {
+            "name": name,
+            "full_name": full_name,
+        }
 
     def reserve_module_id(
         self,
@@ -824,13 +928,15 @@ class StorageService:
                     path_str = str(task_json)
 
                 canonical_task_id = str(meta.get('id') or task_path.name)
-                canonical_task_name = meta.get('name') or task_data.get('name') or task_path.name
+                raw_task_name = meta.get('name') or task_data.get('name') or task_path.name
+                resolved_names = self._resolve_task_display_names(task_data, raw_task_name, canonical_task_id)
 
                 legacy_task_id = str(task_data.get('id') or '').strip()
 
                 metadata = {
                     'id': canonical_task_id,
-                    'name': canonical_task_name,
+                    'name': resolved_names['name'],
+                    'full_name': resolved_names['full_name'],
                     'type': task_data.get('type', meta.get('type', 'unknown')),
                     'subtype': task_data.get('subtype'),
                     'description': task_data.get('description', ''),
@@ -853,6 +959,7 @@ class StorageService:
                     "content_scope",
                     "imported",
                     "import_source",
+                    "author_note",
                 ):
                     if meta.get(field_name) is not None:
                         metadata[field_name] = meta.get(field_name)
@@ -914,9 +1021,16 @@ class StorageService:
                         or (datetime.fromtimestamp(task_json_path.stat().st_mtime).isoformat() if task_json_path.exists() else created_at)
                         or created_at
                     )
+                    raw_task_name = meta.get('name') or task_data.get('name') or metadata.get('name')
+                    resolved_names = self._resolve_task_display_names(
+                        task_data,
+                        raw_task_name,
+                        meta.get('id') or task_json_path.parent.name or metadata.get('id'),
+                    )
                     metadata.update({
                         'id': meta.get('id') or task_json_path.parent.name or metadata.get('id'),
-                        'name': meta.get('name') or task_data.get('name') or metadata.get('name'),
+                        'name': resolved_names['name'],
+                        'full_name': resolved_names['full_name'],
                         'type': task_data.get('type', metadata.get('type', 'unknown')),
                         'subtype': task_data.get('subtype', metadata.get('subtype')),
                         'description': task_data.get('description', metadata.get('description', '')),
@@ -937,6 +1051,7 @@ class StorageService:
                         "updated_by_user_id",
                         "created_via",
                         "content_scope",
+                        "author_note",
                     ):
                         if meta.get(field_name) is not None:
                             metadata[field_name] = meta.get(field_name)

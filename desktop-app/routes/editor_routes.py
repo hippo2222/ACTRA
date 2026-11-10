@@ -34,7 +34,7 @@ import threading
 import time
 import uuid as _uuid
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -752,6 +752,156 @@ def get_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
             return degraded_response
         logger.exception("[HTTP] Failed to load editor task: %s", exc)
         return jsonify({"ok": False, "error": "task_load_failed"}), 500
+
+
+@editor_bp.route(
+    "/api/editor/task/<module_id>/<topic_id>/<task_id>/author-note",
+    methods=["GET", "POST"],
+)
+def editor_task_author_note(module_id: str, topic_id: str, task_id: str) -> Any:
+    """Read or update private author revision note for a task."""
+    ctx = get_ctx()
+    if getattr(ctx, "user_id", None) == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+
+    current_user_id = str(getattr(ctx, "user_id", "") or "").strip()
+    if not current_user_id:
+        return jsonify({"ok": False, "error": "unauthorized"}), 401
+
+    try:
+        existing_task_payload = ctx.storage_service.load_task(module_id, topic_id, task_id)
+        if not existing_task_payload:
+            return jsonify({"ok": False, "error": "task_not_found"}), 404
+
+        serialized = _serialize_workspace_task_payload(
+            existing_task_payload,
+            current_user_id=current_user_id,
+        )
+        existing_metadata = (
+            serialized.get("metadata")
+            if isinstance(serialized.get("metadata"), dict)
+            else {}
+        )
+
+        if is_hosted_web_runtime():
+            if not _is_visible_workspace_graph_payload_for_current_user(
+                existing_metadata,
+                current_user_id=current_user_id,
+            ):
+                return jsonify({"ok": False, "error": "task_not_found"}), 404
+
+        task_data_obj = existing_task_payload.get("task_data")
+        task_meta = (
+            (task_data_obj.get("meta") if isinstance(task_data_obj, dict) and isinstance(task_data_obj.get("meta"), dict) else None)
+            or (existing_task_payload.get("meta") if isinstance(existing_task_payload.get("meta"), dict) else None)
+            or (existing_task_payload.get("metadata") if isinstance(existing_task_payload.get("metadata"), dict) else None)
+            or {}
+        )
+        task_creator_id = (
+            existing_metadata.get("created_by_user_id")
+            or task_meta.get("created_by_user_id")
+            or _extract_workspace_graph_owner_user_id(existing_metadata)
+            or _extract_workspace_graph_owner_user_id(task_meta)
+            or _extract_workspace_graph_owner_user_id(existing_task_payload)
+        )
+        if task_creator_id:
+            is_author = task_creator_id == current_user_id
+        else:
+            is_author = not is_hosted_web_runtime()
+
+        if not is_author:
+            return jsonify({"ok": False, "error": "forbidden_not_author"}), 403
+
+        raw_note = (
+            existing_metadata.get("author_note")
+            or task_meta.get("author_note")
+            or existing_task_payload.get("author_note")
+        )
+
+        if request.method == "GET":
+            normalized_note = None
+            if isinstance(raw_note, dict):
+                normalized_note = {
+                    "text": str(raw_note.get("text") or "").strip(),
+                    "status": str(raw_note.get("status") or "open").strip().lower(),
+                    "updated_at": str(raw_note.get("updated_at") or ""),
+                }
+            elif isinstance(raw_note, str) and raw_note.strip():
+                normalized_note = {
+                    "text": raw_note.strip(),
+                    "status": "open",
+                    "updated_at": "",
+                }
+            return jsonify({"ok": True, "author_note": normalized_note})
+
+        payload = request.get_json(silent=True) or {}
+        should_delete = bool(payload.get("delete"))
+        text = str(payload.get("text") or "").strip()
+        status = str(payload.get("status") or "open").strip().lower()
+        if status not in ("open", "resolved"):
+            status = "open"
+
+        if should_delete:
+            updated_author_note = None
+        elif not text and status != "resolved":
+            updated_author_note = None
+        else:
+            updated_author_note = {
+                "text": text,
+                "status": status,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+        task_data = existing_task_payload.get("task_data")
+        if not isinstance(task_data, dict):
+            task_data = {}
+        task_meta = task_data.get("meta")
+        if not isinstance(task_meta, dict):
+            task_meta = {}
+            task_data["meta"] = task_meta
+
+        meta_container = existing_task_payload.get("metadata")
+        if not isinstance(meta_container, dict):
+            meta_container = dict(existing_metadata or {})
+
+        if updated_author_note is None:
+            task_meta.pop("author_note", None)
+            meta_container.pop("author_note", None)
+            if isinstance(existing_task_payload.get("meta"), dict):
+                existing_task_payload["meta"].pop("author_note", None)
+        else:
+            task_meta["author_note"] = updated_author_note
+            meta_container["author_note"] = updated_author_note
+            if isinstance(existing_task_payload.get("meta"), dict):
+                existing_task_payload["meta"]["author_note"] = updated_author_note
+
+        task_data["meta"] = task_meta
+        existing_task_payload["task_data"] = task_data
+        existing_task_payload["metadata"] = meta_container
+
+        if is_hosted_web_runtime():
+            save_payload = _apply_hosted_editor_task_ownership(
+                task_data,
+                current_user_id=current_user_id,
+                existing_metadata=meta_container,
+            )
+        else:
+            save_payload = task_data
+
+        success = ctx.storage_service.save_task(
+            module_id, topic_id, task_id, save_payload, validate=False
+        )
+        if not success:
+            return jsonify({"ok": False, "error": "save_failed"}), 500
+
+        return jsonify({"ok": True, "author_note": updated_author_note})
+
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to process editor task author note: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @editor_bp.route("/api/editor/difficulty-meta", methods=["GET"])
