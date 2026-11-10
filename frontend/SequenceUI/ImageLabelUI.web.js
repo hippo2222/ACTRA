@@ -405,7 +405,7 @@ const ImageLabelUI = (function () {
         
         // Resolve image URL
         let imageSrc = '';
-        const rawImg = content.image;
+        const rawImg = content.image || content.image_url || (taskData && (taskData.image_url || taskData.image));
         if (rawImg) {
             if (typeof rawImg === 'object') {
                 imageSrc = rawImg.asset_url || (rawImg.asset_id ? `/api/assets/${encodeURIComponent(String(rawImg.asset_id))}/content` : rawImg.path);
@@ -1425,13 +1425,18 @@ const ImageLabelUI = (function () {
             const zoneResults = details.zone_results || details || {};
             
             if (sidebar) {
-                sidebar.classList.add('pointer-events-none', 'opacity-90');
+                sidebar.classList.add('opacity-90');
+                sidebar.querySelectorAll('input, .pool-item, button:not(#btn-accept-typo):not(#btn-retry-typo)').forEach(el => {
+                    el.disabled = true;
+                    el.style.pointerEvents = 'none';
+                });
             }
 
             // Loop through all overlays
             canvasContainer.querySelectorAll('.player-zone-overlay').forEach(overlay => {
                 overlay.style.pointerEvents = 'none';
                 const zoneId = overlay.getAttribute('data-zone-id');
+                const currentZone = zones.find(z => z.id === zoneId) || {};
                 const zoneEntry = zoneResults[zoneId];
                 
                 if (zoneEntry === undefined || zoneEntry === null) return;
@@ -1470,11 +1475,29 @@ const ImageLabelUI = (function () {
                         input.readOnly = true;
                     }
 
-                    // Green check badge
+                    // Green check badge (24px matching hint-q-badge, shrink-0, anti-clip right edge)
                     if (!overlay.querySelector('.status-check-badge')) {
                         const checkBadge = document.createElement('div');
-                        checkBadge.className = 'status-check-badge absolute -top-2.5 -right-2.5 z-40 bg-emerald-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-md border border-white';
-                        checkBadge.innerHTML = '<span class="material-symbols-outlined text-[13px] font-bold">check</span>';
+                        checkBadge.className = 'status-check-badge absolute z-40 flex items-center justify-center text-white select-none shadow-md rounded-full shrink-0';
+                        checkBadge.style.width = '24px';
+                        checkBadge.style.height = '24px';
+                        checkBadge.style.minWidth = '24px';
+                        checkBadge.style.minHeight = '24px';
+                        checkBadge.style.boxSizing = 'border-box';
+                        const isNearRightEdge = currentZone.rect && ((currentZone.rect.x || 0) + (currentZone.rect.width || 16) > 85);
+                        if (isNearRightEdge) {
+                            checkBadge.style.right = 'calc(100% + 6px)';
+                            checkBadge.style.left = 'auto';
+                        } else {
+                            checkBadge.style.left = 'calc(100% + 6px)';
+                            checkBadge.style.right = 'auto';
+                        }
+                        checkBadge.style.top = '50%';
+                        checkBadge.style.transform = 'translateY(-50%)';
+                        checkBadge.style.backgroundColor = '#10b981';
+                        checkBadge.style.border = '2px solid #ffffff';
+                        checkBadge.style.borderRadius = '9999px';
+                        checkBadge.innerHTML = '<span class="material-symbols-outlined font-bold leading-none flex items-center justify-center text-white shrink-0" style="font-size: 15px;">check</span>';
                         overlay.appendChild(checkBadge);
                     }
 
@@ -1612,6 +1635,58 @@ const ImageLabelUI = (function () {
                 }
             });
 
+            // Update Level 1 Sidebar with breakdown list after check
+            if (difficulty === 1 && sidebar) {
+                const pool = sidebar.querySelector('#labels-pool');
+                if (pool) pool.classList.add('hidden');
+
+                const titleSpan = sidebar.querySelector('h3 span:last-child');
+                if (titleSpan) titleSpan.textContent = wt('imagelabel.zone_summary_title', 'Результаты по меткам');
+
+                let l1Summary = sidebar.querySelector('#lvl1-zones-summary');
+                if (l1Summary) l1Summary.remove();
+                l1Summary = document.createElement('div');
+                l1Summary.id = 'lvl1-zones-summary';
+                l1Summary.className = 'flex-1 p-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar text-xs';
+
+                const correctCount = zones.filter(z => {
+                    const ze = zoneResults[z.id];
+                    return (typeof ze === 'object' && ze.status === 'correct') || (typeof ze === 'object' && ze.is_correct) || ze === true;
+                }).length;
+
+                const summaryHeader = document.createElement('div');
+                summaryHeader.className = 'flex items-center justify-between font-bold text-text-main text-xs mb-1.5 pb-2 border-b border-border-subtle';
+                summaryHeader.innerHTML = `
+                    <span>${_escapeHtml(wt('imagelabel.zone_counter', 'Верно: {correct} из {total}').replace('{correct}', correctCount).replace('{count}', correctCount).replace('{total}', zones.length))}</span>
+                    <span class="text-text-secondary">${Math.round((correctCount / (zones.length || 1)) * 100)}%</span>
+                `;
+                l1Summary.appendChild(summaryHeader);
+
+                zones.forEach((z, i) => {
+                    const ze = zoneResults[z.id] || {};
+                    const isCorr = (typeof ze === 'object' && ze.status === 'correct') || (typeof ze === 'object' && ze.is_correct) || ze === true;
+                    const assignedLabel = (assignments[z.id] || '').trim();
+                    const expected = ze.expected || z.label;
+
+                    const card = document.createElement('div');
+                    card.className = `p-2 rounded-lg border text-xs flex items-center justify-between gap-2 ${
+                        isCorr ? 'bg-emerald-50/70 border-emerald-300 text-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300' : 'bg-red-50/70 border-red-300 text-red-900 dark:bg-red-950/20 dark:text-red-300'
+                    }`;
+                    card.innerHTML = `
+                        <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span class="w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 bg-white/80 dark:bg-surface-2">${i + 1}</span>
+                            <span class="truncate font-semibold">${_escapeHtml(assignedLabel || wt('imagelabel.empty_val', '(пусто)'))}</span>
+                            ${!isCorr ? `<span class="text-text-secondary text-[11px] truncate">→ ${_escapeHtml(expected)}</span>` : ''}
+                        </div>
+                        <span class="material-symbols-outlined text-[15px] shrink-0 ${isCorr ? 'text-emerald-600' : 'text-red-600'}">
+                            ${isCorr ? 'check_circle' : 'cancel'}
+                        </span>
+                    `;
+                    l1Summary.appendChild(card);
+                });
+                sidebar.appendChild(l1Summary);
+            }
+
             // Update Level 2 Sidebar with status cards
             if (difficulty === 2 && sidebar) {
                 const zonesListEl = sidebar.querySelector('#lvl2-zones-list');
@@ -1692,6 +1767,7 @@ const ImageLabelUI = (function () {
                     `;
                     sidebar.appendChild(banner);
 
+                    banner.style.pointerEvents = 'auto';
                     banner.querySelector('#btn-accept-typo').addEventListener('click', () => {
                         banner.innerHTML = `
                             <div class="flex items-center gap-2 text-emerald-600 font-bold py-1">
@@ -1716,8 +1792,16 @@ const ImageLabelUI = (function () {
                         lastCheckResult.user_override_typo = true;
                         lastCheckResult.override_typo = true;
 
-                        if (typeof window.handleSubmitAnswer === 'function') {
-                            window.handleSubmitAnswer();
+                        try {
+                            if (typeof window !== 'undefined' && window.SessionControls && typeof window.SessionControls.handleUserJudgementChoice === 'function') {
+                                window.SessionControls.handleUserJudgementChoice('accept');
+                            } else if (typeof window !== 'undefined' && typeof window.handleUserJudgementChoice === 'function') {
+                                window.handleUserJudgementChoice('accept');
+                            } else if (typeof window.handleSubmitAnswer === 'function') {
+                                window.handleSubmitAnswer();
+                            }
+                        } catch (e) {
+                            // ignore
                         }
                     });
 
@@ -1732,8 +1816,16 @@ const ImageLabelUI = (function () {
                         lastCheckResult.success = false;
                         lastCheckResult.single_retry_copy = true;
 
-                        if (typeof window.handleSubmitAnswer === 'function') {
-                            window.handleSubmitAnswer();
+                        try {
+                            if (typeof window !== 'undefined' && window.SessionControls && typeof window.SessionControls.handleUserJudgementChoice === 'function') {
+                                window.SessionControls.handleUserJudgementChoice('reject');
+                            } else if (typeof window !== 'undefined' && typeof window.handleUserJudgementChoice === 'function') {
+                                window.handleUserJudgementChoice('reject');
+                            } else if (typeof window.handleSubmitAnswer === 'function') {
+                                window.handleSubmitAnswer();
+                            }
+                        } catch (e) {
+                            // ignore
                         }
                     });
                 }

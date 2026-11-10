@@ -553,6 +553,7 @@
             const checkBtn = document.getElementById("check-answer-btn");
             if (checkBtn) {
                 checkBtn.disabled = true;
+                checkBtn.classList.add("hidden");
                 checkBtn.setAttribute("aria-disabled", "true");
                 checkBtn.removeAttribute("data-test-incomplete");
                 checkBtn.setAttribute("title", wt('s1.check_already_checked', 'Задание уже проверено'));
@@ -565,6 +566,7 @@
             const checkBtn = document.getElementById("check-answer-btn");
             if (checkBtn) {
                 checkBtn.disabled = true;
+                checkBtn.classList.add("hidden");
                 checkBtn.setAttribute("aria-disabled", "true");
                 checkBtn.removeAttribute("data-test-incomplete");
                 checkBtn.setAttribute("title", wt('s1.check_pending_judgement', 'Сначала выберите итог проверки'));

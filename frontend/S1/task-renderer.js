@@ -216,12 +216,29 @@
     function getRawTaskType(task) {
         if (!task) return null;
 
-        const type = findFieldInTask(task, [
+        let type = findFieldInTask(task, [
             'task_type',
             'type',
             'task_data.task_type',
             'task_data.type'
         ]);
+
+        // Auto-detect image_labeling if display_mode is set or zones are present without levels
+        const displayMode = findFieldInTask(task, [
+            'task_data.content.display_mode',
+            'content.display_mode',
+            'task_data.display_mode',
+            'display_mode'
+        ]);
+        if (displayMode === 'image_labeling') {
+            type = 'image_labeling';
+        } else if (type === 'sequence_assembly' || !type) {
+            const td = task.task_data || task.taskData || {};
+            const content = td.content || task.content || {};
+            if (Array.isArray(content.zones) && content.zones.length > 0 && !Array.isArray(content.levels)) {
+                type = 'image_labeling';
+            }
+        }
 
         // Validate task type
         if (type && !VALID_TASK_TYPES.has(type)) {
@@ -392,6 +409,13 @@
         }
     }
 
+    function updateHeaderTitleElement(titleEl, displayTitle, fullTitle) {
+        if (!titleEl) return;
+        titleEl.textContent = displayTitle;
+        titleEl.setAttribute("title", fullTitle || displayTitle);
+        titleEl.setAttribute("aria-label", fullTitle || displayTitle);
+    }
+
     function bindHeaderTitleToggle() {
         syncHeaderTitleTooltip();
     }
@@ -429,9 +453,9 @@
         const normalizedNextTitle = normalizeHeaderTitle(nextTitle);
         if (currentTitle === normalizedNextTitle) return false;
 
-        titleEl.textContent = nextTitle;
-        titleEl.setAttribute("title", nextTitle);
-        titleEl.setAttribute("aria-label", nextTitle);
+        const fullTitle = (options && options.fullTitle) ? String(options.fullTitle).trim() : nextTitle;
+
+        updateHeaderTitleElement(titleEl, nextTitle, fullTitle);
         if (options && options.animate) {
             animateCurrentTaskHeaderTitle(titleEl);
         }
@@ -448,7 +472,11 @@
         ).trim();
         if (!taskTitle) return;
 
-        setCurrentTaskHeaderTitle(taskTitle, { animate: true });
+        const fullTitle = String(
+            (event && event.detail && (event.detail.fullTaskTitle || event.detail.fullTitle)) || taskTitle
+        ).trim();
+
+        setCurrentTaskHeaderTitle(taskTitle, { fullTitle, animate: true });
     }
 
     if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
@@ -846,6 +874,10 @@
 
         if (!result) {
             if (box) box.classList.add("hidden");
+            const verdictPill = document.getElementById("toolbar-verdict-pill");
+            if (verdictPill) {
+                verdictPill.className = "hidden";
+            }
             if (title) title.textContent = "";
             if (icon) icon.textContent = "";
             if (msg) msg.textContent = "";
@@ -866,14 +898,47 @@
         }
 
         if (box) {
-            box.classList.add("result-entering");
-            box.classList.remove("hidden");
-            requestAnimationFrame(() => box.classList.remove("result-entering"));
+            box.classList.add("hidden");
+        }
+
+        const checkBtn = document.getElementById("check-answer-btn");
+        if (checkBtn) {
+            checkBtn.disabled = true;
+            checkBtn.classList.add("hidden");
         }
 
         const detailsObj = result && result.details && typeof result.details === "object" ? result.details : null;
         const pendingUserJudgement = !!(detailsObj && detailsObj.requires_user_judgement === true);
         const success = result.success === true;
+
+        if (SessionState) {
+            SessionState.currentTaskChecked = !pendingUserJudgement;
+            SessionState.currentEvaluationResult = result;
+            SessionState.pendingManualJudgement = pendingUserJudgement;
+        }
+        if (typeof UIHelpers !== "undefined" && typeof UIHelpers.setCanGoNext === "function") {
+            UIHelpers.setCanGoNext(!pendingUserJudgement);
+        }
+
+        const verdictPill = document.getElementById("toolbar-verdict-pill");
+        if (verdictPill) {
+            const pillIcon = verdictPill.querySelector(".verdict-icon");
+            const pillText = verdictPill.querySelector(".verdict-text");
+            verdictPill.className = "flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-bold tracking-wide uppercase transition-all duration-150 shadow-xs border ";
+            if (pendingUserJudgement) {
+                verdictPill.className += "bg-amber-500/10 text-amber-800 border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40";
+                if (pillIcon) pillIcon.textContent = "help";
+                if (pillText) pillText.textContent = wt("s1.verdict_pending_pill", "Требуется оценка");
+            } else if (success) {
+                verdictPill.className += "bg-emerald-500/10 text-emerald-600 border-emerald-500/25 dark:text-emerald-400";
+                if (pillIcon) pillIcon.textContent = "check_circle";
+                if (pillText) pillText.textContent = wt("s1.verdict_success_pill", "Верно");
+            } else {
+                verdictPill.className += "bg-rose-500/10 text-rose-600 border-rose-500/25 dark:text-rose-400";
+                if (pillIcon) pillIcon.textContent = "cancel";
+                if (pillText) pillText.textContent = wt("s1.verdict_fail_pill", "Неверно");
+            }
+        }
         if (inner) {
             inner.className =
                 "flex flex-col rounded-xl border-l-4 border overflow-hidden shadow-sm " +
@@ -1452,6 +1517,9 @@
         const currentTaskTitleToggleEl = document.getElementById("current-task-title-toggle");
 
         if (!task) {
+            if (typeof AuthorNoteUI !== "undefined" && typeof AuthorNoteUI.syncAuthorNoteButton === "function") {
+                AuthorNoteUI.syncAuthorNoteButton(null);
+            }
             if (SessionState) SessionState.currentTask = null;
             if (SessionState) SessionState.currentTaskChecked = false;
             if (SessionState) SessionState.currentEvaluationResult = null;
@@ -1541,6 +1609,14 @@
         const rawTaskType = getRawTaskType(task);
         const taskSubtype = getTaskSubtype(task);
         const taskTypeLabel = getTaskTypeLabel(task, currentTaskType);
+        const fullNameFromData =
+            task.full_name ||
+            (task.task_data &&
+                (task.task_data.full_name ||
+                    task.task_data.meta?.full_name ||
+                    task.task_data.content?.full_name)) ||
+            "";
+
         const normalizedTitle = String(titleFromData || "").trim();
         const normalizedQuestion = String(questionFromData || "").trim();
         const normalizedDescription = String(descriptionFromData || "").trim();
@@ -1553,6 +1629,21 @@
             String(task.task_name || task.name || task.task_id || "").trim() ||
             wt('s1.task_type_default', 'Задание');
         const headerTitle = preferredTitle;
+
+        let fullHeaderTitle = String(fullNameFromData || "").trim();
+        if (!fullHeaderTitle) {
+            const isLegacyTruncated = /(?:\.\.\.|…)$/.test(normalizedTitle);
+            if (isLegacyTruncated && normalizedQuestion) {
+                if (normalizedTitle.includes(" - ")) {
+                    const prefix = normalizedTitle.split(" - ")[0].trim();
+                    fullHeaderTitle = `${prefix} - ${normalizedQuestion}`;
+                } else {
+                    fullHeaderTitle = normalizedQuestion;
+                }
+            } else {
+                fullHeaderTitle = normalizedTitle || normalizedQuestion || preferredTitle;
+            }
+        }
         const headerMeta = isOpenAnswerTask
             ? (normalizedTitle && normalizedTitle !== normalizedQuestion
                 ? normalizedTitle
@@ -1585,11 +1676,12 @@
             refEl.textContent = `${task.module_id}/${task.topic_id}/${task.task_id}`;
         if (metaEl) metaEl.textContent = headerMeta;
         if (currentTaskTitleEl) {
-            currentTaskTitleEl.textContent = headerTitle;
-            currentTaskTitleEl.setAttribute("title", headerTitle);
-            currentTaskTitleEl.setAttribute("aria-label", headerTitle);
+            updateHeaderTitleElement(currentTaskTitleEl, headerTitle, fullHeaderTitle || headerTitle);
         }
         if (currentTaskTypeEl) currentTaskTypeEl.textContent = taskTypeLabel;
+        if (typeof AuthorNoteUI !== "undefined" && typeof AuthorNoteUI.syncAuthorNoteButton === "function") {
+            AuthorNoteUI.syncAuthorNoteButton(task);
+        }
         bindHeaderTitleToggle();
 
         if (imgEl) {
@@ -1602,8 +1694,8 @@
             }
         }
 
-        const index = task.queue?.index ?? 0;
-        const total = task.queue?.total ?? 0;
+        const index = task.queue?.index ?? (typeof SessionState !== 'undefined' && SessionState?.currentTaskIndex != null ? SessionState.currentTaskIndex : null) ?? task.index ?? 0;
+        const total = task.queue?.total ?? (typeof SessionState !== 'undefined' && SessionState?.totalTasks != null ? SessionState.totalTasks : null) ?? task.total ?? 0;
         if (progressLabel) {
             const progressParts = [];
             progressParts.push(
@@ -1611,11 +1703,11 @@
                     ? `${index + 1}/${total}`
                     : wt('s1.task_type_default', 'Задание') + ' \u2013'
             );
-            progressParts.push(wt('s1.iteration_label', 'Попытка {iter}').replace('{iter}', task.iteration ?? '?'));
+            progressParts.push(wt('s1.iteration_label', 'Попытка {iter}').replace('{iter}', task.iteration ?? task.task_data?._iteration ?? task.task_data?.iteration ?? 1));
             progressLabel.textContent = progressParts.join(" \u2022 ");
         }
 
-        const difficulty = task.difficulty ?? null;
+        const difficulty = task.difficulty ?? task.task_data?._difficulty_level ?? task.task_data?.difficulty ?? (task.settings && (task.settings.difficulty_level || task.settings.difficulty)) ?? null;
         if (difficultyLabel) {
             difficultyLabel.textContent =
                 difficulty != null ? wt('s1.difficulty_label', 'Сложность: {n}').replace('{n}', difficulty) : wt('s1.difficulty_unknown', 'Сложность: -');
@@ -1865,6 +1957,7 @@
         const checkBtn = document.getElementById("check-answer-btn");
         if (checkBtn) {
             checkBtn.disabled = true;
+            checkBtn.classList.add("hidden");
             checkBtn.setAttribute("aria-disabled", "true");
             checkBtn.setAttribute("title", pendingUserJudgement ? wt('s1.check_pending_judgement', 'Сначала выберите итог проверки') : wt('s1.check_already_checked', 'Задание уже проверено'));
         }

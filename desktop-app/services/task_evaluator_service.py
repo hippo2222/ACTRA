@@ -465,21 +465,44 @@ class TaskEvaluatorService:
         )
         is_error_detection = self._is_error_detection_click(content, subtype, content_subtype)
 
-        # Специальная ветка: text_choice / options-driven проверки
+        # Специальная ветка: text_choice / options-driven проверки (поддержка одиночного и множественного выбора)
         options = answer_key.get("options") or content_options
         has_options = bool(options)
         if mode == "text_choice" or ("options" in answer_key) or has_options:
-            correct_opt = next((o for o in options if o.get("is_correct")), None)
-            correct_id = correct_opt.get("id") if correct_opt else None
+            correct_opts = [o for o in options if o.get("is_correct")]
+            correct_ids = [str(o.get("id")) for o in correct_opts if o.get("id") is not None]
+            selected_ids = []
             selected_id = None
             if isinstance(user_input, dict):
-                selected_id = (
-                    user_input.get("selected_option_id")
-                    or user_input.get("selected_option")
-                    or (user_input.get("selected_option_ids") or [None])[0]
-                )
-            success = bool(selected_id) and correct_id is not None and str(selected_id) == str(correct_id)
-            score = 100.0 if success else 0.0
+                raw_ids = user_input.get("selected_option_ids")
+                if isinstance(raw_ids, list):
+                    selected_ids = [str(x) for x in raw_ids if x is not None]
+                single = user_input.get("selected_option_id") or user_input.get("selected_option")
+                if single is not None:
+                    selected_id = str(single)
+                    if not selected_ids:
+                        selected_ids = [selected_id]
+                elif selected_ids:
+                    selected_id = selected_ids[0]
+
+            correct_set = set(correct_ids)
+            selected_set = set(selected_ids)
+
+            if len(correct_set) > 1:
+                # Множественный выбор утверждений (например, @CLICK_TEXT с несколькими верными утверждениями)
+                success = bool(selected_set) and selected_set == correct_set
+                tp = len(selected_set & correct_set)
+                fp = len(selected_set - correct_set)
+                fn = len(correct_set - selected_set)
+                total_evaluated = tp + fp + fn
+                score = round(100.0 * (tp / total_evaluated), 1) if total_evaluated > 0 else 0.0
+                if success:
+                    score = 100.0
+            else:
+                primary_correct_id = correct_ids[0] if correct_ids else None
+                success = bool(selected_id) and primary_correct_id is not None and str(selected_id) == str(primary_correct_id)
+                score = 100.0 if success else 0.0
+
             return EvaluationResult(
                 success=success,
                 message="✅ Правильно" if success else "❌ Неправильно",
@@ -488,7 +511,9 @@ class TaskEvaluatorService:
                 details={
                     "mode": "text_choice",
                     "selected_option_id": selected_id,
-                    "correct_option_id": correct_id,
+                    "selected_option_ids": selected_ids,
+                    "correct_option_id": correct_ids[0] if correct_ids else None,
+                    "correct_option_ids": correct_ids,
                     "options_total": len(options),
                 },
             )

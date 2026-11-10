@@ -99,7 +99,7 @@ const TestUI = (function () {
         const mapped = raw.map((q, idx) => ({
           id: q.id != null ? String(q.id) : `q_${idx + 1}`,
           index: idx,
-          text: q.text || q.title || wt('testui_q.question_fallback', 'Вопрос теста'),
+          text: q.text || q.question || q.title || q.prompt || wt('testui_q.question_fallback', 'Вопрос теста'),
           sourceTaskTitle:
             q._split_source_task_name ||
             q._split_source_task_title ||
@@ -293,6 +293,13 @@ const TestUI = (function () {
       list.className = "grid grid-cols-5 gap-2.5";
       sidebarCard.appendChild(list);
       sidebar.appendChild(sidebarCard);
+
+      // DEF-12: When test has only 1 question, hide redundant sidebar to reclaim 33% workspace width
+      if (Array.isArray(state.questions) && state.questions.length <= 1) {
+        root.className = "w-full max-w-4xl mx-auto flex flex-col gap-4";
+        main.className = "w-full flex min-h-[120px] flex-col gap-2";
+        sidebar.className = "hidden";
+      }
 
       root.appendChild(main);
       root.appendChild(sidebar);

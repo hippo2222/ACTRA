@@ -34,7 +34,9 @@
             NEXT_TASK: (sessionId) => `/api/session/${encode(sessionId)}/task/next`,
             ITERATION_RESULTS: (sessionId) => `/api/session/${encode(sessionId)}/iteration-results`,
             FINAL_RESULTS: (sessionId) => `/api/session/${encode(sessionId)}/final-results`,
-            CANCEL: (sessionId) => `/api/session/${encode(sessionId)}/cancel`
+            CANCEL: (sessionId) => `/api/session/${encode(sessionId)}/cancel`,
+            TASK_AUTHOR_NOTE: (moduleId, topicId, taskId) =>
+                `/api/editor/task/${encode(moduleId)}/${encode(topicId)}/${encode(taskId)}/author-note`
         }
     };
 

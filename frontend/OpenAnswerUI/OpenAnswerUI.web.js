@@ -934,7 +934,7 @@
     if (!hasMultipleQuestions) {
       const card = _createEl(
         "div",
-        "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm dark:border-border-strong dark:bg-surface-2 oa-card-entry",
+        "w-full flex flex-col gap-4 oa-card-entry",
         ""
       );
 
@@ -986,7 +986,7 @@
 
       const textarea = document.createElement("textarea");
       textarea.className =
-        "oa-answer-input mt-4 w-full min-h-[176px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
+        "oa-answer-input w-full min-h-[176px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-xs focus:border-primary focus:ring-2 focus:ring-primary/20";
       textarea.placeholder = wt("openanswerui.enter_answer_placeholder", "Введите ответ...");
 
       const settings = _getSettings(taskDto);
@@ -1016,6 +1016,7 @@
       container.appendChild(root);
 
       state.root = root;
+      state.card = card;
       state.textarea = textarea;
       state.counter = counter;
       state.isLocked = false;
@@ -1184,7 +1185,7 @@
         // Active Step Card
         const activeCard = _createEl(
           "div",
-          "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm oa-card-entry",
+          "w-full rounded-2xl border border-border-subtle bg-surface-1 p-5 shadow-xs oa-card-entry flex flex-col gap-3",
           ""
         );
         const activePromptBlock = _createEl(
@@ -1352,7 +1353,7 @@
         const qid = String(q.id);
         const card = _createEl(
           "div",
-          "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm oa-card-entry",
+          "w-full rounded-2xl border border-border-subtle bg-surface-1 p-5 shadow-xs oa-card-entry flex flex-col gap-3",
           ""
         );
 
@@ -1485,6 +1486,115 @@
     return { answer: _getTextareaValue() };
   };
 
+  function _renderFeedbackCard(container, fb, overallResult) {
+    if (!container) return;
+    container.innerHTML = "";
+    container.classList.remove("hidden");
+
+    const data = fb || (overallResult && overallResult.details) || {};
+    const isSuccess = data.success != null ? !!data.success : !!overallResult?.success;
+    const isSequenceViolation = !isSuccess && data.sequence_matters && Array.isArray(data.found_keywords) && data.total_keywords && data.found_keywords.length === data.total_keywords;
+
+    const box = _createEl(
+      "div",
+      `mt-3.5 rounded-xl border-2 p-4 text-xs leading-relaxed bg-surface-1 dark:bg-surface-2 shadow-sm oa-card-entry ${
+        isSuccess
+          ? "border-emerald-500 text-text-main dark:text-text-on-dark"
+          : "border-red-500 text-text-main dark:text-text-on-dark"
+      }`
+    );
+
+    const statusRow = _createEl("div", `flex items-center gap-2 font-bold mb-2 text-sm ${
+      isSuccess ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"
+    }`);
+    const icon = _createEl(
+      "span",
+      `material-symbols-outlined text-[20px] ${
+        isSuccess ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+      }`,
+      isSuccess ? "check_circle" : "cancel"
+    );
+
+    let statusText = isSuccess
+      ? wt("openanswerui.step_passed", "Ответ принят")
+      : (isSequenceViolation
+          ? wt("openanswerui.sequence_violation", "Нарушена требуемая последовательность ключевых слов")
+          : wt("openanswerui.step_retry_hint", "В ответе отсутствуют необходимые ключевые слова"));
+
+    const label = _createEl("span", "", statusText);
+    statusRow.appendChild(icon);
+    statusRow.appendChild(label);
+    box.appendChild(statusRow);
+
+    // Tolerance note if applicable
+    const hasTolerance = (Array.isArray(data.tolerance_matches) && data.tolerance_matches.length > 0) ||
+                         data.tolerance_explanation ||
+                         (data.tolerance_type && data.tolerance_type !== "exact");
+    if (hasTolerance) {
+      const toleranceRow = _createEl(
+        "div",
+        "mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-amber-800 dark:text-amber-300"
+      );
+      const tolIcon = _createEl("span", "material-symbols-outlined text-[15px]", "info");
+      const tolMsg = data.tolerance_explanation || wt("s1.tolerance_typo", "Ответ засчитан с учётом опечатки.");
+      const tolText = _createEl("span", "", tolMsg);
+      toleranceRow.appendChild(tolIcon);
+      toleranceRow.appendChild(tolText);
+      box.appendChild(toleranceRow);
+    }
+
+    // Sequence violation note if not already shown in label
+    if (isSequenceViolation && statusText !== wt("openanswerui.sequence_violation", "Нарушена требуемая последовательность ключевых слов")) {
+      const seqRow = _createEl(
+        "div",
+        "mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-amber-800 dark:text-amber-300"
+      );
+      const seqIcon = _createEl("span", "material-symbols-outlined text-[15px]", "format_list_numbered");
+      const seqText = _createEl("span", "", wt("openanswerui.sequence_violation", "Нарушена требуемая последовательность ключевых слов"));
+      seqRow.appendChild(seqIcon);
+      seqRow.appendChild(seqText);
+      box.appendChild(seqRow);
+    }
+
+    // Keywords display
+    const found = Array.isArray(data.found_keywords) ? data.found_keywords : [];
+    const missing = Array.isArray(data.missing_keywords) ? data.missing_keywords : [];
+
+    if (found.length > 0 || missing.length > 0) {
+      const chipsRow = _createEl("div", "flex flex-wrap items-center gap-1.5 mt-2.5");
+      found.forEach((kw) => {
+        const chip = _createEl(
+          "span",
+          "inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-400 dark:border-emerald-600 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300 shadow-2xs",
+          `✓ ${kw}`
+        );
+        chipsRow.appendChild(chip);
+      });
+      missing.forEach((kw) => {
+        const chip = _createEl(
+          "span",
+          "inline-flex items-center gap-1 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-400 dark:border-red-600 px-2.5 py-1 text-xs font-semibold text-red-800 dark:text-red-300 shadow-2xs",
+          `✗ ${kw}`
+        );
+        chipsRow.appendChild(chip);
+      });
+      box.appendChild(chipsRow);
+    }
+
+    // Reference answer
+    const refAnswer = data.reference_answer || (state.questions && state.questions.length === 1 ? state.questions[0].reference_answer : null) || state.taskDto?.reference_answer || state.taskDto?.task_data?.reference_answer || state.taskDto?.task_data?.content?.reference_answer;
+    if (refAnswer) {
+      const refEl = _createEl(
+        "div",
+        "mt-3 pt-2.5 border-t border-border-subtle text-xs text-text-secondary dark:text-text-muted"
+      );
+      refEl.innerHTML = `<strong class="text-text-main dark:text-text-on-dark font-semibold">${wt("openanswerui.reference_revealed", "Эталонный ответ:")}</strong> ${_safeText(refAnswer)}`;
+      box.appendChild(refEl);
+    }
+
+    container.appendChild(box);
+  }
+
   OpenAnswerUI.applyCheckFeedback = function applyCheckFeedback(result) {
     if (!result || typeof result !== "object") {
       _setInputLocked(true);
@@ -1504,77 +1614,10 @@
         const container = state.feedbackContainers[qid];
 
         if (!container) return;
-        container.innerHTML = "";
-        container.classList.remove("hidden");
+        _renderFeedbackCard(container, fb, result);
 
         const isSuccess = fb ? !!fb.success : !!result.success;
         if (!isSuccess) anyFailed = true;
-
-        const box = _createEl(
-          "div",
-          `mt-3 rounded-xl border p-3 text-xs leading-relaxed oa-card-entry ${
-            isSuccess
-              ? "border-color-success/40 bg-color-success-light/10 text-text-main"
-              : "border-color-error-text/40 bg-color-error-light/10 text-text-main"
-          }`
-        );
-
-        const statusRow = _createEl("div", "flex items-center gap-2 font-semibold mb-1.5");
-        const icon = _createEl(
-          "span",
-          `material-symbols-outlined text-[18px] ${
-            isSuccess ? "text-color-success" : "text-color-error-text"
-          }`,
-          isSuccess ? "check_circle" : "cancel"
-        );
-        const label = _createEl(
-          "span",
-          "",
-          isSuccess
-            ? wt("openanswerui.step_passed", "Ответ принят")
-            : wt("openanswerui.step_retry_hint", "В ответе отсутствуют необходимые ключевые слова")
-        );
-        statusRow.appendChild(icon);
-        statusRow.appendChild(label);
-        box.appendChild(statusRow);
-
-        // Keywords display
-        if (fb) {
-          const found = Array.isArray(fb.found_keywords) ? fb.found_keywords : [];
-          const missing = Array.isArray(fb.missing_keywords) ? fb.missing_keywords : [];
-
-          if (found.length > 0 || missing.length > 0) {
-            const chipsRow = _createEl("div", "flex flex-wrap items-center gap-1.5 mt-2");
-            found.forEach((kw) => {
-              const chip = _createEl(
-                "span",
-                "inline-flex items-center gap-1 rounded-md bg-color-success-light/20 border border-color-success/30 px-2 py-0.5 text-[11px] font-medium text-color-success",
-                `✓ ${kw}`
-              );
-              chipsRow.appendChild(chip);
-            });
-            missing.forEach((kw) => {
-              const chip = _createEl(
-                "span",
-                "inline-flex items-center gap-1 rounded-md bg-color-error-light/20 border border-color-error-text/30 px-2 py-0.5 text-[11px] font-medium text-color-error-text",
-                `✗ ${kw}`
-              );
-              chipsRow.appendChild(chip);
-            });
-            box.appendChild(chipsRow);
-          }
-
-          if (fb.reference_answer) {
-            const refEl = _createEl(
-              "div",
-              "mt-2 pt-2 border-t border-border-subtle/50 text-[11px] text-text-secondary"
-            );
-            refEl.innerHTML = `<strong>${wt("openanswerui.reference_revealed", "Эталонный ответ:")}</strong> ${_safeText(fb.reference_answer)}`;
-            box.appendChild(refEl);
-          }
-        }
-
-        container.appendChild(box);
 
         // Smart Partial Retry: lock passed questions, keep failed editable
         if (isSuccess) {
@@ -1589,6 +1632,14 @@
       }
     } else {
       _setInputLocked(true);
+      if (!state.singleFeedbackContainer && (state.card || state.root)) {
+        const parent = state.card || state.root;
+        state.singleFeedbackContainer = _createEl("div", "oa-single-feedback-container hidden mt-4", "");
+        parent.appendChild(state.singleFeedbackContainer);
+      }
+      if (state.singleFeedbackContainer) {
+        _renderFeedbackCard(state.singleFeedbackContainer, null, result);
+      }
     }
     _syncCheckButtonState();
   };
@@ -1666,6 +1717,8 @@
     state.textareas = {};
     state.counters = {};
     state.feedbackContainers = {};
+    state.card = null;
+    state.singleFeedbackContainer = null;
     state.stepCards = {};
     state.stepAnswers = {};
   };

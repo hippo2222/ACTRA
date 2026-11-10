@@ -102,7 +102,7 @@
         banner.classList.remove("hidden");
 
         // Reset classes
-        banner.className = "mb-4 w-full min-w-0 rounded-lg border-2 px-4 py-3 flex items-center gap-3 break-words transition-colors duration-200";
+        banner.className = "fixed bottom-6 right-6 z-60 max-w-md min-w-[280px] rounded-xl border-2 px-4 py-3 flex items-center gap-3 break-words shadow-lg transition-all duration-200 pointer-events-auto";
 
         if (type === "error") {
             banner.classList.add(
@@ -121,7 +121,7 @@
             );
         }
 
-        const dismissible = !!(options && options.dismissible);
+        const dismissible = options && options.dismissible === false ? false : true;
         const content = document.createElement("div");
         content.className = dismissible
             ? "flex w-full min-w-0 items-center justify-between gap-2"

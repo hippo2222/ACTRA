@@ -3051,6 +3051,46 @@
     });
   }
 
+  function _triggerJudgementChoice(choice) {
+    state.judgementResolved = true;
+    const isAccept = choice === "accept";
+
+    // Update all inline action containers across DOM
+    const allActionContainers = document.querySelectorAll(".clickui-judgement-actions");
+    allActionContainers.forEach((container) => {
+      container.innerHTML = "";
+      const badge = _createEl(
+        "div",
+        isAccept
+          ? "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+          : "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30",
+        ""
+      );
+      const icon = _createEl("span", "material-symbols-outlined text-[14px]", isAccept ? "check_circle" : "cancel");
+      const text = _createEl("span", "", isAccept ? wt("s1.verdict_accepted", "Ответ принят по вашему выбору.") : wt("s1.verdict_rejected", "Ответ отмечен как неверный по вашему выбору."));
+      badge.appendChild(icon);
+      badge.appendChild(text);
+      container.appendChild(badge);
+    });
+
+    // Update sidebar target status pills
+    const allPendingPills = document.querySelectorAll(".clickui-target-status-pending");
+    allPendingPills.forEach((pill) => {
+      pill.className = isAccept
+        ? "inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400"
+        : "inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
+      pill.innerHTML = `<span class="material-symbols-outlined text-[13px]">${isAccept ? "check_circle" : "close"}</span><span>${isAccept ? wt("clickui.verdict_success", "Зачтено") : wt("clickui.verdict_fail", "Не зачтено")}</span>`;
+    });
+
+    try {
+      if (typeof window !== "undefined" && window.SessionControls && typeof window.SessionControls.handleDrawLabelJudgementChoice === "function") {
+        window.SessionControls.handleDrawLabelJudgementChoice(choice);
+      }
+    } catch (e) {
+      console.error("[ClickUI] Failed to notify SessionControls", e);
+    }
+  }
+
   function _buildReviewLabelsBlock(titleText, items, dataTestUi) {
     const safeItems = Array.isArray(items) ? items : [];
     if (!safeItems.length) return null;
@@ -3072,19 +3112,18 @@
       )
     );
 
-    const list = _createEl("div", "mt-2 flex flex-col gap-2 max-h-56 overflow-y-auto p-1.5 scroll-py-1 pr-2 clickui-registry-scroll", "");
+    const details = (state.lastResult && state.lastResult.details) || {};
+    const requiresJudgement = details.requires_user_judgement === true;
+    const manualJudgement = details.manual_label_judgement;
+    const mismatches = (manualJudgement && Array.isArray(manualJudgement.soft_mismatches)) ? manualJudgement.soft_mismatches : [];
+    const isUserLabels = dataTestUi === "review-user-labels";
+
+    const list = _createEl(
+      "div",
+      "mt-1.5 flex flex-col gap-1.5 max-h-44 overflow-y-auto p-1 scroll-py-1 pr-1.5 clickui-registry-scroll",
+      ""
+    );
     safeItems.forEach((item, idx) => {
-      const row = _createEl(
-        "div",
-        "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark flex items-center justify-between gap-2 min-w-0 transition-colors",
-        ""
-      );
-      if (item && item.targetIndex != null) {
-        row.setAttribute("data-target-index", String(item.targetIndex));
-      }
-      if (item && item.actionKey) {
-        row.setAttribute("data-clickui-action-key", String(item.actionKey));
-      }
       const fallbackTitle =
         item && item.kind === "freehand"
           ? wt("clickui.shape_line_n", "Линия {n}").replace("{n}", idx + 1)
@@ -3094,43 +3133,80 @@
               ? wt("clickui.shape_area_n", "Область {n}").replace("{n}", idx + 1)
               : wt("clickui.shape_polygon_n", "Контур {n}").replace("{n}", idx + 1);
 
-      const labelStatus = item && item.targetIndex != null ? _getLabelStatusForTarget(item.targetIndex) : null;
-      const hasTypo = !!(labelStatus && labelStatus.hasTypo);
-      const isLabelMismatch = labelStatus && labelStatus.status === "unmatched";
-      const isMatched = labelStatus && labelStatus.status === "matched";
+      const labelStatus = isUserLabels && item && item.targetIndex != null ? _getLabelStatusForTarget(item.targetIndex) : null;
+      const hasTypo = isUserLabels && !!(labelStatus && labelStatus.hasTypo);
+      const isLabelMismatch = isUserLabels && !!(labelStatus && labelStatus.status === "unmatched");
+      const isMatched = isUserLabels && !!(labelStatus && labelStatus.status === "matched");
 
-      const labelLeft = _createEl("div", "min-w-0 flex-1 truncate", "");
       const titlePrefix = item && item.title ? item.title : fallbackTitle;
       const textVal = _normalizeReviewLabelText(item && item.label);
-      labelLeft.textContent = `${titlePrefix}: ${textVal}`;
-      row.appendChild(labelLeft);
 
-      if (hasTypo) {
-        const badge = _createEl(
-          "span",
-          "shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30",
-          ""
-        );
-        badge.title = wt("clickui.typo_canonical_hint", "Эталон: {canonical}").replace("{canonical}", labelStatus.canonicalLabel || labelStatus.correctLabel || "");
-        const bIcon = _createEl("span", "material-symbols-outlined text-[13px] leading-none select-none", "spellcheck");
-        const bText = _createEl("span", "", wt("clickui.badge_typo", "Опечатка"));
-        badge.appendChild(bIcon);
-        badge.appendChild(bText);
-        row.appendChild(badge);
-      } else if (isLabelMismatch) {
-        const badge = _createEl(
-          "span",
-          "shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30",
-          ""
-        );
-        const bIcon = _createEl("span", "material-symbols-outlined text-[13px] leading-none select-none", "close");
-        const bText = _createEl("span", "", wt("clickui.badge_label_err", "Ошибка названия"));
-        badge.appendChild(bIcon);
-        badge.appendChild(bText);
-        row.appendChild(badge);
-      } else if (isMatched) {
-        const check = _createEl("span", "shrink-0 material-symbols-outlined text-[14px] text-emerald-500 leading-none select-none", "check");
-        row.appendChild(check);
+      const matchingMismatch = isUserLabels && requiresJudgement && mismatches.find((m) => {
+        if (m.index != null && item.targetIndex != null) {
+          return Number(m.index) === Number(item.targetIndex);
+        }
+        if (m.index != null) {
+          return Number(m.index) === idx;
+        }
+        return mismatches.length === 1;
+      });
+      const isPendingSoftMismatch = !!(matchingMismatch && !state.judgementResolved);
+
+      // Clean caption row (arbitration card lives canonically in the Right Sidebar Registry)
+      const hasBadge = isUserLabels && (hasTypo || (isLabelMismatch && !isPendingSoftMismatch));
+      const row = _createEl(
+        "div",
+        hasBadge
+          ? "rounded-xl border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark flex flex-col gap-1 min-w-0 transition-colors"
+          : "rounded-xl border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark flex items-center justify-between gap-2 min-w-0 transition-colors",
+        ""
+      );
+      if (item && item.targetIndex != null) {
+        row.setAttribute("data-target-index", String(item.targetIndex));
+      }
+      if (item && item.actionKey) {
+        row.setAttribute("data-clickui-action-key", String(item.actionKey));
+      }
+
+      if (hasBadge) {
+        const topBar = _createEl("div", "flex items-center justify-between gap-2 min-w-0", "");
+        topBar.appendChild(_createEl("span", "text-[11px] font-semibold text-text-secondary", titlePrefix));
+        if (hasTypo) {
+          const badge = _createEl(
+            "span",
+            "shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30",
+            ""
+          );
+          badge.title = wt("clickui.typo_canonical_hint", "Эталон: {canonical}").replace("{canonical}", labelStatus.canonicalLabel || labelStatus.correctLabel || "");
+          const bIcon = _createEl("span", "material-symbols-outlined text-[12px] leading-none select-none", "spellcheck");
+          const bText = _createEl("span", "", wt("clickui.badge_typo", "Опечатка"));
+          badge.appendChild(bIcon);
+          badge.appendChild(bText);
+          topBar.appendChild(badge);
+        } else if (isLabelMismatch) {
+          const badge = _createEl(
+            "span",
+            "shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30",
+            ""
+          );
+          const bIcon = _createEl("span", "material-symbols-outlined text-[12px] leading-none select-none", "close");
+          const bText = _createEl("span", "", wt("clickui.badge_label_err", "Ошибка названия"));
+          badge.appendChild(bIcon);
+          badge.appendChild(bText);
+          topBar.appendChild(badge);
+        }
+        row.appendChild(topBar);
+        const valLine = _createEl("div", "min-w-0 font-medium break-words leading-snug", textVal);
+        row.appendChild(valLine);
+      } else {
+        const labelLeft = _createEl("div", "min-w-0 flex-1 break-words leading-snug", "");
+        labelLeft.textContent = `${titlePrefix}: ${textVal}`;
+        row.appendChild(labelLeft);
+
+        if (isMatched) {
+          const check = _createEl("span", "shrink-0 material-symbols-outlined text-[14px] text-emerald-500 leading-none select-none", "check");
+          row.appendChild(check);
+        }
       }
 
       list.appendChild(row);
@@ -4346,6 +4422,11 @@
     // 2. Count Errors & Items
     let totalTargets = targets.length;
     let targetErrors = 0;
+    const headerDetailsObj = (result && result.details) || {};
+    const headerSoftList =
+      headerDetailsObj.manual_label_judgement && Array.isArray(headerDetailsObj.manual_label_judgement.soft_mismatches)
+        ? headerDetailsObj.manual_label_judgement.soft_mismatches
+        : [];
     targets.forEach((t, idx) => {
       const isFound = foundTargets.has(idx);
       const labelStatus = _getLabelStatusForTarget(idx);
@@ -4354,7 +4435,12 @@
       const lineRes = lineResults.find((r) => r.target_index === idx);
       const contourRes = polyRes || lineRes;
       const isLowCoverage = contourRes && contourRes.coverage < (contourRes.threshold || 75);
-      if (!isFound || isLabelMismatch || isLowCoverage) {
+      const isPendingSoft =
+        isLabelMismatch &&
+        headerDetailsObj.requires_user_judgement === true &&
+        !state.judgementResolved &&
+        !!headerSoftList.find((m) => (m.index != null ? Number(m.index) === idx : headerSoftList.length === 1));
+      if (!isFound || (isLabelMismatch && !isPendingSoft) || isLowCoverage) {
         targetErrors++;
       }
     });
@@ -4488,35 +4574,159 @@
       item.setAttribute("data-clickui-panel-row", "target");
       item.setAttribute("data-has-error", hasError ? "true" : "false");
 
-      // Top row: Badge + Label + Status Pill
-      const rowTop = _createEl("div", "flex items-start justify-between gap-2.5", "");
-      const rowLeft = _createEl("div", "flex items-start gap-2.5 min-w-0 flex-1", "");
+      // Pending self-assessment: the card is a QUESTION to the student, not a report.
+      const pendingDetails = (result && result.details) || {};
+      const pendingSoftList =
+        pendingDetails.manual_label_judgement && Array.isArray(pendingDetails.manual_label_judgement.soft_mismatches)
+          ? pendingDetails.manual_label_judgement.soft_mismatches
+          : [];
+      const pendingSoft = pendingSoftList.find((m) => (m.index != null ? Number(m.index) === idx : pendingSoftList.length === 1));
+      const isPendingJudgement =
+        isLabelMismatch && pendingDetails.requires_user_judgement === true && !!pendingSoft && !state.judgementResolved;
 
-      const badge = _createEl(
+      if (isPendingJudgement) {
+        item.className =
+          "result-registry-item task-chip flex flex-col gap-2.5 rounded-xl border border-border-strong bg-surface-1 px-3.5 py-3 shadow-sm transition-all duration-150";
+        item.setAttribute("data-clickui", "target-row");
+        item.setAttribute("data-clickui-judgement", "pending");
+
+        const userAnsP = _normalizeReviewLabelText(labelStatus.userLabel);
+        const correctAnsP = _normalizeReviewLabelText(labelStatus.correctLabel || target.label);
+        const omittedP = pendingSoft.omitted_phrase;
+
+        // 1. Situation Header: human-centered, clear and friendly
+        const headerRow = _createEl("div", "flex items-center justify-between gap-2", "");
+        const titleWrap = _createEl("div", "flex items-center gap-1.5 text-[14px] font-bold text-text-main dark:text-text-on-dark", "");
+        titleWrap.appendChild(_createEl("span", "material-symbols-outlined text-[18px] text-amber-500 shrink-0", "lightbulb"));
+        titleWrap.appendChild(_createEl("span", "", wt("clickui.judgement_title", "Ответ почти совпал")));
+        headerRow.appendChild(titleWrap);
+
+        // Hidden semantic status pill for test compatibility and screen readers
+        const statusPillP = _createEl("div", "clickui-target-status-pending hidden text-amber-800 dark:text-amber-300", "");
+        statusPillP.setAttribute("data-clickui", "status-pill");
+        headerRow.appendChild(statusPillP);
+
+        let badgeP = null;
+        if (targets.length > 1) {
+          badgeP = _createEl(
+            "div",
+            "task-chip flex shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+            String(displayIndex)
+          );
+          badgeP.style.width = "22px";
+          badgeP.style.height = "22px";
+          badgeP.style.backgroundColor = _getTargetColor(idx);
+          badgeP.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+          headerRow.appendChild(badgeP);
+        }
+        item.appendChild(headerRow);
+
+        // 2. Vertical 2-Row Comparison: "Вы написали" and "В задании" aligned cleanly
+        const compBox = _createEl("div", "flex flex-col gap-1.5 text-[13px] leading-snug py-0.5", "");
+        
+        // Row 1: You wrote
+        const userRow = _createEl("div", "flex items-baseline gap-2", "");
+        userRow.appendChild(_createEl("span", "text-text-secondary text-[12px] font-medium w-24 shrink-0", wt("clickui.judgement_user_row", "Вы написали:")));
+        userRow.appendChild(_createEl("span", "font-semibold text-text-main dark:text-text-on-dark break-words", userAnsP));
+        compBox.appendChild(userRow);
+
+        // Row 2: In task (with highlighted omitted qualifier)
+        const expRow = _createEl("div", "flex items-baseline gap-2", "");
+        expRow.setAttribute("data-clickui", "judgement-reference");
+        expRow.appendChild(_createEl("span", "text-text-secondary text-[12px] font-medium w-24 shrink-0", wt("clickui.judgement_expected_row", "В задании:")));
+        
+        const expVal = _createEl("span", "font-medium text-text-main dark:text-text-on-dark break-words", "");
+        if (omittedP && correctAnsP.toLowerCase().includes(String(omittedP).trim().toLowerCase())) {
+          const omitTrim = String(omittedP).trim();
+          const pos = correctAnsP.toLowerCase().lastIndexOf(omitTrim.toLowerCase());
+          const before = correctAnsP.slice(0, pos);
+          const matchPart = correctAnsP.slice(pos, pos + omitTrim.length);
+          const after = correctAnsP.slice(pos + omitTrim.length);
+          if (before) expVal.appendChild(document.createTextNode(before));
+          const mark = _createEl(
+            "span",
+            "inline-block rounded px-1.5 py-0.2 font-semibold text-amber-900 dark:text-amber-200 bg-amber-500/15 border border-amber-500/30",
+            matchPart
+          );
+          expVal.appendChild(mark);
+          if (after) expVal.appendChild(document.createTextNode(after));
+        } else {
+          expVal.textContent = correctAnsP;
+        }
+        expRow.appendChild(expVal);
+        compBox.appendChild(expRow);
+        item.appendChild(compBox);
+
+        // 3. Buttons: Primary action brand-filled, secondary action calm neutral outline
+        const actionsP = _createEl("div", "clickui-judgement-actions flex items-stretch gap-2 mt-1 w-full", "");
+        actionsP.setAttribute("data-clickui", "label-judgement");
+
+        const acceptP = _createEl(
+          "button",
+          "clickui-judgement-btn-accept flex-1 rounded-lg px-3 py-2 text-[13px] font-semibold whitespace-nowrap cursor-pointer transition-all active:scale-[0.98]",
+          wt("clickui.judgement_accept_btn", "Засчитать ответ")
+        );
+        acceptP.type = "button";
+        acceptP.style.backgroundColor = "var(--color-primary, #4F46E5)";
+        acceptP.style.color = "var(--color-primary-fg, #ffffff)";
+        acceptP.style.border = "1px solid var(--color-primary, #4F46E5)";
+        acceptP.addEventListener("click", () => _triggerJudgementChoice("accept"));
+
+        const rejectP = _createEl(
+          "button",
+          "clickui-judgement-btn-reject flex-1 rounded-lg px-3 py-2 text-[13px] font-semibold whitespace-nowrap cursor-pointer transition-all active:scale-[0.98] text-text-main border border-border-strong bg-transparent hover:bg-surface-2",
+          wt("clickui.judgement_reject_btn", "Повторить вопрос")
+        );
+        rejectP.type = "button";
+        rejectP.addEventListener("click", () => _triggerJudgementChoice("reject"));
+
+        actionsP.appendChild(acceptP);
+        actionsP.appendChild(rejectP);
+        item.appendChild(actionsP);
+
+        // 4. Honest consequences bullet points
+        const conseq = _createEl("div", "flex flex-col gap-0.5 text-[11px] leading-snug text-text-secondary mt-0.5", "");
+        conseq.setAttribute("data-clickui", "judgement-consequences");
+        conseq.appendChild(
+          _createEl(
+            "div",
+            "",
+            `• ${wt("clickui.judgement_accept_bullet", "Засчитать: 100% за задание и переход далее")}`
+          )
+        );
+        conseq.appendChild(
+          _createEl(
+            "div",
+            "",
+            `• ${wt("clickui.judgement_reject_bullet", "Повторить: задание вернётся позже в тренировке")}`
+          )
+        );
+        item.appendChild(conseq);
+
+        const onEnterP = () => _setGlobalHover({ targetIndex: idx, source: "sidebar" });
+        const onLeaveP = () => {
+          if (state.globalHoveredInfo && state.globalHoveredInfo.targetIndex === idx) {
+            _setGlobalHover(null);
+          }
+        };
+        item.addEventListener("pointerenter", onEnterP);
+        item.addEventListener("pointerleave", onLeaveP);
+        item.addEventListener("mouseenter", onEnterP);
+        item.addEventListener("mouseleave", onLeaveP);
+        item.addEventListener("pointerdown", onEnterP);
+
+        list.appendChild(item);
+        state.targetRows.push({ idx, el: item, badge: badgeP, icon: null, dot: null, statusPill: statusPillP });
+        return;
+      }
+
+      // Superstructure Status Header ("надстроечный заголовок") above card title so it never competes horizontally
+      const statusHeader = _createEl(
         "div",
-        "task-chip mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold shadow-sm",
-        String(displayIndex)
+        "flex items-center justify-between gap-2 border-b border-border-subtle pb-1.5 mb-0.5",
+        ""
       );
-      const color = _getTargetColor(idx);
-      badge.style.backgroundColor = color;
-      badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
-      badge.style.borderColor = _withAlpha(color, 0.4);
-      badge.style.boxShadow = `0 0 0 2px ${_withAlpha(color, 0.12)}`;
-
-      const labelWrap = _createEl("div", "min-w-0 flex-1", "");
-      const labelText = target.label || wt("clickui.target_n", "Цель {n}").replace("{n}", idx + 1);
-      const label = _createEl(
-        "div",
-        "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark break-words",
-        labelText
-      );
-      labelWrap.appendChild(label);
-      rowLeft.appendChild(badge);
-      rowLeft.appendChild(labelWrap);
-      rowTop.appendChild(rowLeft);
-
-      // Status Pill
-      const statusPill = _createEl("div", "shrink-0 ml-1.5", "");
+      const statusPill = _createEl("div", "shrink-0", "");
       statusPill.setAttribute("data-clickui", "status-pill");
       let pillText = "";
       let pillIcon = "";
@@ -4531,15 +4741,26 @@
         pillIcon = "spellcheck";
       } else if (!hasError) {
         item.classList.add("ring-2", "ring-success-light", "bg-success-lighter");
-        badge.classList.add("border-success-light", "bg-success-lighter", "text-success-text");
         pillClass = "inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[11px] font-semibold text-success-text";
         pillText = wt("clickui.status_found", "Найдена");
         pillIcon = "check";
       } else if (isLabelMismatch) {
         item.classList.add("ring-2", "ring-amber-500/30", "bg-amber-500/10");
-        pillClass = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400";
-        pillText = wt("clickui.badge_label_err", "Ошибка названия");
-        pillIcon = "edit_note";
+        const detailsObj = (result && result.details) || {};
+        const reqJudgement = detailsObj.requires_user_judgement === true;
+        const manJudgement = detailsObj.manual_label_judgement;
+        const softList = (manJudgement && Array.isArray(manJudgement.soft_mismatches)) ? manJudgement.soft_mismatches : [];
+        const matchSoft = softList.find((m) => (m.index != null ? Number(m.index) === idx : softList.length === 1));
+
+        if (reqJudgement && matchSoft && !state.judgementResolved) {
+          pillClass = "clickui-target-status-pending inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300";
+          pillText = wt("s1.verdict_pending_pill", "Требуется решение");
+          pillIcon = "help";
+        } else {
+          pillClass = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300";
+          pillText = wt("clickui.badge_label_err", "Ошибка названия");
+          pillIcon = "edit_note";
+        }
       } else if (!isFound) {
         item.classList.add("ring-2", "ring-error-light/30", "bg-error-lighter/20");
         pillClass = "inline-flex items-center gap-1 rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
@@ -4559,30 +4780,109 @@
       }
       const sText = _createEl("span", "", pillText);
       statusPill.appendChild(sText);
-      rowTop.appendChild(statusPill);
+      statusHeader.appendChild(statusPill);
+      item.appendChild(statusHeader);
+
+      // Full-width Target Title Row: Badge + Label (100% horizontal space, no pill collision)
+      const rowTop = _createEl("div", "flex items-center gap-2.5 min-w-0", "");
+      const rowLeft = _createEl("div", "flex items-center gap-2.5 min-w-0 flex-1", "");
+
+      const badge = _createEl(
+        "div",
+        "task-chip flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold shadow-sm",
+        String(displayIndex)
+      );
+      badge.style.width = "26px";
+      badge.style.height = "26px";
+      const color = _getTargetColor(idx);
+      badge.style.backgroundColor = color;
+      badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+      badge.style.borderColor = _withAlpha(color, 0.4);
+      badge.style.boxShadow = `0 0 0 2px ${_withAlpha(color, 0.12)}`;
+      if (!hasError && !hasTypo) {
+        badge.classList.add("border-success-light", "bg-success-lighter", "text-success-text");
+      }
+
+      const labelWrap = _createEl("div", "min-w-0 flex-1", "");
+      const labelText = target.label || wt("clickui.target_n", "Цель {n}").replace("{n}", idx + 1);
+      const label = _createEl(
+        "div",
+        "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark break-words",
+        labelText
+      );
+      labelWrap.appendChild(label);
+      rowLeft.appendChild(badge);
+      rowLeft.appendChild(labelWrap);
+      rowTop.appendChild(rowLeft);
       item.appendChild(rowTop);
 
       // Detail section (L2 naming comparison / L3 coverage / L1 click match)
       if (isLabelMismatch) {
-        const diffBox = _createEl("div", "mt-0.5 pl-10 flex flex-col gap-0.5 text-[12px] border-t border-amber-500/20 pt-1.5", "");
-        const userEntered = _createEl(
-          "div",
-          "text-text-secondary truncate",
-          `${wt("clickui.user_entered", "Введено:")} `
-        );
-        const userSpan = _createEl("span", "font-medium text-rose-500 line-through", `«${_normalizeReviewLabelText(labelStatus.userLabel)}»`);
-        userEntered.appendChild(userSpan);
+        const diffBox = _createEl("div", "mt-1 flex flex-col gap-1.5 text-[12px] border-t border-border-subtle pt-2", "");
 
-        const expected = _createEl(
-          "div",
-          "text-text-secondary truncate",
-          `${wt("clickui.expected", "Ожидалось:")} `
-        );
-        const expectedSpan = _createEl("span", "font-semibold text-emerald-600 dark:text-emerald-400", `«${_normalizeReviewLabelText(labelStatus.correctLabel || target.label)}»`);
-        expected.appendChild(expectedSpan);
+        const detailsObj = (result && result.details) || {};
+        const reqJudgement = detailsObj.requires_user_judgement === true;
+        const manJudgement = detailsObj.manual_label_judgement;
+        const softList = (manJudgement && Array.isArray(manJudgement.soft_mismatches)) ? manJudgement.soft_mismatches : [];
+        const matchSoft = softList.find((m) => (m.index != null ? Number(m.index) === idx : softList.length === 1));
 
-        diffBox.appendChild(userEntered);
-        diffBox.appendChild(expected);
+        const userAns = _normalizeReviewLabelText(labelStatus.userLabel);
+        const correctAns = _normalizeReviewLabelText(labelStatus.correctLabel || target.label);
+        const omittedPhrase = matchSoft && matchSoft.omitted_phrase;
+
+        const compTable = _createEl("div", "rounded-lg border border-border-subtle bg-surface-1 p-2 flex flex-col gap-1", "");
+
+        const userRow = _createEl("div", "flex items-baseline justify-between gap-2 text-[11px]", "");
+        userRow.appendChild(_createEl("span", "text-text-secondary font-medium shrink-0", wt("clickui.user_entered", "Введено:")));
+        userRow.appendChild(_createEl("span", "text-text-main font-medium text-right break-words", `«${userAns}»`));
+        compTable.appendChild(userRow);
+
+        const expRow = _createEl("div", "flex items-baseline justify-between gap-2 text-[11px] border-t border-border-subtle/60 pt-1", "");
+        expRow.appendChild(_createEl("span", "text-text-secondary font-medium shrink-0", wt("clickui.expected", "Ожидалось:")));
+        expRow.appendChild(_createEl("span", "text-text-main font-bold text-right break-words", `«${correctAns}»`));
+        compTable.appendChild(expRow);
+
+        if (omittedPhrase) {
+          const omitText = wt("drawui.omitted_phrase_val", "Пропущено: {val}").replace("{val}", omittedPhrase);
+          const omitEl = _createEl("div", "flex items-center gap-1.5 text-[10px] text-amber-800 dark:text-amber-300 bg-amber-500/10 rounded px-1.5 py-0.5 border border-amber-500/20 mt-0.5", "");
+          omitEl.appendChild(_createEl("span", "material-symbols-outlined text-[12px] shrink-0 text-amber-600 dark:text-amber-400", "info"));
+          omitEl.appendChild(_createEl("span", "font-medium", omitText));
+          compTable.appendChild(omitEl);
+        }
+        diffBox.appendChild(compTable);
+
+        if (reqJudgement && matchSoft && !state.judgementResolved) {
+          diffBox.setAttribute("data-clickui", "label-judgement");
+          const actionsRow = _createEl("div", "clickui-judgement-actions flex items-center gap-2 mt-1.5 w-full", "");
+          const acceptBtn = _createEl(
+            "button",
+            "clickui-judgement-btn-accept flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white text-xs font-semibold whitespace-nowrap transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1",
+            ""
+          );
+          acceptBtn.type = "button";
+          acceptBtn.style.backgroundColor = "#059669";
+          acceptBtn.style.borderColor = "#047857";
+          acceptBtn.style.color = "#ffffff";
+          acceptBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">check</span><span>${wt("drawui.grade_correct", "Засчитать ответ")}</span>`;
+          acceptBtn.addEventListener("click", () => _triggerJudgementChoice("accept"));
+
+          const rejectBtn = _createEl(
+            "button",
+            "clickui-judgement-btn-reject flex-1 py-1.5 px-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white text-xs font-semibold whitespace-nowrap transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1",
+            ""
+          );
+          rejectBtn.type = "button";
+          rejectBtn.style.backgroundColor = "#dc2626";
+          rejectBtn.style.borderColor = "#b91c1c";
+          rejectBtn.style.color = "#ffffff";
+          rejectBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">close</span><span>${wt("drawui.grade_incorrect", "Считать ошибкой")}</span>`;
+          rejectBtn.addEventListener("click", () => _triggerJudgementChoice("reject"));
+
+          actionsRow.appendChild(acceptBtn);
+          actionsRow.appendChild(rejectBtn);
+          diffBox.appendChild(actionsRow);
+        }
+
         item.appendChild(diffBox);
       } else if (contourRes) {
         const covBox = _createEl(
@@ -4642,7 +4942,7 @@
           const rawExpected = _normalizeReviewLabelText(labelStatus.canonicalLabel || labelStatus.correctLabel || target.label);
           const diffResult = _computeStringDiff(rawUser, rawExpected);
 
-          const userEntered = _createEl("div", "text-text-secondary truncate flex items-baseline gap-1", "");
+          const userEntered = _createEl("div", "text-text-secondary break-words leading-tight flex flex-wrap items-baseline gap-1", "");
           const userPrefix = _createEl("span", "font-medium shrink-0", `${wt("clickui.user_entered", "Введено:")} `);
           userEntered.appendChild(userPrefix);
           const userQuoteSpan = _createEl("span", "font-medium text-text-main", "");
@@ -4651,7 +4951,7 @@
           userQuoteSpan.appendChild(document.createTextNode("»"));
           userEntered.appendChild(userQuoteSpan);
 
-          const expected = _createEl("div", "text-text-secondary truncate flex items-baseline gap-1", "");
+          const expected = _createEl("div", "text-text-secondary break-words leading-tight flex flex-wrap items-baseline gap-1", "");
           const expPrefix = _createEl("span", "font-medium shrink-0", `${wt("clickui.expected", "Ожидалось:")} `);
           expected.appendChild(expPrefix);
           const expQuoteSpan = _createEl("span", "font-medium text-text-main", "");
@@ -4721,7 +5021,7 @@
           String(action.index + 1)
         );
         if (isDuplicate) {
-          badge.className += " border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400";
+          badge.className += " border-amber-500/40 bg-amber-500/15 text-amber-800 dark:text-amber-300";
         } else {
           badge.className += " border-error-light/40 bg-error-lighter/25 text-error-text";
         }
@@ -4744,7 +5044,7 @@
         const statusPill = _createEl("div", "shrink-0 ml-1.5", "");
         statusPill.setAttribute("data-clickui", "status-pill");
         if (isDuplicate) {
-          statusPill.className = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400";
+          statusPill.className = "inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300";
           const sIcon = _createEl("span", "material-symbols-outlined text-[13px]", "replay");
           const sText = _createEl("span", "", wt("clickui.badge_duplicate", "Повтор"));
           statusPill.appendChild(sIcon);
@@ -4904,6 +5204,8 @@
     );
     section.setAttribute("data-clickui", "review-comparison");
     section.setAttribute("data-clickui-result-workspace", "true");
+    section.style.opacity = "0";
+    section.style.transition = "opacity 140ms ease-out";
 
     const details = (result && result.details) || {};
     const success = result && result.success === true;
@@ -4925,31 +5227,47 @@
     const extraActionsCount = Math.max(0, totalUserActions - foundCount);
 
     // ==========================================
-    // A. Top Header / Verdict & Stats Banner
+    // A. Unified Result Toolbar (Single Compact Line: Verdict, Stats, Mode Switch & Zoom)
     // ==========================================
-    const headerBanner = _createEl("div", "flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border-subtle", "");
+    const headerBanner = _createEl(
+      "div",
+      "clickui-result-toolbar flex items-center justify-between gap-2 pb-2 border-b border-border-subtle select-none min-w-0 overflow-x-auto overflow-y-hidden max-h-[46px]",
+      ""
+    );
+    headerBanner.setAttribute("data-clickui", "result-viewport-toolbar");
 
     // Left group: Verdict badge + Metrics
-    const leftGroup = _createEl("div", "flex flex-wrap items-center gap-3", "");
+    const leftGroup = _createEl("div", "flex items-center gap-1.5 shrink min-w-0 whitespace-nowrap", "");
     
-    // Strict binary verdict badge
+    const requiresJudgement = details.requires_user_judgement === true;
+    const manualJudgement = details.manual_label_judgement;
+
+    // Strict binary verdict badge (or pending judgement badge)
     const verdictBadge = _createEl(
       "div",
-      success
-        ? "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30 shadow-xs"
-        : "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 border border-rose-500/25 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30 shadow-xs",
+      requiresJudgement
+        ? "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-800 border border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 shadow-xs"
+        : success
+          ? "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30 shadow-xs"
+          : "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 border border-rose-500/25 dark:bg-rose-500/15 dark:text-rose-400 dark:border-rose-500/30 shadow-xs",
       ""
     );
     verdictBadge.setAttribute("data-clickui", "result-verdict-badge");
+    const hasHostToolbarPill = typeof document !== "undefined" && !!document.getElementById("toolbar-verdict-pill");
+    if (hasHostToolbarPill) {
+      verdictBadge.classList.add("hidden");
+    }
     const verdictIcon = _createEl(
       "span",
-      "material-symbols-outlined text-[16px]",
-      success ? "check_circle" : "cancel"
+      "material-symbols-outlined text-[15px]",
+      requiresJudgement ? "help" : (success ? "check_circle" : "cancel")
     );
     const verdictText = _createEl(
       "span",
       "",
-      success ? wt("clickui.verdict_success", "Зачтено") : wt("clickui.verdict_fail", "Не зачтено")
+      requiresJudgement
+        ? wt("s1.verdict_pending_pill", "Требуется оценка")
+        : (success ? wt("clickui.verdict_success", "Зачтено") : wt("clickui.verdict_fail", "Не зачтено"))
     );
     verdictBadge.appendChild(verdictIcon);
     verdictBadge.appendChild(verdictText);
@@ -4958,10 +5276,9 @@
     // Targets found stat
     const foundStats = _createEl(
       "div",
-      "inline-flex items-center gap-1 text-xs font-medium text-text-secondary dark:text-text-muted",
+      "inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary dark:text-text-muted",
       ""
     );
-    const targetIcon = _createEl("span", "material-symbols-outlined text-[15px] text-text-muted", "ads_click");
     const foundStatsText = _createEl(
       "span",
       "",
@@ -4974,7 +5291,6 @@
             .replace("{found}", foundCount)
             .replace("{total}", totalTargets)
     );
-    foundStats.appendChild(targetIcon);
     foundStats.appendChild(foundStatsText);
     leftGroup.appendChild(foundStats);
 
@@ -4983,10 +5299,9 @@
       const scoreVal = Math.round(Number(result.score) || 0);
       const scorePill = _createEl(
         "div",
-        "inline-flex items-center gap-1 text-xs font-medium text-text-secondary dark:text-text-muted border-l border-border-subtle pl-3",
+        "inline-flex items-center gap-1 text-[11px] font-medium text-text-secondary dark:text-text-muted border-l border-border-subtle pl-2",
         ""
       );
-      const scoreIcon = _createEl("span", "material-symbols-outlined text-[15px] text-text-muted", "percent");
       const scoreText = _createEl(
         "span",
         "",
@@ -5001,7 +5316,6 @@
             })()
           : wt("clickui.score_stat", "Оценка: {score}%").replace("{score}", scoreVal)
       );
-      scorePill.appendChild(scoreIcon);
       scorePill.appendChild(scoreText);
       leftGroup.appendChild(scorePill);
     }
@@ -5010,10 +5324,10 @@
     if (extraActionsCount > 0) {
       const extraPill = _createEl(
         "div",
-        "inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 border-l border-border-subtle pl-3",
+        "inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 dark:text-amber-300 border-l border-border-subtle pl-2",
         ""
       );
-      const extraIcon = _createEl("span", "material-symbols-outlined text-[15px]", "info");
+      const extraIcon = _createEl("span", "material-symbols-outlined text-[14px] hidden xl:inline", "info");
       const extraText = _createEl(
         "span",
         "",
@@ -5025,65 +5339,9 @@
     }
 
     headerBanner.appendChild(leftGroup);
-    section.appendChild(headerBanner);
 
-    // ==========================================
-    // B. Unified Anti-CLS Inspector Bar
-    // ==========================================
-    const inspectorBar = _createEl(
-      "div",
-      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-200 ease-out",
-      ""
-    );
-    inspectorBar.classList.add("clickui-result-inspector");
-    inspectorBar.style.minHeight = "46px";
-    inspectorBar.style.height = "46px";
-    inspectorBar.style.boxSizing = "border-box";
-    inspectorBar.setAttribute("data-clickui", "result-inspector");
-
-    const inspectorLeft = _createEl("div", "flex items-center gap-2.5 min-w-0 flex-1", "");
-    const inspectorIcon = _createEl(
-      "span",
-      "material-symbols-outlined text-[20px] text-text-muted shrink-0 transition-colors",
-      success ? "check_circle" : "info"
-    );
-    if (success) inspectorIcon.classList.add("text-emerald-500");
-
-    const inspectorTextCol = _createEl("div", "flex flex-col min-w-0 flex-1", "");
-    const defaultIdleTitle = success
-      ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
-      : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
-    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
-
-    const inspectorTitle = _createEl(
-      "div",
-      "text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:text-text-muted truncate transition-opacity duration-150",
-      defaultIdleTitle
-    );
-    const inspectorDesc = _createEl(
-      "div",
-      "text-[13px] font-medium text-text-main dark:text-text-on-dark truncate transition-opacity duration-150",
-      defaultIdleDesc
-    );
-    inspectorTextCol.appendChild(inspectorTitle);
-    inspectorTextCol.appendChild(inspectorDesc);
-    inspectorLeft.appendChild(inspectorIcon);
-    inspectorLeft.appendChild(inspectorTextCol);
-    inspectorBar.appendChild(inspectorLeft);
-
-    const inspectorChip = _createEl("div", "inspector-chip shrink-0 ml-3", "");
-    inspectorBar.appendChild(inspectorChip);
-    section.appendChild(inspectorBar);
-
-    // ==========================================
-    // C. Viewport Projection & Action Toolbar
-    // ==========================================
-    const viewportToolbar = _createEl(
-      "div",
-      "clickui-result-toolbar flex flex-wrap items-center justify-between gap-2.5 min-w-0 select-none",
-      ""
-    );
-    viewportToolbar.setAttribute("data-clickui", "result-viewport-toolbar");
+    // Right group: Projection Modes & Zoom controls in the same row
+    const rightGroup = _createEl("div", "flex items-center gap-1 shrink-0 ml-auto", "");
 
     // Unified 4-projection segmented control (WAI-ARIA Tabs pattern)
     const modeSwitch = _createEl(
@@ -5095,7 +5353,7 @@
     modeSwitch.setAttribute("role", "tablist");
     modeSwitch.setAttribute("aria-label", wt("clickui.projection_modes_aria", "Режимы отображения снимка"));
 
-    const btnBaseClass = "inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0";
+    const btnBaseClass = "inline-flex items-center justify-center px-2 py-1 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0";
     const activeBtnClass = `${btnBaseClass} bg-surface-1 text-text-main dark:text-text-on-dark shadow-xs border border-border-subtle/50`;
     const inactiveBtnClass = `${btnBaseClass} text-text-secondary dark:text-text-muted hover:text-text-main border-transparent`;
 
@@ -5107,9 +5365,7 @@
     sideBtn.tabIndex = 0;
     sideBtn.setAttribute("data-clickui", "mode-side-by-side");
     sideBtn.title = wt("clickui.mode_sbs", "2 снимка");
-    const sideIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "view_column");
-    const sideLabel = _createEl("span", "hidden sm:inline", wt("clickui.mode_sbs", "2 снимка"));
-    sideBtn.appendChild(sideIcon);
+    const sideLabel = _createEl("span", "", wt("clickui.mode_sbs", "2 снимка"));
     sideBtn.appendChild(sideLabel);
 
     // 2. User Answer button
@@ -5120,9 +5376,7 @@
     tabBtnUser.tabIndex = -1;
     tabBtnUser.setAttribute("data-clickui", "tab-user");
     tabBtnUser.title = wt("clickui.tab_user", "Ваш ответ");
-    const tabUserIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "person");
-    const tabUserLabel = _createEl("span", "hidden sm:inline", wt("clickui.tab_user", "Ваш ответ"));
-    tabBtnUser.appendChild(tabUserIcon);
+    const tabUserLabel = _createEl("span", "", wt("clickui.tab_user", "Ваш ответ"));
     tabBtnUser.appendChild(tabUserLabel);
 
     // 3. Reference button
@@ -5133,9 +5387,7 @@
     tabBtnRef.tabIndex = -1;
     tabBtnRef.setAttribute("data-clickui", "tab-reference");
     tabBtnRef.title = wt("clickui.tab_reference", "Эталон");
-    const tabRefIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "verified");
-    const tabRefLabel = _createEl("span", "hidden sm:inline", wt("clickui.tab_reference", "Эталон"));
-    tabBtnRef.appendChild(tabRefIcon);
+    const tabRefLabel = _createEl("span", "", wt("clickui.tab_reference", "Эталон"));
     tabBtnRef.appendChild(tabRefLabel);
 
     // 4. Overlay button
@@ -5146,9 +5398,7 @@
     tabBtnOverlay.tabIndex = -1;
     tabBtnOverlay.setAttribute("data-clickui", "tab-overlay");
     tabBtnOverlay.title = wt("clickui.tab_overlay", "Наложение");
-    const tabOverlayIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "layers");
-    const tabOverlayLabel = _createEl("span", "hidden sm:inline", wt("clickui.tab_overlay", "Наложение"));
-    tabBtnOverlay.appendChild(tabOverlayIcon);
+    const tabOverlayLabel = _createEl("span", "", wt("clickui.tab_overlay", "Наложение"));
     tabBtnOverlay.appendChild(tabOverlayLabel);
 
     modeSwitch.appendChild(sideBtn);
@@ -5184,10 +5434,10 @@
       }
     });
 
-    viewportToolbar.appendChild(modeSwitch);
+    rightGroup.appendChild(modeSwitch);
 
     // Right actions: Canvas Zoom Cluster and Contextual Fullscreen action
-    const rightActions = _createEl("div", "flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto", "");
+    const rightActions = _createEl("div", "flex items-center gap-1 shrink-0", "");
 
     // 1. Unified Canvas Zoom Cluster [ - ] [ ⟲ ] [ + ]
     const zoomCluster = _createEl(
@@ -5199,39 +5449,39 @@
 
     const zoomOutBtn = _createEl(
       "button",
-      "inline-flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
+      "inline-flex h-6 w-6 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
       ""
     );
     zoomOutBtn.type = "button";
     zoomOutBtn.setAttribute("data-clickui", "result-zoom-out");
     zoomOutBtn.title = wt("clickui.zoom_out_title", "Уменьшить");
     zoomOutBtn.setAttribute("aria-label", wt("clickui.zoom_out_title", "Уменьшить"));
-    zoomOutBtn.appendChild(_createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "remove"));
+    zoomOutBtn.appendChild(_createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "remove"));
 
     const resetViewBtn = _createEl(
       "button",
-      "inline-flex items-center gap-1 px-2 h-7 rounded-lg text-xs font-medium text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
+      "inline-flex h-6 w-6 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
       ""
     );
     resetViewBtn.type = "button";
     resetViewBtn.setAttribute("data-clickui", "result-reset-view");
     resetViewBtn.title = wt("clickui.reset_view", "Подогнать масштаб");
     resetViewBtn.setAttribute("aria-label", wt("clickui.reset_view", "Подогнать масштаб"));
-    const resetIcon = _createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "restart_alt");
-    const resetLabel = _createEl("span", "hidden 2xl:inline", wt("clickui.reset_view", "Подогнать масштаб"));
+    const resetIcon = _createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "restart_alt");
+    const resetLabel = _createEl("span", "hidden", wt("clickui.reset_view", "Подогнать масштаб"));
     resetViewBtn.appendChild(resetIcon);
     resetViewBtn.appendChild(resetLabel);
 
     const zoomInBtn = _createEl(
       "button",
-      "inline-flex h-7 w-7 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
+      "inline-flex h-6 w-6 items-center justify-center rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-1 dark:hover:bg-surface-2 transition-colors",
       ""
     );
     zoomInBtn.type = "button";
     zoomInBtn.setAttribute("data-clickui", "result-zoom-in");
     zoomInBtn.title = wt("clickui.zoom_in_title", "Увеличить");
     zoomInBtn.setAttribute("aria-label", wt("clickui.zoom_in_title", "Увеличить"));
-    zoomInBtn.appendChild(_createEl("span", "material-symbols-outlined text-[16px] leading-none select-none", "add"));
+    zoomInBtn.appendChild(_createEl("span", "material-symbols-outlined text-[15px] leading-none select-none", "add"));
 
     zoomCluster.appendChild(zoomOutBtn);
     zoomCluster.appendChild(resetViewBtn);
@@ -5239,8 +5489,6 @@
     rightActions.appendChild(zoomCluster);
 
     // 2. Fullscreen Button (data-clickui="result-zoom-btn" for test compatibility)
-    // In Side-by-Side mode, this button is hidden because each pane header has its own dedicated expand button.
-    // In Single Tab modes (Your answer, Reference, Overlay), this is visible to expand the current tab.
     const tabZoomBtn = _createEl(
       "button",
       "hidden inline-flex items-center gap-1 px-2.5 h-8 rounded-xl border border-border-subtle bg-surface-2/70 hover:bg-surface-2 text-xs font-medium text-text-secondary hover:text-text-main transition-colors shadow-xs",
@@ -5256,8 +5504,62 @@
     tabZoomBtn.appendChild(tabZoomLabel);
     rightActions.appendChild(tabZoomBtn);
 
-    viewportToolbar.appendChild(rightActions);
-    section.appendChild(viewportToolbar);
+    rightGroup.appendChild(rightActions);
+    headerBanner.appendChild(rightGroup);
+    section.appendChild(headerBanner);
+
+    // ==========================================
+    // B. Contextual Second Row: Judgement Card OR Inspector Bar
+    // ==========================================
+    const inspectorBar = _createEl(
+      "div",
+      "clickui-result-inspector flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-200 ease-out",
+      ""
+    );
+    inspectorBar.classList.add("clickui-result-inspector");
+    inspectorBar.style.minHeight = "46px";
+    inspectorBar.style.height = "46px";
+    inspectorBar.style.boxSizing = "border-box";
+    inspectorBar.setAttribute("data-clickui", "result-inspector");
+
+    const inspectorLeft = _createEl("div", "flex items-center gap-2.5 min-w-0 flex-1", "");
+    const inspectorIcon = _createEl(
+      "span",
+      "material-symbols-outlined text-[20px] text-text-muted shrink-0 transition-colors",
+      success ? "check_circle" : "info"
+    );
+    if (success) inspectorIcon.classList.add("text-emerald-500");
+
+    const inspectorTextCol = _createEl("div", "flex flex-col min-w-0 flex-1", "");
+    const defaultIdleTitle = success
+      ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
+      : requiresJudgement && !state.judgementResolved
+        ? wt("clickui.inspector_idle_pending_title", "Проверка ответа")
+        : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
+    const defaultIdleDesc = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
+
+    const inspectorTitle = _createEl(
+      "div",
+      "text-[11px] font-semibold uppercase tracking-wider text-text-secondary dark:text-text-muted truncate transition-opacity duration-150",
+      defaultIdleTitle
+    );
+    const inspectorDesc = _createEl(
+      "div",
+      "text-[13px] font-medium text-text-main dark:text-text-on-dark truncate transition-opacity duration-150",
+      defaultIdleDesc
+    );
+    inspectorTextCol.appendChild(inspectorTitle);
+    inspectorTextCol.appendChild(inspectorDesc);
+    inspectorLeft.appendChild(inspectorIcon);
+    inspectorLeft.appendChild(inspectorTextCol);
+    inspectorBar.appendChild(inspectorLeft);
+
+    const inspectorChip = _createEl("div", "inspector-chip shrink-0 ml-3", "");
+    inspectorBar.appendChild(inspectorChip);
+
+    // Option C (Clean Visual Space): Arbitration controls are mounted inline in user preview labels
+    // and sidebar registry. Inspector bar is preserved for hover details without bulky overhead banners.
+    section.appendChild(inspectorBar);
 
     let inspectorResetTimer = null;
     let isMouseOverInspector = false;
@@ -5311,12 +5613,15 @@
 
     function renderInspectorContent(hoverInfo) {
       if (!hoverInfo) {
+        // Preserved inspector bar in Option C
         inspectorBar.className = "clickui-result-inspector min-h-[46px] h-[46px] flex items-center justify-between px-3.5 py-1.5 rounded-xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/30 shadow-xs select-none transition-all duration-200 ease-out";
         inspectorIcon.textContent = success ? "check_circle" : "info";
         inspectorIcon.className = "material-symbols-outlined text-[20px] shrink-0 transition-colors " + (success ? "text-emerald-500" : "text-text-muted");
         inspectorTitle.textContent = success
           ? wt("clickui.inspector_idle_success_title", "Задание успешно выполнено")
-          : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
+          : requiresJudgement && !state.judgementResolved
+            ? wt("clickui.inspector_idle_pending_title", "Проверка ответа")
+            : wt("clickui.inspector_idle_error_title", "Разбор ошибок выполнения");
         inspectorDesc.textContent = wt("clickui.inspector_idle_desc", "Наведите курсор на отметку на снимке или элемент списка для детального анализа");
         inspectorChip.innerHTML = "";
         return;
@@ -5350,7 +5655,7 @@
             inspectorIcon.className = "material-symbols-outlined text-[20px] text-warning shrink-0 transition-colors";
             inspectorTitle.textContent = wt("clickui.inspector_label_err_title", "Клик {n}: Место найдено, ошибка в названии").replace("{n}", action.index + 1);
             inspectorDesc.textContent = wt("clickui.duplicate_click_detail", "Цель {ref} уже была отмечена другим кликом.").replace("{ref}", targetLabel || "");
-            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_duplicate", "Повтор")}</span>`;
+            inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_duplicate", "Повтор")}</span>`;
           } else if (interpretation && interpretation.success) {
             const hasTypo = !!(labelStatus && labelStatus.hasTypo);
             if (isLabelMismatch) {
@@ -5363,7 +5668,7 @@
               inspectorDesc.textContent = wt("clickui.inspector_label_err_desc", "Введено: «{user}», ожидалось: «{correct}»")
                 .replace("{user}", userLabel)
                 .replace("{correct}", expectedLabel);
-              inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
+              inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
             } else if (hasTypo) {
               const userLabel = _normalizeReviewLabelText(labelStatus.userLabel || action.label || (state.labelsClicks && state.labelsClicks[action.index]));
               const expectedLabel = labelStatus.canonicalLabel || labelStatus.correctLabel || targetLabel;
@@ -5433,7 +5738,7 @@
           inspectorDesc.textContent = wt("clickui.inspector_label_err_desc", "Введено: «{user}», ожидалось: «{correct}»")
             .replace("{user}", userLabel)
             .replace("{correct}", expectedLabel);
-          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
+          inspectorChip.innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">${wt("clickui.badge_label_err", "Ошибка названия")}</span>`;
         } else if (contourRes && isLowCoverage) {
           const covVal = _formatPercentNumber(contourRes.coverage);
           const thrVal = _formatPercentNumber(contourRes.threshold || 75);
@@ -5519,11 +5824,11 @@
     const refLabelsBlock = _getReferenceReviewLabelsBlock();
 
     // 1. Side-by-Side Container
-    const sideBySideGrid = _createEl("div", "clickui-side-by-side-grid grid grid-cols-2 gap-3.5", "");
+    const sideBySideGrid = _createEl("div", "clickui-side-by-side-grid grid grid-cols-2 gap-3.5 min-w-0 w-full", "");
     sideBySideGrid.setAttribute("data-clickui", "result-side-by-side");
 
     // Left Card: User Answer
-    const userCard = _createEl("div", "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-2/40 p-3 shadow-xs", "");
+    const userCard = _createEl("div", "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-2/40 p-3 shadow-xs min-w-0 flex-1", "");
     userCard.setAttribute("data-clickui", "review-user-preview");
 
     const userHeader = _createEl("div", "flex items-center justify-between gap-2 px-1", "");
@@ -5560,7 +5865,7 @@
       "relative overflow-hidden rounded-xl border border-border-subtle bg-surface-2 select-none cursor-grab",
       ""
     );
-    viewportUser.style.height = "480px";
+    viewportUser.style.height = "clamp(260px, calc(100vh - 430px), 440px)";
     viewportUser.setAttribute("data-clickui", "viewport-user");
 
     const contentLayerUser = _createEl("div", "absolute left-0 top-0", "");
@@ -5598,7 +5903,7 @@
     sideBySideGrid.appendChild(userCard);
 
     // Right Card: Reference
-    const refCard = _createEl("div", "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-2/40 p-3 shadow-xs", "");
+    const refCard = _createEl("div", "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-2/40 p-3 shadow-xs min-w-0 flex-1", "");
     refCard.setAttribute("data-clickui", "review-reference-preview");
 
     const refHeader = _createEl("div", "flex items-center justify-between gap-2 px-1", "");
@@ -5635,7 +5940,7 @@
       "relative overflow-hidden rounded-xl border border-border-subtle bg-surface-2 select-none cursor-grab",
       ""
     );
-    viewportRef.style.height = "480px";
+    viewportRef.style.height = "clamp(260px, calc(100vh - 430px), 440px)";
     viewportRef.setAttribute("data-clickui", "viewport-reference");
 
     const contentLayerRef = _createEl("div", "absolute left-0 top-0", "");
@@ -5682,7 +5987,7 @@
       "relative overflow-hidden rounded-xl border border-border-subtle bg-surface-2 select-none cursor-grab",
       ""
     );
-    viewportTab.style.height = "520px";
+    viewportTab.style.height = "clamp(280px, calc(100vh - 380px), 520px)";
     viewportTab.setAttribute("data-clickui", "viewport-tab");
 
     const contentLayerTab = _createEl("div", "absolute left-0 top-0", "");
@@ -5725,6 +6030,13 @@
 
     viewportTab.appendChild(contentLayerTab);
     tabsContainer.appendChild(viewportTab);
+
+    const tabUserLabels = _getUserReviewLabelsBlock();
+    if (tabUserLabels) {
+      tabUserLabels.setAttribute("data-clickui", "review-tab-labels");
+      tabsContainer.appendChild(tabUserLabels);
+    }
+
     section.appendChild(tabsContainer);
 
     // ==========================================
@@ -6077,12 +6389,8 @@
       updateReviewCanvasDimensions(state.img.naturalWidth, state.img.naturalHeight);
     }
 
-    // Always unconditionally calculate and apply initial fitView transform
+    // Coordinated initial fitView transform
     fitView();
-    setTimeout(() => fitView(), 0);
-    if (typeof requestAnimationFrame !== "undefined") {
-      requestAnimationFrame(() => fitView());
-    }
 
     if (state.img && !state.img.complete) {
       state.img.addEventListener("load", () => {
@@ -6093,14 +6401,12 @@
     }
 
     // Apply initial display mode explicitly before ResizeObserver fires.
-    // Without this call the DOM stays in whatever state the HTML was built with,
-    // and the observer fires asynchronously — causing a visible flicker to tabs.
     setProjectionMode("side_by_side");
 
     // Auto-adaptive width observer: switches to single-view overlay only on truly narrow containers.
-    // 680px = ~320px per pane which is still readable for annotated medical images.
     if (typeof ResizeObserver !== "undefined") {
       let lastObservedW = 0;
+      let isFirstObserverCall = true;
       const ro = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const width = entry.contentRect.width;
@@ -6108,14 +6414,15 @@
           const widthChanged = Math.abs(width - lastObservedW) > 2;
           lastObservedW = width;
           if (!userChoseDisplayMode) {
-            if (width < 680 && currentProjectionMode === "side_by_side") {
+            if (width < 640 && currentProjectionMode === "side_by_side") {
               setProjectionMode("overlay");
               return;
-            } else if (width >= 680 && currentProjectionMode !== "side_by_side") {
+            } else if (width >= 640 && currentProjectionMode !== "side_by_side") {
               setProjectionMode("side_by_side");
               return;
             }
           }
+          isFirstObserverCall = false;
           if (widthChanged) {
             fitView();
           }
@@ -6161,6 +6468,21 @@
     state.reviewHost.appendChild(section);
     state.reviewComparisonEl = section;
     _setupResultRegistryInSidebar(result);
+
+    const imgsToDecode = [
+      typeof imgUser !== "undefined" ? imgUser : null,
+      typeof imgRef !== "undefined" ? imgRef : null,
+      typeof imgTab !== "undefined" ? imgTab : null,
+    ].filter((img) => img && typeof img.decode === "function");
+
+    if (imgsToDecode.length > 0) {
+      Promise.all(imgsToDecode.map((img) => img.decode().catch(() => {}))).then(() => {
+        section.style.opacity = "1";
+        fitView();
+      });
+    } else {
+      section.style.opacity = "1";
+    }
   }
 
   function _renderReviewComparison(result) {
@@ -7856,12 +8178,12 @@
     );
     const mainColumn = _createEl(
       "div",
-      "flex min-h-[68vh] flex-1 flex-col gap-3",
+      "flex min-h-[68vh] flex-1 min-w-0 flex-col gap-3",
       ""
     );
     const sideColumn = _createEl(
       "div",
-      "flex w-full flex-col gap-3 lg:w-80 lg:sticky lg:top-3 lg:self-stretch lg:h-full lg:overflow-hidden lg:pr-1 xl:w-96 2xl:w-[420px]",
+      "flex w-full shrink-0 flex-col gap-3 lg:w-80 lg:min-w-[320px] lg:max-w-[360px] lg:sticky lg:top-3 lg:self-stretch lg:h-full lg:overflow-hidden lg:pr-1 xl:w-96 xl:min-w-[360px] 2xl:w-[420px]",
       ""
     );
     sideColumn.setAttribute("data-clickui", "side-column");
@@ -9772,7 +10094,10 @@
     // Re-assign palette so _renderReference uses fresh colors (important for Level 2).
     _assignTargetColors(state.taskDto);
     _renderReference();
-    _renderResultWorkspace(result);
+    const isIntermediate = !state.locked || stage === "lines" || stage === "clicks" || error === "lines_missing" || error === "polygons_missing" || error === "labels_missing";
+    if (!isIntermediate) {
+      _renderResultWorkspace(result);
+    }
 
     if (_debugEnabled()) {
       try {

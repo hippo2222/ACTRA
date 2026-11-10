@@ -437,3 +437,88 @@ span.streak-badge-inner.streak-badge-epic {
     stroke-dashoffset: 0;
   }
 }
+
+/* =============================================================================
+   SMART OVERFLOW MARQUEE (Бегущая строка)
+   Используется для длинных заголовков в S1 и на дашборде редактора
+   ============================================================================= */
+
+.has-marquee,
+.editor-sidebar-tree-label,
+#current-task-title {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.marquee-track {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.is-marquee-active {
+  text-overflow: clip !important;
+}
+
+.is-marquee-active > .marquee-track {
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  will-change: transform;
+  animation: a-marquee-scroll var(--marquee-duration, 4s) cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+}
+
+@keyframes a-marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(0);
+  }
+  75% {
+    transform: translateX(var(--marquee-shift, 0));
+  }
+  90% {
+    transform: translateX(var(--marquee-shift, 0));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-marquee-active > .marquee-track {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+
+
+/* Unobtrusive pulsing author revision note button in editors */
+@keyframes authorNotePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+    border-color: rgba(245, 158, 11, 0.8);
+  }
+}
+
+.author-note-btn--pulse {
+  animation: authorNotePulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .author-note-btn--pulse {
+    animation: none !important;
+    transform: none !important;
+  }
+}

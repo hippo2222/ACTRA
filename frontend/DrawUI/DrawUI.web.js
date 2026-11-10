@@ -2820,7 +2820,11 @@
     _renderLabelsInputs(null);
     _renderDrawing();
     _renderReference();
-    _renderReviewComparison(result);
+    if (result && result.details && result.details.requires_user_judgement === true) {
+      _renderJudgementPrompt(result);
+    } else {
+      _renderReviewComparison(result);
+    }
     if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
     if (typeof state._updateToolbar === "function") state._updateToolbar();
   };

@@ -66,6 +66,14 @@ const SequenceUI = (function () {
       .map((blockId) => String(blockId));
   }
 
+  function isTautologicalLevelLabel(label, index) {
+    if (!label) return true;
+    const s = String(label).trim();
+    if (!s) return true;
+    if (s === String(index + 1) || s === `#${index + 1}`) return true;
+    return /^(?:level|уровень|рівень|этап|етап|stage|группа|група|group)[_\s-]*\d+$/i.test(s);
+  }
+
   function getLevelLabelForComparison(levelLike, originalLevelLabelById) {
     const explicitLabel = safeText(
       levelLike && (levelLike.level_name || levelLike.label || levelLike.name)
@@ -498,7 +506,8 @@ const SequenceUI = (function () {
     const levels = levelsRaw
       .map((l, idx) => {
         const levelId = l && l.level_id != null ? String(l.level_id) : `level_${idx + 1}`;
-        const label = safeText(l && (l.label || l.name || l.level_name)) || levelId;
+        const rawLabel = safeText(l && (l.label || l.name || l.level_name));
+        const label = isTautologicalLevelLabel(rawLabel, idx) ? "" : rawLabel;
         const slotCount = Array.isArray(l && l.blocks)
           ? l.blocks.length
           : Array.isArray(l && l.slots)
@@ -2616,8 +2625,15 @@ const SequenceUI = (function () {
       if (!Array.isArray(levels) || levels.length === 0) {
         // For difficulty=2 (user creates levels) empty-state is handled above.
         const empty = document.createElement("div");
-        empty.className = "text-sm text-text-muted dark:text-text-muted";
-        empty.textContent = wt("sequenceui.empty_task_levels", "В задаче нет уровней");
+        empty.className = "flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-border-strong bg-surface-1 dark:bg-surface-2 text-text-secondary min-h-[180px]";
+        const emptyIcon = document.createElement("span");
+        emptyIcon.className = "material-symbols-outlined text-[32px] text-text-muted mb-2";
+        emptyIcon.textContent = "format_list_numbered";
+        const emptyText = document.createElement("span");
+        emptyText.className = "text-sm font-medium";
+        emptyText.textContent = wt("sequenceui.empty_task_levels", "В задаче не заданы уровни последовательности.");
+        empty.appendChild(emptyIcon);
+        empty.appendChild(emptyText);
         levelsContainer.appendChild(empty);
         return;
       }
@@ -2689,12 +2705,14 @@ const SequenceUI = (function () {
             leftHeader.appendChild(h3);
           }
         } else {
-          const h3 = document.createElement("h3");
-          h3.className = "text-sm font-bold text-text-main dark:text-text-on-dark";
-          const levelTitle = lvl.label || lvl.level_id;
-          h3.textContent = levelTitle;
-          h3.title = levelTitle;
-          leftHeader.appendChild(h3);
+          const displayTitle = lvl.label && !isTautologicalLevelLabel(lvl.label, idx) ? lvl.label : "";
+          if (displayTitle) {
+            const h3 = document.createElement("h3");
+            h3.className = "text-sm font-bold text-text-main dark:text-text-on-dark";
+            h3.textContent = displayTitle;
+            h3.title = displayTitle;
+            leftHeader.appendChild(h3);
+          }
         }
 
         const rightHeader = document.createElement("div");
@@ -5131,10 +5149,35 @@ const SequenceUI = (function () {
         userViewBtn.disabled = activeView === "user";
         referenceViewBtn.disabled = activeView === "reference";
 
+        let userStatusText = wt("sequenceui.user_answer_shown_desc", "Показан ваш ответ с отметками проверки.");
+        try {
+          const d = state.lastRawResultDetails;
+          if (d && typeof d === "object") {
+            const elCorrect = d.total_correct_blocks != null ? d.total_correct_blocks : (d.correct_blocks_count != null ? d.correct_blocks_count : null);
+            const elTotal = d.total_blocks_in_levels != null ? d.total_blocks_in_levels : (d.total_blocks != null ? d.total_blocks : null);
+            const lvlCorrect = Array.isArray(d.correct_levels) ? d.correct_levels.length : (d.correct_levels_count != null ? d.correct_levels_count : null);
+            const lvlTotal = d.total_levels != null ? d.total_levels : null;
+
+            if (elCorrect != null && elTotal != null && lvlCorrect != null && lvlTotal != null) {
+              userStatusText = wt("sequenceui.status_score", "Верно элементов: {elements_correct} из {elements_total} • Уровней: {levels_correct} из {levels_total}")
+                .replace("{elements_correct}", elCorrect)
+                .replace("{elements_total}", elTotal)
+                .replace("{levels_correct}", lvlCorrect)
+                .replace("{levels_total}", lvlTotal);
+
+              if (Array.isArray(d.tolerance_matches) && d.tolerance_matches.length > 0) {
+                userStatusText += " • " + wt("s1.tolerance_typo", "Ответ засчитан с учётом опечатки.");
+              }
+            }
+          }
+        } catch (e) {
+          // fallback
+        }
+
         comparisonStatus.textContent =
           activeView === "reference"
             ? wt("sequenceui.ref_shown_desc", "Показан эталонный вариант.")
-            : wt("sequenceui.user_answer_shown_desc", "Показан ваш ответ с отметками проверки.");
+            : userStatusText;
       }
     }
 

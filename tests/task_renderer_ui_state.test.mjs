@@ -589,6 +589,51 @@ describe("TaskRenderer UI state", () => {
     expect(titleEl.getAttribute("title")).toBe(longTitle);
   });
 
+  it("prioritizes full_name and expands legacy truncated ellipsis in the header tooltip without marquee track", () => {
+    const titleEl = document.getElementById("current-task-title");
+    const TaskRenderer = initTaskRenderer();
+
+    // 1. Prioritizes explicit full_name
+    TaskRenderer.renderTask({
+      task_type: "click",
+      task_id: "task_full_name_test",
+      task_name: "Клиника - Укажите...",
+      full_name: "Клиника - Укажите локализацию перелома ключицы со смещением отломков",
+      module_id: "m1",
+      topic_id: "t1",
+      iteration: 1,
+      queue: { index: 0, total: 1 },
+      task_data: {},
+    });
+
+    expect(titleEl.textContent).toBe("Клиника - Укажите...");
+    expect(titleEl.getAttribute("title")).toBe(
+      "Клиника - Укажите локализацию перелома ключицы со смещением отломков"
+    );
+    expect(titleEl.querySelector(".marquee-track")).toBeNull();
+
+    // 2. Reconstructs legacy truncated ellipsis from prompt
+    TaskRenderer.renderTask({
+      task_type: "click",
+      task_id: "task_legacy_ellipsis_test",
+      task_name: "Тест - Определите...",
+      module_id: "m1",
+      topic_id: "t1",
+      iteration: 1,
+      queue: { index: 0, total: 1 },
+      task_data: {
+        meta: { name: "Тест - Определите..." },
+        content: {
+          prompt: "Определите признаки гидроторакса на представленной рентгенограмме",
+        },
+      },
+    });
+
+    expect(titleEl.getAttribute("title")).toBe(
+      "Тест - Определите признаки гидроторакса на представленной рентгенограмме"
+    );
+  });
+
   it("keeps the result box above the task content and highlights keywords inside the reference answer", () => {
     const TaskRenderer = initTaskRenderer();
     window.SessionState.currentTask = {
@@ -746,5 +791,46 @@ describe("TaskRenderer UI state", () => {
     expect(judgementSpy).toHaveBeenCalledWith("accept");
 
     delete window.TaskRendererSelector;
+  });
+
+  it("delegates canGoNext=true and hides check button when task evaluation is completed without pending judgement (DEF-01)", () => {
+    const TaskRenderer = initTaskRenderer();
+    window.SessionState.currentTask = {
+      task_type: "click",
+      task_id: "click-eval-1",
+      task_data: {},
+    };
+
+    const checkBtn = document.getElementById("check-answer-btn");
+
+    TaskRenderer.showEvaluationResult({
+      success: true,
+      message: "Верно",
+      details: {},
+    });
+
+    expect(window.SessionState.currentTaskChecked).toBe(true);
+    expect(window.UIHelpers.setCanGoNext).toHaveBeenCalledWith(true);
+    expect(checkBtn.classList.contains("hidden")).toBe(true);
+  });
+
+  it("delegates canGoNext=false when manual judgement is pending (DEF-01)", () => {
+    const TaskRenderer = initTaskRenderer();
+    window.SessionState.currentTask = {
+      task_type: "click",
+      task_id: "click-pending-1",
+      task_data: {},
+    };
+
+    TaskRenderer.showEvaluationResult({
+      success: false,
+      message: "Требуется оценка",
+      details: {
+        requires_user_judgement: true,
+      },
+    });
+
+    expect(window.SessionState.currentTaskChecked).toBe(false);
+    expect(window.UIHelpers.setCanGoNext).toHaveBeenCalledWith(false);
   });
 });

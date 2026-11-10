@@ -18,7 +18,16 @@
     s.textContent =
       "@keyframes tuiSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }" +
       ".tui-question-enter { animation: tuiSlideUp 220ms ease-out forwards; }" +
-      ".tui-option-enter { animation: tuiSlideUp 180ms ease-out both; }";
+      ".tui-option-enter { animation: tuiSlideUp 180ms ease-out both; }" +
+      ".tui-choice-icon { width: 20px; height: 20px; min-width: 20px; min-height: 20px; max-width: 20px; max-height: 20px; border-width: 2px; border-style: solid; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; box-sizing: border-box; transition: all 150ms ease; }" +
+      ".tui-choice-icon--radio { border-radius: 9999px; }" +
+      ".tui-choice-icon--checkbox { border-radius: 5px; }" +
+      ".tui-choice-icon--neutral { border-color: var(--color-border-strong, #94a3b8); background-color: var(--color-surface-1, #ffffff); }" +
+      ".tui-choice-icon--selected { border-color: var(--color-primary, #4338ca); background-color: var(--color-primary, #4338ca); color: #ffffff; }" +
+      ".tui-choice-icon--success { border-color: var(--color-success, #10b981); background-color: var(--color-success, #10b981); color: #ffffff; }" +
+      ".tui-choice-icon--error { border-color: var(--color-error, #ef4444); background-color: var(--color-error, #ef4444); color: #ffffff; }" +
+      ".tui-choice-dot { width: 8px; height: 8px; border-radius: 9999px; background-color: currentColor; display: block; flex-shrink: 0; }" +
+      ".tui-choice-check { width: 13px; height: 13px; stroke-width: 2.5; stroke: currentColor; fill: none; display: block; flex-shrink: 0; }";
     document.head.appendChild(s);
   })();
 
@@ -26,9 +35,9 @@
     l1: {
       textOption: {
         neutral:
-          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-border-strong bg-surface-1 px-5 py-4 text-[15px] text-text-main dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark shadow-sm transition-all hover:-translate-y-[1px] hover:bg-bg-hover dark:hover:bg-bg-hover active:scale-[.99]",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-border-strong/80 hover:border-border-strong bg-surface-1 px-5 py-4 text-[15px] text-text-main dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark shadow-xs transition-all hover:bg-surface-2/60 active:scale-[.99]",
         selected:
-          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-primary-dark bg-primary px-5 py-4 text-[15px] text-primary-fg ring-2 ring-primary-light shadow-sm transition-all active:scale-[.99]",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-primary bg-primary/5 dark:bg-primary/10 px-5 py-4 text-[15px] font-medium text-text-main dark:text-text-on-dark ring-2 ring-primary/20 shadow-xs transition-all active:scale-[.99]",
         reviewCorrectChosen:
           "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-success bg-success-light px-5 py-4 text-[15px] text-success-text shadow-sm transition-colors dark:border-success dark:bg-success-light dark:text-success-lighter",
         reviewCorrectMissed:
@@ -62,6 +71,78 @@
     if (Array.isArray(value)) return value.length > 0;
     if (typeof value === "string") return value.trim().length > 0;
     return value != null;
+  }
+
+
+  function isMultipleChoiceQuestion(raw, state) {
+    if (!raw) return false;
+    const correctCount = Array.isArray(raw.answers)
+      ? raw.answers.filter((a) => a && a.correct).length
+      : 0;
+    if (correctCount > 1) return true;
+    if (Array.isArray(raw.correct_answers) && raw.correct_answers.length > 1) return true;
+    if (raw.test_type === "multiple_choice") return true;
+    if (state && state.data && state.data.test_type === "multiple_choice") return true;
+    return false;
+  }
+
+  function createChoiceControlIcon(isMultiple, isSelected, reviewTone) {
+    const icon = document.createElement("span");
+    icon.dataset.testui = isMultiple ? "choice-checkbox" : "choice-radio";
+    updateChoiceControlIcon(icon, isMultiple, isSelected, reviewTone);
+    return icon;
+  }
+
+  function updateChoiceControlIcon(icon, isMultiple, isSelected, reviewTone) {
+    if (!icon) return;
+    const baseShape = isMultiple ? "tui-choice-icon--checkbox" : "tui-choice-icon--radio";
+    let toneClass = "tui-choice-icon--neutral";
+    let innerContent = "";
+
+    if (reviewTone === "success") {
+      toneClass = "tui-choice-icon--success";
+      innerContent = isMultiple
+        ? '<svg class="tui-choice-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<span class="tui-choice-dot"></span>';
+    } else if (reviewTone === "error") {
+      toneClass = "tui-choice-icon--error";
+      innerContent = isMultiple
+        ? '<svg class="tui-choice-check" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4L4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<span class="tui-choice-dot"></span>';
+    } else if (isSelected) {
+      toneClass = "tui-choice-icon--selected";
+      innerContent = isMultiple
+        ? '<svg class="tui-choice-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<span class="tui-choice-dot"></span>';
+    } else {
+      toneClass = "tui-choice-icon--neutral";
+      innerContent = "";
+    }
+
+    const isImageOption = icon.classList && (icon.classList.contains("absolute") || (icon.parentElement && icon.parentElement.classList.contains("image-box")));
+    const extraClasses = isImageOption ? " absolute right-2 top-2 z-10" : "";
+    icon.className = `tui-choice-icon ${baseShape} ${toneClass}${extraClasses}`;
+    icon.innerHTML = innerContent;
+  }
+
+  function createInstructionBadge(isMultiple) {
+    const badge = document.createElement("div");
+    badge.className =
+      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold " +
+      (isMultiple
+        ? "bg-primary/10 text-primary-dark dark:text-primary-light border border-primary/20"
+        : "bg-surface-2 text-text-secondary dark:text-text-muted border border-border-subtle");
+    badge.dataset.testui = "choice-instruction-badge";
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined text-[15px]";
+    icon.textContent = isMultiple ? "checklist" : "radio_button_checked";
+    const badgeText = document.createElement("span");
+    badgeText.textContent = isMultiple
+      ? wt('testui_q.instruction_select_multiple', 'Выберите все верные варианты')
+      : wt('testui_q.instruction_select_single', 'Выберите один верный вариант');
+    badge.appendChild(icon);
+    badge.appendChild(badgeText);
+    return badge;
   }
 
   function createQuestionRenderer(state, main) {
@@ -449,7 +530,8 @@
       const qText = document.createElement("p");
       qText.className =
         "mb-1 max-w-3xl text-[1.05rem] font-semibold leading-7 text-text-main dark:text-text-on-dark";
-      qText.textContent = currentMeta.text || wt('testui_q.question_fallback', 'Вопрос теста');
+      const promptText = (currentMeta && (currentMeta.text || currentMeta.question || currentMeta.prompt)) || (raw && (raw.question || raw.prompt || raw.text)) || wt('testui_q.question_fallback', 'Вопрос теста');
+      qText.textContent = promptText;
       body.appendChild(qText);
 
       // Optional question images (L1.C / L2)
@@ -500,12 +582,42 @@
       const forceClosedForImageOnly = hasOptions && allImageOptions;
 
       if (state.isOpenMode && !forceClosedForImageOnly) {
-        renderOpenQuestion(body, currentMeta);
+        renderOpenQuestion(body, currentMeta, raw);
       } else if (hasOptions) {
         if (hasImageOptions) {
           renderImageOptions(body, currentMeta, raw);
         } else {
           renderTextOptions(body, currentMeta, raw);
+        }
+      }
+
+      if (state.mode === "review") {
+        const questionFeedback =
+          state.questionResults && state.questionResults[currentMeta.id];
+        const explanation =
+          (raw && typeof raw.explanation === "string" && raw.explanation.trim()) ||
+          (questionFeedback && typeof questionFeedback.explanation === "string" && questionFeedback.explanation.trim()) ||
+          (questionFeedback && questionFeedback.details && typeof questionFeedback.details.explanation === "string" && questionFeedback.details.explanation.trim());
+
+        if (explanation) {
+          const expCard = document.createElement("div");
+          expCard.dataset.testui = "question-explanation";
+          expCard.className = "mt-4 rounded-2xl border border-border-subtle bg-surface-2/60 dark:bg-surface-2/40 p-4 shadow-sm";
+          const expHeader = document.createElement("div");
+          expHeader.className = "flex items-center gap-2 mb-2 text-xs font-bold uppercase tracking-wider text-text-secondary dark:text-text-muted";
+          const expIcon = document.createElement("span");
+          expIcon.className = "material-symbols-outlined text-[18px] text-primary";
+          expIcon.textContent = "lightbulb";
+          const expTitle = document.createElement("span");
+          expTitle.textContent = wt('testui_q.explanation_title', 'Пояснение');
+          expHeader.appendChild(expIcon);
+          expHeader.appendChild(expTitle);
+          const expBody = document.createElement("div");
+          expBody.className = "text-sm text-text-main dark:text-text-on-dark leading-relaxed whitespace-pre-wrap";
+          expBody.textContent = explanation;
+          expCard.appendChild(expHeader);
+          expCard.appendChild(expBody);
+          body.appendChild(expCard);
         }
       }
 
@@ -515,7 +627,7 @@
       return body;
     }
 
-    function renderOpenQuestion(body, currentMeta) {
+    function renderOpenQuestion(body, currentMeta, raw) {
       const qId = currentMeta.id;
       const existing =
         typeof state.answers[qId] === "string" ? state.answers[qId] : "";
@@ -528,9 +640,26 @@
         return;
       }
 
+      const isMultiple = isMultipleChoiceQuestion(raw, state);
+
       const textWrapper = document.createElement("div");
       textWrapper.className =
         "mt-5 space-y-3 rounded-2xl border border-border-strong bg-surface-1 px-4 py-4 shadow-sm dark:border-border-strong dark:bg-surface-1";
+
+      if (isMultiple) {
+        const multiHint = document.createElement("div");
+        multiHint.dataset.testui = "open-multiple-hint";
+        multiHint.className =
+          "flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-2.5 text-xs font-medium text-primary-dark dark:text-primary-light";
+        const hintIcon = document.createElement("span");
+        hintIcon.className = "material-symbols-outlined text-[18px] shrink-0";
+        hintIcon.textContent = "checklist";
+        const hintText = document.createElement("span");
+        hintText.textContent = wt('testui_q.open_multiple_hint', 'Вопрос предполагает несколько ответов — перечислите все верные варианты');
+        multiHint.appendChild(hintIcon);
+        multiHint.appendChild(hintText);
+        textWrapper.appendChild(multiHint);
+      }
 
       const label = document.createElement("label");
       label.className =
@@ -542,7 +671,9 @@
       const textarea = document.createElement("textarea");
       textarea.className = CLASSMAP.l2.open.textareaAnswering;
       textarea.value = existing;
-      textarea.placeholder = wt('testui_q.enter_answer', 'Введите точный ответ');
+      textarea.placeholder = isMultiple
+        ? wt('testui_q.placeholder_enter_multiple', 'Перечислите верные ответы (через запятую или точку с запятой)...')
+        : wt('testui_q.enter_answer', 'Введите точный ответ');
 
       textarea.addEventListener("input", () => {
         const val = textarea.value || "";
@@ -1520,8 +1651,7 @@
     }
 
     function renderTextOptions(body, currentMeta, raw) {
-      const correctCount = raw.answers.filter((a) => a && a.correct).length;
-      const isMultiple = correctCount > 1;
+      const isMultiple = isMultipleChoiceQuestion(raw, state);
 
       const currentAnswer = state.answers[currentMeta.id];
       const questionFeedback =
@@ -1534,13 +1664,17 @@
             })
           : null;
 
+      if (state.mode === "answering") {
+        body.appendChild(createInstructionBadge(isMultiple));
+      }
+
       const optionsWrapper = document.createElement("div");
-      optionsWrapper.className = reviewShell ? "space-y-3" : "mt-5 space-y-3";
+      optionsWrapper.className = reviewShell ? "space-y-3" : "mt-4 space-y-3";
       const optionRows = [];
 
       function syncTextOptionSelectionState() {
         const liveAnswer = state.answers[currentMeta.id];
-        optionRows.forEach(({ idx, input, optionRow }) => {
+        optionRows.forEach(({ idx, input, optionRow, iconEl }) => {
           const isSelected = isMultiple
             ? Array.isArray(liveAnswer) && liveAnswer.includes(idx)
             : typeof liveAnswer === "number" && liveAnswer === idx;
@@ -1548,6 +1682,7 @@
           optionRow.className = isSelected
             ? CLASSMAP.l1.textOption.selected
             : CLASSMAP.l1.textOption.neutral;
+          updateChoiceControlIcon(iconEl, isMultiple, isSelected, null);
         });
       }
 
@@ -1683,10 +1818,16 @@
           textWrapper.appendChild(createCompactStatusBadge(reviewTagText, reviewTagTone));
         }
 
+        const iconEl = createChoiceControlIcon(
+          isMultiple,
+          state.mode === "answering" && isSelected,
+          reviewTagTone !== "neutral" ? reviewTagTone : null
+        );
         optionRow.appendChild(input);
+        optionRow.appendChild(iconEl);
         optionRow.appendChild(textWrapper);
         optionsWrapper.appendChild(optionRow);
-        optionRows.push({ idx, input, optionRow });
+        optionRows.push({ idx, input, optionRow, iconEl });
       });
 
       if (reviewShell) {
@@ -1698,8 +1839,7 @@
 
     function renderImageOptions(body, currentMeta, raw) {
       // Используем компактную адаптивную сетку для вариантов с изображениями.
-      const correctCount = raw.answers.filter((a) => a && a.correct).length;
-      const isMultiple = correctCount > 1;
+      const isMultiple = isMultipleChoiceQuestion(raw, state);
       const currentAnswer = state.answers[currentMeta.id];
       const questionFeedback =
         state.questionResults && state.questionResults[currentMeta.id];
@@ -1711,6 +1851,10 @@
             })
           : null;
 
+      if (state.mode === "answering") {
+        body.appendChild(createInstructionBadge(isMultiple));
+      }
+
       const grid = document.createElement("div");
       grid.className =
         (reviewShell ? "" : "mt-3 ") +
@@ -1719,17 +1863,18 @@
 
       function syncImageOptionSelectionState() {
         const liveAnswer = state.answers[currentMeta.id];
-        optionCards.forEach(({ idx, input, card, captionEl }) => {
+        optionCards.forEach(({ idx, input, card, captionEl, iconEl }) => {
           const isSelected = isMultiple
             ? Array.isArray(liveAnswer) && liveAnswer.includes(idx)
             : typeof liveAnswer === "number" && liveAnswer === idx;
           input.checked = isSelected;
           card.className = isSelected
-            ? "flex flex-col gap-3 rounded-2xl border-2 border-primary-dark bg-primary p-3 ring-2 ring-primary-light shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group"
-            : "flex flex-col gap-3 rounded-2xl border-2 border-border-strong bg-surface-1 p-3 shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group hover:-translate-y-[1px] hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:hover:bg-bg-hover";
+            ? "flex flex-col gap-3 rounded-2xl border-2 border-primary bg-primary/5 dark:bg-primary/10 p-3 ring-2 ring-primary/20 shadow-xs transition-colors transition-transform active:scale-[.99] cursor-pointer group"
+            : "flex flex-col gap-3 rounded-2xl border-2 border-border-strong/80 bg-surface-1 p-3 shadow-xs transition-colors transition-transform active:scale-[.99] cursor-pointer group hover:bg-surface-2/60 dark:border-border-strong dark:bg-surface-1 dark:hover:bg-surface-2/60";
           captionEl.className = isSelected
-            ? "text-sm text-primary-fg text-center font-bold leading-relaxed"
+            ? "text-sm text-text-main dark:text-text-on-dark text-center font-bold leading-relaxed"
             : "text-sm text-text-secondary dark:text-text-muted text-center font-medium leading-relaxed";
+          updateChoiceControlIcon(iconEl, isMultiple, isSelected, null);
         });
       }
 
@@ -1754,7 +1899,7 @@
 
         if (state.mode === "answering" && isSelected) {
           cardClass =
-            "flex flex-col gap-3 rounded-2xl border-2 border-primary-dark bg-primary p-3 ring-2 ring-primary-light shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group";
+            "flex flex-col gap-3 rounded-2xl border-2 border-primary bg-primary/5 dark:bg-primary/10 p-3 ring-2 ring-primary/20 shadow-xs transition-colors transition-transform active:scale-[.99] cursor-pointer group";
         }
 
         if (state.mode === "review" && questionFeedback) {
@@ -1891,10 +2036,18 @@
           }
         });
 
+        const iconEl = createChoiceControlIcon(
+          isMultiple,
+          state.mode === "answering" && isSelected,
+          reviewTagTone !== "neutral" ? reviewTagTone : null
+        );
+        iconEl.classList.add("absolute", "right-2", "top-2", "z-10");
+        imgBox.appendChild(iconEl);
+
         card.appendChild(imgBox);
         card.appendChild(captionEl);
         card.appendChild(input);
-        optionCards.push({ idx, input, card, captionEl });
+        optionCards.push({ idx, input, card, captionEl, iconEl });
 
         wrapper.appendChild(card);
 

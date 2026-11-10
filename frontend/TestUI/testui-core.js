@@ -46,7 +46,7 @@
       return {
         id: q.id != null ? String(q.id) : `q_${idx + 1}`,
         index: idx,
-        text: q.text || q.title || "Question",
+        text: q.text || q.question || q.title || q.prompt || "Question",
         sourceTaskTitle:
           q._split_source_task_name ||
           q._split_source_task_title ||

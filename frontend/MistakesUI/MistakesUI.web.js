@@ -231,7 +231,7 @@
     const detail = {
       foundCount: found.length,
       totalKnown: state.totalErrors || null,
-      completed: completedErrors || state.selectedOptionId !== null,
+      completed: completedErrors || state.selectedOptionId !== null || Boolean(state.isMultiChoice && state.selectedOptionIds && state.selectedOptionIds.size > 0),
       selections: [...state.selections],
       mode: content?.mode || "text_errors",
       requiredCorrect: requirement.required,
@@ -262,6 +262,8 @@
     state.showReference = false;
     state.selectedOptionId = null;
     state.selectedOptionIndex = null;
+    state.selectedOptionIds = new Set();
+    state.isMultiChoice = false;
     state.originalMode = null;
 
     const content = getContent(taskDto);
@@ -553,9 +555,12 @@
     const prompt = content.choice_prompt || content.prompt || getDEFAULT_CHOICE_PROMPT();
     const referenceText = content.reference_text || content.referenceText || "";
     const correctCount = options.filter((o) => o.is_correct).length;
+    const isMultiChoice = correctCount > 1;
+    state.isMultiChoice = isMultiChoice;
+    state.selectedOptionIds = new Set();
     const isInvalid =
       options.length < 2 ||
-      correctCount !== 1 ||
+      correctCount < 1 ||
       options.some((o) => typeof o.text !== "string" || o.text.trim().length === 0);
 
     container.innerHTML = "";
@@ -586,6 +591,32 @@
     }
 
     function updateSelection(option) {
+      if (isMultiChoice) {
+        const optKey = option?.id !== undefined ? String(option.id) : String(option?._idx);
+        if (state.selectedOptionIds.has(optKey)) {
+          state.selectedOptionIds.delete(optKey);
+        } else {
+          state.selectedOptionIds.add(optKey);
+        }
+        grid.querySelectorAll(".choice-card").forEach((card) => {
+          const cardKey = card.dataset.optionId !== undefined ? String(card.dataset.optionId) : String(card.dataset.optionIndex);
+          const isSelected = state.selectedOptionIds.has(cardKey);
+          card.classList.toggle("selected", isSelected);
+          const btn = card.querySelector(".choice-btn");
+          if (btn) {
+            btn.classList.toggle("selected", isSelected);
+            btn.textContent = isSelected ? wt("mistakesui.option_selected", "Выбрано") : wt("mistakesui.option_select", "Выбрать");
+          }
+          const check = card.querySelector(".choice-check");
+          if (check) {
+            check.classList.toggle("opacity-0", !isSelected);
+            check.classList.toggle("scale-90", !isSelected);
+          }
+        });
+        notifyState();
+        return;
+      }
+
       const prevId = state.selectedOptionId;
       const prevIdx = state.selectedOptionIndex;
       state.selectedOptionId = option?.id ?? null;
@@ -718,12 +749,16 @@
     // Для сервера схема ожидает text_choice/text_errors, поэтому отправляем нормализованный режим
     const effectiveMode = normalizedMode;
     if (normalizedMode === "text_choice") {
-      const optionId = state.selectedOptionId;
+      const isMulti = Boolean(state.isMultiChoice);
+      const selectedIds = isMulti
+        ? Array.from(state.selectedOptionIds || [])
+        : (state.selectedOptionId !== null && state.selectedOptionId !== undefined ? [String(state.selectedOptionId)] : []);
+      const primaryId = selectedIds[0] ?? null;
       return {
         mode: effectiveMode,
-        selected_option_id: optionId,
-        selected_option: optionId, // alias на случай другого названия
-        selected_option_ids: optionId ? [optionId] : [],
+        selected_option_id: primaryId,
+        selected_option: primaryId,
+        selected_option_ids: selectedIds,
         selected_option_index: state.selectedOptionIndex,
       };
     }
@@ -749,6 +784,8 @@
     state.showReference = false;
     state.selectedOptionId = null;
     state.selectedOptionIndex = null;
+    state.selectedOptionIds = new Set();
+    state.isMultiChoice = false;
     state.originalMode = null;
     // Note: Event listeners are attached to DOM elements that will be removed,
     // so they will be garbage collected automatically.

@@ -183,9 +183,32 @@
     }
 
     .s1-toolbar-heading-row {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
       min-width: 0;
       margin-top: 0;
+    }
+
+    #s1-author-note-btn.has-note {
+      border-color: rgba(245, 158, 11, 0.45);
+      background-color: rgba(245, 158, 11, 0.12);
+      color: #d97706;
+    }
+    html.dark #s1-author-note-btn.has-note {
+      color: #fbbf24;
+      background-color: rgba(245, 158, 11, 0.18);
+    }
+
+    #s1-author-note-dialog::backdrop {
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(2px);
+    }
+    html.dark #s1-author-note-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+    }
+    #s1-author-note-dialog[open] {
+      animation: s1DialogFadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .s1-toolbar-actions {
@@ -210,7 +233,7 @@
     .s1-progress-cluster {
       flex: 0 0 auto;
       min-width: min(150px, 100%);
-      max-width: 220px;
+      max-width: 260px;
       padding: 0.45rem 0.65rem;
       border-radius: 0.8rem;
       border: 1px solid var(--color-border-subtle);
@@ -250,8 +273,8 @@
       .s1-progress-cluster {
         justify-self: end;
         width: auto;
-        min-width: 215px;
-        max-width: 240px;
+        min-width: 220px;
+        max-width: 300px;
       }
 
       .s1-toolbar-primary {
@@ -287,6 +310,27 @@
       }
     }
 
+    /* DEF-06: Vertical rhythm and screen economy for compact viewports (<=760px / 720p) */
+    @media (max-height: 760px) {
+      .s1-shell-row {
+        padding-top: 0.35rem !important;
+        padding-bottom: 0.35rem !important;
+      }
+      .s1-toolbar {
+        margin-bottom: 0.45rem !important;
+        padding-top: 0.35rem !important;
+        padding-bottom: 0.35rem !important;
+      }
+      .s1-progress-cluster {
+        padding: 0.25rem 0.5rem !important;
+      }
+      #current-task-title {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+      }
+    }
+
     #current-task-title,
     #complex-title,
     #task-title {
@@ -297,15 +341,13 @@
     #current-task-title {
       font-size: clamp(0.8125rem, 0.75rem + 0.25vw, 1.05rem);
       line-height: 1.25;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
+      display: block;
       overflow: hidden;
-      white-space: normal;
-      word-break: normal;
-      overflow-wrap: break-word;
+      white-space: nowrap;
+      text-overflow: ellipsis;
       min-width: 0;
       max-width: 100%;
+      cursor: default;
     }
 
     #current-task-title.s1-title-updated {
@@ -369,8 +411,6 @@
 
     #progress-label {
       flex: 1 1 auto;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
@@ -407,7 +447,14 @@
 
     #status-banner {
       background: var(--color-page-s1-status-banner-bg);
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      max-width: 28rem;
+      z-index: 60;
+      margin-bottom: 0;
+      pointer-events: auto;
     }
 
     #task-content > * {
@@ -597,15 +644,23 @@
               </button>
               <div class="s1-toolbar-title">
                 <div class="s1-toolbar-heading-row">
-                  <h1 id="current-task-title" class="font-bold tracking-[-0.015em] text-text-main">
-                    –
-                  </h1>
+                  <h1 id="current-task-title" class="font-bold tracking-[-0.015em] text-text-main">–</h1>
                   <button id="current-task-title-toggle"
                     class="hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1"
                     type="button"
                     aria-expanded="false"
                     data-i18n="s1.more_btn">
                     Ещё
+                  </button>
+                  <button id="s1-author-note-btn"
+                    type="button"
+                    class="hidden shrink-0 relative inline-flex items-center justify-center size-7 rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 active:scale-95 text-text-secondary hover:text-text-main transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
+                    title="Заметка автора к заданию"
+                    data-i18n-title="s1.author_note_title"
+                    aria-label="Заметка автора к заданию"
+                    data-i18n-aria="s1.author_note_title">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit_note</span>
+                    <span id="s1-author-note-badge" class="hidden absolute -top-1 -right-1 size-2 rounded-full bg-amber-500 ring-2 ring-surface-1"></span>
                   </button>
                 </div>
                 <span id="current-task-type" class="hidden">–</span>
@@ -615,7 +670,7 @@
             <div class="s1-toolbar-actions">
               <div class="s1-progress-cluster flex flex-col">
                 <div class="flex items-center justify-between gap-3 min-w-0">
-                  <p id="progress-label" class="text-xs font-medium leading-normal text-text-secondary truncate min-w-0" data-i18n="s1.progress_label_prefix">
+                  <p id="progress-label" class="text-xs font-medium leading-normal text-text-secondary whitespace-nowrap min-w-0" data-i18n="s1.progress_label_prefix">
                     Задание –
                   </p>
                   <p id="difficulty-label" class="hidden text-xs font-normal leading-normal text-text-secondary shrink-0 whitespace-nowrap" data-i18n="s1.difficulty_label_prefix">
@@ -628,6 +683,10 @@
                 </div>
               </div>
               <div class="s1-toolbar-primary flex items-center gap-2">
+                <div id="toolbar-verdict-pill" class="hidden items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-bold tracking-wide uppercase transition-all duration-150 shadow-xs" data-s1="toolbar-verdict-pill">
+                  <span class="material-symbols-outlined text-[16px] verdict-icon">check_circle</span>
+                  <span class="verdict-text truncate"></span>
+                </div>
                 <button id="s1-theory-btn"
                   class="hidden flex h-9 items-center gap-1.5 cursor-pointer overflow-hidden whitespace-nowrap rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 active:scale-[0.98] px-3.5 text-sm font-semibold leading-normal tracking-[0.015em] text-text-main transition-all s1-btn"
                   type="button"
@@ -644,9 +703,10 @@
                   <span class="truncate" data-i18n="s1.check_btn">Проверить</span>
                 </button>
                 <button id="next-task-btn"
-                  class="hidden flex h-9 min-w-[132px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-5 text-sm font-bold leading-normal tracking-[0.015em] text-text-main disabled:cursor-default disabled:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed s1-btn"
+                  class="hidden flex h-9 min-w-[132px] max-w-[480px] cursor-pointer items-center justify-center gap-1.5 overflow-hidden rounded-lg bg-primary hover:bg-primary/90 active:scale-[0.98] shadow-sm px-5 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
                   type="button">
                   <span class="truncate" data-i18n="s1.next_btn">Следующее</span>
+                  <span aria-hidden="true" class="text-sm font-bold leading-none">→</span>
                 </button>
                 <button id="finish-complex-btn"
                   class="flex h-9 min-w-[180px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 active:scale-[0.98] px-4 text-sm font-semibold leading-normal tracking-[0.015em] text-text-main transition-all disabled:cursor-default disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
@@ -657,9 +717,9 @@
             </div>
           </header>
           <main class="flex-grow">
-            <!-- Global status / error banner -->
+            <!-- Global status / error banner (Toast Overlay) -->
             <div id="status-banner"
-              class="mb-4 hidden rounded-lg border-2 border-warning bg-surface-1 px-4 py-3 text-sm text-text-main">
+              class="hidden fixed bottom-6 right-6 z-60 max-w-md min-w-[280px] rounded-xl border-2 border-warning bg-surface-1 px-4 py-3 text-sm text-text-main shadow-lg pointer-events-auto">
             </div>
             <!-- Pause confirmation modal -->
             <div id="pause-confirm-modal"
@@ -733,6 +793,65 @@
                 </div>
               </div>
             </div>
+            <!-- Author note dialog modal -->
+            <dialog id="s1-author-note-dialog"
+              class="fixed inset-0 z-[1200] m-auto flex h-fit max-h-[90vh] w-full max-w-md flex-col rounded-2xl border border-border-strong bg-surface-1 shadow-2xl backdrop:bg-scrim-weak dark:backdrop:bg-scrim backdrop:backdrop-blur-xs p-0 overflow-hidden"
+              aria-labelledby="s1-author-note-dialog-title">
+              <div class="flex flex-col gap-4 p-5">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-500">
+                      <span class="material-symbols-outlined text-xl" aria-hidden="true">edit_note</span>
+                    </div>
+                    <div class="min-w-0">
+                      <h2 id="s1-author-note-dialog-title" class="text-base font-bold text-text-main truncate" data-i18n="s1.author_note_title">
+                        Заметка автора к заданию
+                      </h2>
+                      <p class="text-xs text-text-secondary" data-i18n="s1.author_note_hint">
+                        Заметка видна только вам в дашборде редактора
+                      </p>
+                    </div>
+                  </div>
+                  <button id="s1-author-note-close" type="button"
+                    class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-transparent text-text-secondary hover:bg-surface-2 hover:text-text-main transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label="Закрыть" data-i18n-aria="s1.author_note_close">
+                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
+                  </button>
+                </div>
+
+                <div>
+                  <label for="s1-author-note-input" class="sr-only" data-i18n="s1.author_note_title">Заметка автора к заданию</label>
+                  <textarea id="s1-author-note-input" rows="4" maxlength="2000"
+                    class="w-full resize-y rounded-xl border border-border-strong bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Что нужно изменить или исправить в этом задании?"
+                    data-i18n-placeholder="s1.author_note_placeholder"></textarea>
+                  <div class="mt-1 flex items-center justify-between text-xs text-text-secondary">
+                    <span id="s1-author-note-updated-at"></span>
+                    <span id="s1-author-note-char-count">0/2000</span>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1">
+                  <div>
+                    <button id="s1-author-note-delete" type="button"
+                      class="hidden inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-error hover:bg-error/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-error transition">
+                      <span class="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
+                      <span data-i18n="s1.author_note_delete">Удалить заметку</span>
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button id="s1-author-note-cancel" type="button"
+                      class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 hover:bg-surface-3 px-3.5 py-2 text-sm font-semibold text-text-main transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary s1-btn">
+                      <span data-i18n="s1.author_note_cancel">Отмена</span>
+                    </button>
+                    <button id="s1-author-note-save" type="button"
+                      class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary hover:bg-primary/90 px-4 py-2 text-sm font-bold text-primary-fg shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary s1-btn">
+                      <span data-i18n="s1.author_note_save">Сохранить</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </dialog>
             <!-- Task header + content (без дополнительной белой карточки) -->
             <div class="p-4 @container s1-page-enter">
               <div id="task-header-block"
@@ -824,6 +943,7 @@
     <script src="/S1/success-effects.js"></script>
     <script src="/S1/session_validation.js"></script>
     <script src="/S1/session-controls.js?v=20260727-judgementbtn5"></script>
+    <script src="/S1/author-note.js"></script>
     <script src="/S1/main.js?v=20260727-judgementbtn5"></script>
     <script>
       function wt(key, fallback) {
