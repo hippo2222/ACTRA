@@ -1677,3 +1677,84 @@ body {
     box-shadow: 0 0 8px var(--color-success-light);
     animation: pulseSoft 2s ease-in-out infinite;
 }
+
+/* --- Dashboard typography & labels --- */
+.editor-task-card-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal !important;
+    line-height: 1.38;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.editor-sidebar-tree-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* --- Soft-delete and FLIP transitions --- */
+.task-card.task-card--deleting {
+    opacity: 0 !important;
+    transform: scale(0.92) !important;
+    pointer-events: none !important;
+    transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1), transform 180ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.task-card.task-card--restoring {
+    animation: a-scale-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.sidebar-item--deleting,
+.sidebar-task--deleting {
+    opacity: 0 !important;
+    max-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    transition: opacity 180ms ease, max-height 180ms ease, padding 180ms ease, margin 180ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .task-card.task-card--deleting,
+    .sidebar-item--deleting,
+    .sidebar-task--deleting {
+        transition: none !important;
+    }
+    .task-card.task-card--restoring {
+        animation: none !important;
+    }
+}
+
+
+
+/* Unobtrusive pulsing author revision note button in editors */
+@keyframes authorNotePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+    border-color: rgba(245, 158, 11, 0.8);
+  }
+}
+
+.author-note-btn--pulse {
+  animation: authorNotePulse 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .author-note-btn--pulse {
+    animation: none !important;
+    transform: none !important;
+  }
+}

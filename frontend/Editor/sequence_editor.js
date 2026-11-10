@@ -13,6 +13,394 @@ function wt(key, fallback) {
 const SEQUENCE_ONBOARDING_TOUR_ID = 'sequence-editor-authoring';
 const SEQUENCE_HIERARCHY_ONBOARDING_TOUR_ID = 'sequence-hierarchy-editor-authoring';
 
+class HierarchyDnDController {
+    constructor(editor) {
+        this.editor = editor;
+        this.viewport = null;
+        this.dragState = null;
+        this.dragAvatar = null;
+
+        this._onPointerDown = this.onPointerDown.bind(this);
+        this._onPointerMove = this.onPointerMove.bind(this);
+        this._onPointerUp = this.onPointerUp.bind(this);
+        this._onPointerCancel = this.onPointerCancel.bind(this);
+    }
+
+    init(viewport) {
+        if (!viewport) return;
+        this.viewport = viewport;
+        viewport.addEventListener('pointerdown', this._onPointerDown);
+    }
+
+    destroy() {
+        if (this.viewport) {
+            this.viewport.removeEventListener('pointerdown', this._onPointerDown);
+            this.viewport = null;
+        }
+        this.cleanupDrag();
+    }
+
+    onPointerDown(e) {
+        if (e.button !== 0 && e.pointerType === 'mouse') return;
+        if (!this.editor || !Array.isArray(this.editor.nodes)) return;
+
+        const itemHandle = e.target.closest('.se-item-drag-handle');
+        const nodeHandle = e.target.closest('.se-node-drag-handle');
+        if (!itemHandle && !nodeHandle) return;
+
+        e.stopPropagation();
+
+        if (itemHandle) {
+            const row = itemHandle.closest('.se-node-item-row');
+            const card = itemHandle.closest('.se-node-card');
+            if (!row || !card) return;
+            const nodeId = card.getAttribute('data-node-id');
+            const itemIdx = parseInt(row.getAttribute('data-item-idx') || '0', 10);
+            const node = this.editor.nodes.find(n => n.nodeId === nodeId);
+            if (!node || !node.items || !node.items[itemIdx]) return;
+
+            this.dragState = {
+                type: 'item',
+                nodeId,
+                itemIdx,
+                item: node.items[itemIdx],
+                label: node.items[itemIdx].label || wt('se.node_item_placeholder', 'Текст элемента или признака'),
+                startX: e.clientX,
+                startY: e.clientY,
+                isDragging: false,
+                originRow: row,
+                originCard: card,
+                target: null,
+            };
+        } else if (nodeHandle) {
+            const card = nodeHandle.closest('.se-node-card');
+            if (!card) return;
+            const nodeId = card.getAttribute('data-node-id');
+            const node = this.editor.nodes.find(n => n.nodeId === nodeId);
+            if (!node) return;
+
+            const label = node.items && node.items.length
+                ? (node.items.map(i => i.label).filter(Boolean).join(', ') || wt('se.node_item_placeholder', 'Текст элемента или признака'))
+                : wt('se.default_col_title', 'Группа');
+
+            this.dragState = {
+                type: 'node',
+                nodeId,
+                node,
+                label,
+                startX: e.clientX,
+                startY: e.clientY,
+                isDragging: false,
+                originCard: card,
+                target: null,
+            };
+        }
+
+        window.addEventListener('pointermove', this._onPointerMove);
+        window.addEventListener('pointerup', this._onPointerUp);
+        window.addEventListener('pointercancel', this._onPointerCancel);
+    }
+
+    onPointerMove(e) {
+        if (!this.dragState) return;
+
+        if (!this.dragState.isDragging) {
+            const dist = Math.hypot(e.clientX - this.dragState.startX, e.clientY - this.dragState.startY);
+            if (dist < 5) return;
+
+            this.dragState.isDragging = true;
+            this.editor.flushPendingHistorySave();
+
+            if (this.dragState.type === 'item') {
+                this.dragState.originRow?.classList.add('is-dragging');
+            } else {
+                this.dragState.originCard?.classList.add('is-dragging');
+            }
+            this.createDragAvatar(e);
+        }
+
+        this.updateAvatarPosition(e.clientX, e.clientY);
+        this.checkViewportAutoScroll(e.clientX, e.clientY);
+        this.detectDropTarget(e);
+    }
+
+    createDragAvatar(e) {
+        if (this.dragAvatar) this.dragAvatar.remove();
+
+        const avatar = document.createElement('div');
+        avatar.className = 'se-hierarchy-drag-avatar';
+        avatar.innerHTML = `
+            <div class="se-avatar-label">${(this.editor && this.editor.escapeHtml) ? this.editor.escapeHtml(this.dragState.label) : this.dragState.label}</div>
+            <div class="se-avatar-badge">
+                <span class="material-symbols-outlined">${this.dragState.type === 'item' ? 'drag_indicator' : 'account_tree'}</span>
+                <span class="se-avatar-badge-text">${this.dragState.type === 'item' ? wt('se.display_mode_linear_short', 'Элемент') : wt('se.display_mode_hierarchy_short', 'Узел')}</span>
+            </div>
+        `;
+        document.body.appendChild(avatar);
+        this.dragAvatar = avatar;
+        this.updateAvatarPosition(e.clientX, e.clientY);
+    }
+
+    updateAvatarPosition(clientX, clientY) {
+        if (!this.dragAvatar) return;
+        const w = this.dragAvatar.offsetWidth || 160;
+        const h = this.dragAvatar.offsetHeight || 44;
+        this.dragAvatar.style.transform = `translate3d(${Math.round(clientX - w / 2)}px, ${Math.round(clientY - h / 2)}px, 0)`;
+    }
+
+    setAvatarBadge(icon, text) {
+        if (!this.dragAvatar) return;
+        const badge = this.dragAvatar.querySelector('.se-avatar-badge');
+        if (!badge) return;
+        badge.innerHTML = `<span class="material-symbols-outlined">${icon}</span><span class="se-avatar-badge-text">${text}</span>`;
+    }
+
+    clearDropHighlights() {
+        document.querySelectorAll('.is-drop-target-group, .is-drop-target-merge, .is-drop-target-parent, .is-drop-indicator-top, .is-drop-indicator-bottom')
+            .forEach(el => {
+                el.classList.remove('is-drop-target-group', 'is-drop-target-merge', 'is-drop-target-parent', 'is-drop-indicator-top', 'is-drop-indicator-bottom');
+            });
+    }
+
+    detectDropTarget(e) {
+        this.clearDropHighlights();
+        this.dragState.target = null;
+
+        const elUnderCursor = (typeof document.elementFromPoint === 'function')
+            ? document.elementFromPoint(e.clientX, e.clientY)
+            : null;
+        if (!elUnderCursor) return;
+
+        if (this.dragState.type === 'item') {
+            this.detectItemDropTarget(e, elUnderCursor);
+        } else if (this.dragState.type === 'node') {
+            this.detectNodeDropTarget(e, elUnderCursor);
+        }
+    }
+
+    detectItemDropTarget(e, elUnderCursor) {
+        const { nodeId: sourceNodeId, itemIdx: sourceItemIdx, originCard } = this.dragState;
+        const sourceNode = this.editor.nodes.find(n => n.nodeId === sourceNodeId);
+
+        // 1. Check if hovering over another item row in the same node
+        const hoveredRow = elUnderCursor.closest('.se-node-item-row');
+        if (hoveredRow) {
+            const targetCard = hoveredRow.closest('.se-node-card');
+            const targetNodeId = targetCard?.getAttribute('data-node-id');
+            const targetItemIdx = parseInt(hoveredRow.getAttribute('data-item-idx') || '0', 10);
+
+            if (targetNodeId === sourceNodeId) {
+                // Intra-group reorder
+                const rect = hoveredRow.getBoundingClientRect();
+                const isAfter = (e.clientY - rect.top) > (rect.height / 2);
+                if (isAfter) {
+                    hoveredRow.classList.add('is-drop-indicator-bottom');
+                } else {
+                    hoveredRow.classList.add('is-drop-indicator-top');
+                }
+                const toIdx = isAfter ? targetItemIdx + (targetItemIdx > sourceItemIdx ? 0 : 1) : (targetItemIdx > sourceItemIdx ? targetItemIdx - 1 : targetItemIdx);
+                this.dragState.target = {
+                    action: 'reorder-item',
+                    nodeId: sourceNodeId,
+                    fromIdx: sourceItemIdx,
+                    toIdx: Math.max(0, Math.min((sourceNode?.items?.length || 1) - 1, toIdx)),
+                };
+                this.setAvatarBadge('swap_vert', wt('se.mode_steps_only', 'Порядок'));
+                return;
+            } else if (targetNodeId && targetCard) {
+                // Hovering an item row of another card -> Group formation
+                targetCard.classList.add('is-drop-target-group');
+                this.dragState.target = {
+                    action: 'move-to-group',
+                    sourceNodeId,
+                    sourceItemIdx,
+                    targetNodeId,
+                    targetItemIdx,
+                };
+                this.setAvatarBadge('layers', wt('se.dnd_into_group', '+ В группу'));
+                return;
+            }
+        }
+
+        // 2. Check if hovering another node card
+        const targetCard = elUnderCursor.closest('.se-node-card');
+        if (targetCard) {
+            const targetNodeId = targetCard.getAttribute('data-node-id');
+            if (targetNodeId && targetNodeId !== sourceNodeId) {
+                targetCard.classList.add('is-drop-target-group');
+                this.dragState.target = {
+                    action: 'move-to-group',
+                    sourceNodeId,
+                    sourceItemIdx,
+                    targetNodeId,
+                    targetItemIdx: -1,
+                };
+                this.setAvatarBadge('layers', wt('se.dnd_into_group', '+ В группу'));
+                return;
+            }
+        }
+
+        // 3. Dragging outside card -> Branch Extraction (if group has > 1 items)
+        if (sourceNode && Array.isArray(sourceNode.items) && sourceNode.items.length > 1 && originCard) {
+            const cardRect = originCard.getBoundingClientRect();
+            if (e.clientY > cardRect.bottom + 25) {
+                this.dragState.target = {
+                    action: 'extract-child',
+                    sourceNodeId,
+                    sourceItemIdx,
+                };
+                this.setAvatarBadge('south', wt('se.dnd_branch_child', '+ Ветка ниже'));
+                return;
+            } else if (Math.abs(e.clientX - (cardRect.left + cardRect.width / 2)) > cardRect.width / 2 + 20) {
+                this.dragState.target = {
+                    action: 'extract-sibling',
+                    sourceNodeId,
+                    sourceItemIdx,
+                };
+                this.setAvatarBadge('east', wt('se.dnd_branch_sibling', '+ Ветка рядом'));
+                return;
+            }
+        }
+
+        this.setAvatarBadge('drag_indicator', wt('se.display_mode_linear_short', 'Элемент'));
+    }
+
+    detectNodeDropTarget(e, elUnderCursor) {
+        const { nodeId: draggedNodeId } = this.dragState;
+
+        const isDescendant = (candidateId, rootId) => {
+            let curr = this.editor.nodes.find(n => n.nodeId === candidateId);
+            const visited = new Set();
+            while (curr && curr.parentId) {
+                if (curr.parentId === rootId) return true;
+                if (visited.has(curr.parentId)) break;
+                visited.add(curr.parentId);
+                curr = this.editor.nodes.find(n => n.nodeId === curr.parentId);
+            }
+            return false;
+        };
+
+        const targetCard = elUnderCursor.closest('.se-node-card');
+        if (targetCard) {
+            const targetNodeId = targetCard.getAttribute('data-node-id');
+            if (targetNodeId && targetNodeId !== draggedNodeId && !isDescendant(targetNodeId, draggedNodeId)) {
+                const targetNode = this.editor.nodes.find(n => n.nodeId === targetNodeId);
+                const draggedNode = this.editor.nodes.find(n => n.nodeId === draggedNodeId);
+
+                // If same tier -> merge into group
+                if (targetNode && draggedNode && targetNode.levelId === draggedNode.levelId) {
+                    targetCard.classList.add('is-drop-target-merge');
+                    this.dragState.target = {
+                        action: 'merge-nodes',
+                        sourceNodeId: draggedNodeId,
+                        targetId: targetNodeId,
+                    };
+                    this.setAvatarBadge('merge_type', wt('se.dnd_merge_nodes', 'Объединить узлы'));
+                    return;
+                } else if (targetNode) {
+                    // Different tier -> Re-parent under targetNode
+                    targetCard.classList.add('is-drop-target-parent');
+                    this.dragState.target = {
+                        action: 'reparent-node',
+                        sourceNodeId: draggedNodeId,
+                        targetId: targetNodeId,
+                    };
+                    this.setAvatarBadge('account_tree', wt('se.dnd_reparent_node', 'Сменить родителя'));
+                    return;
+                }
+            }
+        }
+
+        this.setAvatarBadge('account_tree', wt('se.display_mode_hierarchy_short', 'Узел'));
+    }
+
+    checkViewportAutoScroll(clientX, clientY) {
+        const vp = document.querySelector('#se-hierarchy-viewport');
+        if (!vp) return;
+        const rect = vp.getBoundingClientRect();
+        const threshold = 45;
+        let dx = 0;
+        let dy = 0;
+
+        if (clientX < rect.left + threshold) {
+            dx = -Math.round(14 * ((rect.left + threshold - clientX) / threshold));
+        } else if (clientX > rect.right - threshold) {
+            dx = Math.round(14 * ((clientX - (rect.right - threshold)) / threshold));
+        }
+
+        if (clientY < rect.top + threshold) {
+            dy = -Math.round(14 * ((rect.top + threshold - clientY) / threshold));
+        } else if (clientY > rect.bottom - threshold) {
+            dy = Math.round(14 * ((clientY - (rect.bottom - threshold)) / threshold));
+        }
+
+        if (dx !== 0 || dy !== 0) {
+            vp.scrollLeft += dx;
+            vp.scrollTop += dy;
+            this.editor.updateHierarchyMinimap();
+        }
+    }
+
+    onPointerUp() {
+        if (!this.dragState) return;
+
+        const { isDragging, target } = this.dragState;
+        this.cleanupDrag();
+
+        if (isDragging && target && target.action) {
+            this.executeDropAction(target);
+        }
+    }
+
+    onPointerCancel() {
+        this.cleanupDrag();
+    }
+
+    cleanupDrag() {
+        window.removeEventListener('pointermove', this._onPointerMove);
+        window.removeEventListener('pointerup', this._onPointerUp);
+        window.removeEventListener('pointercancel', this._onPointerCancel);
+
+        if (this.dragAvatar) {
+            this.dragAvatar.remove();
+            this.dragAvatar = null;
+        }
+
+        if (this.dragState) {
+            this.dragState.originRow?.classList.remove('is-dragging');
+            this.dragState.originCard?.classList.remove('is-dragging');
+            this.dragState = null;
+        }
+
+        this.clearDropHighlights();
+    }
+
+    executeDropAction(target) {
+        if (!target || !this.editor) return;
+
+        switch (target.action) {
+            case 'reorder-item':
+                this.editor.reorderItemInNode(target.nodeId, target.fromIdx, target.toIdx);
+                break;
+            case 'move-to-group':
+                this.editor.moveItemBetweenNodes(target.sourceNodeId, target.sourceItemIdx, target.targetNodeId, target.targetItemIdx);
+                break;
+            case 'extract-child':
+                this.editor.extractItemToNewNode(target.sourceNodeId, target.sourceItemIdx, 'child');
+                break;
+            case 'extract-sibling':
+                this.editor.extractItemToNewNode(target.sourceNodeId, target.sourceItemIdx, 'sibling');
+                break;
+            case 'merge-nodes':
+                this.editor.reparentOrMergeNode(target.sourceNodeId, target.targetId, 'merge');
+                break;
+            case 'reparent-node':
+                this.editor.reparentOrMergeNode(target.sourceNodeId, target.targetId, 'reparent');
+                break;
+        }
+    }
+}
+
 class SequenceEditor extends BaseEditor {
     constructor() {
         super(); // Call BaseEditor constructor
@@ -177,28 +565,18 @@ class SequenceEditor extends BaseEditor {
                     currentTierNodes.push(n);
                 });
             } else {
-                if (prevTierNodes.length > 0 && levelItems.length === prevTierNodes.length) {
-                    levelItems.forEach((item, idx) => {
-                        const n = this.createEmptyNode({
-                            levelId: level.levelId,
-                            parentId: prevTierNodes[idx].nodeId,
-                            items: [{ ...item }]
-                        });
-                        builtNodes.push(n);
-                        currentTierNodes.push(n);
+                levelItems.forEach((item, idx) => {
+                    const parentNode = prevTierNodes.length > 0
+                        ? prevTierNodes[idx % prevTierNodes.length]
+                        : null;
+                    const n = this.createEmptyNode({
+                        levelId: level.levelId,
+                        parentId: parentNode ? parentNode.nodeId : null,
+                        items: [{ ...item }]
                     });
-                } else {
-                    const parentNode = prevTierNodes[0] || null;
-                    levelItems.forEach((item) => {
-                        const n = this.createEmptyNode({
-                            levelId: level.levelId,
-                            parentId: parentNode ? parentNode.nodeId : null,
-                            items: [{ ...item }]
-                        });
-                        builtNodes.push(n);
-                        currentTierNodes.push(n);
-                    });
-                }
+                    builtNodes.push(n);
+                    currentTierNodes.push(n);
+                });
             }
             prevTierNodes = currentTierNodes;
         });
@@ -1047,13 +1425,21 @@ class SequenceEditor extends BaseEditor {
         }
     }
 
+    isTautologicalTitle(title, index) {
+        if (!title) return true;
+        const s = String(title).trim();
+        if (!s) return true;
+        if (index != null && (s === String(index + 1) || s === `#${index + 1}`)) return true;
+        return /^(?:level|уровень|рівень|этап|етап|stage|группа|група|group)[_\s-]*\d+$/i.test(s);
+    }
+
     parseLevels(content) {
         const levels = [];
         const elements = Array.isArray(content.elements) ? content.elements : [];
         const elementsById = new Map(elements.map(el => [el.id, el]));
 
         if (Array.isArray(content.levels) && content.levels.length) {
-            content.levels.forEach(level => {
+            content.levels.forEach((level, idx) => {
                 const items = (level.blocks || []).map(blockId => {
                     const element = elementsById.get(blockId) || {};
                     return {
@@ -1064,14 +1450,17 @@ class SequenceEditor extends BaseEditor {
                     };
                 });
 
+                const rawTitle = String(level.level_name || "").trim();
+                const cleanTitle = this.isTautologicalTitle(rawTitle, idx) ? "" : rawTitle;
+
                 levels.push({
                     levelId: level.level_id || this.generateId("level"),
-                    title: level.level_name || "",
+                    title: cleanTitle,
                     items: items.length ? items : [this.createEmptyItem()]
                 });
             });
         } else if (Array.isArray(content.sequence) && content.sequence.length) {
-            content.sequence.forEach(level => {
+            content.sequence.forEach((level, idx) => {
                 const items = (level.items || []).map(item => ({
                     id: item.id || this.generateId("elem"),
                     label: item.label || "",
@@ -1079,9 +1468,12 @@ class SequenceEditor extends BaseEditor {
                     semanticKey: item.semantic_key || item.semanticKey || null
                 }));
 
+                const rawSeqTitle = String(level.title || "").trim();
+                const cleanSeqTitle = this.isTautologicalTitle(rawSeqTitle, idx) ? "" : rawSeqTitle;
+
                 levels.push({
                     levelId: level.level_id || this.generateId("level"),
-                    title: level.title || "",
+                    title: cleanSeqTitle,
                     items: items.length ? items : [this.createEmptyItem()]
                 });
             });
@@ -1241,6 +1633,7 @@ class SequenceEditor extends BaseEditor {
             }
         } else {
             this.syncLevelsFromNodes();
+            this.nodes = [];
             this.displayMode = 'linear';
         }
         this.updateDisplayModeControls(false);
@@ -1752,7 +2145,7 @@ class SequenceEditor extends BaseEditor {
             const rightBtn = colHeaderWrap.querySelector('.move-col-right');
             if (rightBtn) rightBtn.onclick = () => this.moveNodeSibling(rootNode.nodeId, 1);
             const delBtn = colHeaderWrap.querySelector('.delete-col');
-            if (delBtn) delBtn.onclick = () => this.deleteNode(rootNode.nodeId);
+            if (delBtn) delBtn.onclick = () => void this.deleteNode(rootNode.nodeId);
 
             grid.appendChild(colHeaderWrap);
         });
@@ -1931,7 +2324,17 @@ class SequenceEditor extends BaseEditor {
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
 
+        if (this._hierarchyDnDController) {
+            this._hierarchyDnDController.destroy();
+        }
+        this._hierarchyDnDController = new HierarchyDnDController(this);
+        this._hierarchyDnDController.init(viewport);
+
         this._hierarchyWindowCleanup = () => {
+            if (this._hierarchyDnDController) {
+                this._hierarchyDnDController.destroy();
+                this._hierarchyDnDController = null;
+            }
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
             window.removeEventListener('mousemove', onMouseMove);
@@ -1984,17 +2387,32 @@ class SequenceEditor extends BaseEditor {
         }
     }
 
+    bindNodeItemInputKeyboard(textarea, nodeId) {
+        if (!textarea) return;
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                this.flushPendingHistorySave();
+                this.addItemToNode(nodeId);
+            } else if (e.key === 'ArrowDown' && e.altKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.flushPendingHistorySave();
+                this.addChildNode(nodeId);
+            }
+        });
+    }
+
     createHierarchyNodeCard(nodeLayout, lIndex, nIdx, layout) {
         const { node, hasChildren, siblingIndex, siblingCount } = nodeLayout;
         const card = document.createElement('div');
-        const isLeafGroup = !hasChildren && node.items.length > 1;
+        const isNodeGroup = Array.isArray(node.items) && node.items.length > 1;
         const isNewNode = this._lastCreatedNodeId && this._lastCreatedNodeId === node.nodeId;
         const rootIdx = nodeLayout.rootIndex ?? 0;
         const rootNode = layout.rootNodes[rootIdx] || null;
         const rootColTitle = (rootNode && rootNode.columnTitle ? rootNode.columnTitle : '').trim();
         const romanNum = this.toRoman(rootIdx + 1);
 
-        card.className = `se-node-card sequence-block-card${isLeafGroup ? ' is-leaf-group' : ''}${isNewNode ? ' is-new-node' : ''}`;
+        card.className = `se-node-card sequence-block-card${isNodeGroup ? ' is-node-group is-leaf-group' : ''}${isNewNode ? ' is-new-node' : ''}`;
         card.setAttribute('data-node-id', node.nodeId);
         card.setAttribute('data-level-id', node.levelId);
         card.setAttribute('data-col-idx', String(rootIdx));
@@ -2027,7 +2445,7 @@ class SequenceEditor extends BaseEditor {
         const canMoveRight = siblingIndex < siblingCount - 1;
         const canDeleteNode = !(lIndex === 0 && layout.rootNodes.length <= 1);
 
-        const groupBadgeHtml = isLeafGroup
+        const groupBadgeHtml = isNodeGroup
             ? `<span class="se-node-group-badge"><span class="material-symbols-outlined text-[12px]">layers</span>${wt('se.leaf_group_badge', 'Группа ({count})').replace('{count}', node.items.length)}</span>`
             : '';
 
@@ -2043,6 +2461,7 @@ class SequenceEditor extends BaseEditor {
         card.innerHTML = `
             <div class="se-node-header">
                 <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="se-node-drag-handle" data-i18n-title="se.drag_node_hint" title="${wt('se.drag_node_hint', 'Потяните узел для слияния или смены ветки')}"><span class="material-symbols-outlined text-[15px]">drag_indicator</span></span>
                     <span class="se-node-badge">${badgeLabel}</span>
                     ${colTagHtml}
                     ${groupBadgeHtml}
@@ -2054,31 +2473,25 @@ class SequenceEditor extends BaseEditor {
                 </div>
             </div>
             <div class="se-node-items-list"></div>
+            <button type="button" class="add-node-item-btn se-node-add-item-btn" data-i18n-title="se.btn_add_group_item_title" title="${wt('se.btn_add_group_item_title', 'Добавить ещё один элемент в этот контейнер (Enter)')}">
+                <span class="material-symbols-outlined">add</span>
+                <span data-i18n="se.btn_add_group_item">${wt('se.btn_add_group_item', '+ Элемент в группу')}</span>
+            </button>
             <div class="se-node-footer">
-                <div class="se-node-footer-group flex items-center min-w-0">
-                    ${!hasChildren ? `
-                        <button type="button" class="add-node-item-btn se-node-action-btn" data-i18n-title="se.btn_add_group_item_title" title="${wt('se.btn_add_group_item_title', 'Добавить ещё один элемент в этот листовой контейнер (Enter)')}">
-                            <span class="material-symbols-outlined">playlist_add</span>
-                            <span data-i18n="se.btn_add_group_item">${wt('se.btn_add_group_item', '+ Элемент')}</span>
-                        </button>
-                    ` : ''}
-                </div>
-                <div class="se-node-footer-branch flex items-center gap-1 shrink-0">
-                    <button type="button" class="add-child-node-btn se-node-action-btn se-node-action-btn--primary" data-i18n-title="se.btn_add_child_branch_title" title="${wt('se.btn_add_child_branch_title', 'Создать блок на следующем уровне (Alt+↓)')}">
-                        <span class="material-symbols-outlined">south</span>
-                        <span data-i18n="se.btn_add_child_branch">${wt('se.btn_add_child_branch', '+ Уровень')}</span>
-                    </button>
-                    <button type="button" class="add-sibling-node-btn se-node-action-btn" data-i18n-title="se.btn_add_sibling_branch_title" title="${wt('se.btn_add_sibling_branch_title', 'Создать блок в следующей колонке')}">
-                        <span class="material-symbols-outlined">east</span>
-                        <span data-i18n="se.btn_add_sibling_branch">${wt('se.btn_add_sibling_branch', '+ Колонка')}</span>
-                    </button>
-                </div>
+                <button type="button" class="add-child-node-btn se-node-action-btn se-node-action-btn--primary" data-i18n-title="se.btn_add_child_branch_title" title="${wt('se.btn_add_child_branch_title', 'Создать дочерний узел на следующем этаже (Alt+↓)')}">
+                    <span class="material-symbols-outlined">south</span>
+                    <span data-i18n="se.btn_add_child_branch">${wt('se.btn_add_child_branch', '+ Ветка ниже')}</span>
+                </button>
+                <button type="button" class="add-sibling-node-btn se-node-action-btn" data-i18n-title="se.btn_add_sibling_branch_title" title="${wt('se.btn_add_sibling_branch_title', 'Создать соседний узел справа у того же родителя')}">
+                    <span class="material-symbols-outlined">east</span>
+                    <span data-i18n="se.btn_add_sibling_branch">${wt('se.btn_add_sibling_branch', '+ Соседняя ветка')}</span>
+                </button>
             </div>
         `;
 
         card.querySelector('.move-node-left').onclick = () => this.moveNodeSibling(node.nodeId, -1);
         card.querySelector('.move-node-right').onclick = () => this.moveNodeSibling(node.nodeId, 1);
-        card.querySelector('.delete-node').onclick = () => this.deleteNode(node.nodeId);
+        card.querySelector('.delete-node').onclick = () => void this.deleteNode(node.nodeId);
 
         const addItemBtn = card.querySelector('.add-node-item-btn');
         if (addItemBtn) {
@@ -2091,11 +2504,16 @@ class SequenceEditor extends BaseEditor {
         node.items.forEach((item, iIdx) => {
             const itemRow = document.createElement('div');
             itemRow.className = 'se-node-item-row';
+            itemRow.setAttribute('data-node-id', node.nodeId);
+            itemRow.setAttribute('data-item-idx', String(iIdx));
             const showDeleteItem = node.items.length > 1;
 
             itemRow.innerHTML = `
+                <span class="se-item-drag-handle" data-i18n-title="se.drag_item_hint" title="${wt('se.drag_item_hint', 'Потяните для переноса или группировки')}">
+                    <span class="material-symbols-outlined text-[14px]">drag_indicator</span>
+                </span>
                 <textarea class="block-title-input sequence-block-title se-node-item-input"
-                          rows="2" data-min-height="36" data-i18n-placeholder="se.node_item_placeholder" placeholder="${wt('se.node_item_placeholder', 'Текст элемента или признака...')}"></textarea>
+                          rows="2" data-min-height="36" data-i18n-placeholder="se.node_item_placeholder" placeholder="${wt('se.node_item_placeholder', 'Текст элемента или признака')}"></textarea>
                 ${showDeleteItem ? `
                     <button type="button" class="delete-node-item" title="${wt('se.k014', 'Удалить элемент')}">
                         <span class="material-symbols-outlined text-[13px]">close</span>
@@ -2106,6 +2524,7 @@ class SequenceEditor extends BaseEditor {
             const textarea = itemRow.querySelector('.block-title-input');
             textarea.value = item.label || '';
             textarea.title = item.label || '';
+            this.bindNodeItemInputKeyboard(textarea, node.nodeId);
             textarea.oninput = (e) => {
                 item.label = e.target.value;
                 textarea.title = e.target.value;
@@ -2429,15 +2848,15 @@ class SequenceEditor extends BaseEditor {
 
     syncNodeCardGroupBadge(card, node) {
         if (!card || !node || !Array.isArray(node.items)) return;
-        const hasChildren = this.nodes.some(n => n.parentId === node.nodeId);
-        const isLeafGroup = !hasChildren && node.items.length > 1;
-        card.classList.toggle('is-leaf-group', isLeafGroup);
+        const isNodeGroup = node.items.length > 1;
+        card.classList.toggle('is-node-group', isNodeGroup);
+        card.classList.toggle('is-leaf-group', isNodeGroup);
 
         const badgeContainer = card.querySelector('.se-node-header .flex.items-center');
         if (!badgeContainer) return;
 
         let badge = badgeContainer.querySelector('.se-node-group-badge');
-        if (isLeafGroup) {
+        if (isNodeGroup) {
             const badgeText = wt('se.leaf_group_badge', 'Группа ({count})').replace('{count}', node.items.length);
             if (badge) {
                 badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">layers</span>${badgeText}`;
@@ -2679,22 +3098,7 @@ class SequenceEditor extends BaseEditor {
         this.checkpointHistoryBeforeMutation();
         const prevRects = this.captureHierarchyNodeRects();
 
-        let splitHappened = false;
-        // Variant B rule: if parentNode had multiple items in a leaf container-group,
-        // automatically split items[1..K-1] into sibling nodes on the same tier before branching!
-        if (Array.isArray(parentNode.items) && parentNode.items.length > 1) {
-            const extraItems = parentNode.items.splice(1);
-            const parentIdx = this.nodes.indexOf(parentNode);
-            extraItems.forEach((extraItem, offset) => {
-                const splitSibling = this.createEmptyNode({
-                    levelId: parentNode.levelId,
-                    parentId: parentNode.parentId || null,
-                    items: [extraItem],
-                });
-                this.nodes.splice(parentIdx + 1 + offset, 0, splitSibling);
-            });
-            splitHappened = true;
-        }
+        // Parent node preserves all its items without destructive splitting
 
         const currentTierIdx = this.levels.findIndex(l => l.levelId === parentNode.levelId);
         const nextTierIdx = currentTierIdx >= 0 ? currentTierIdx + 1 : this.levels.length;
@@ -2717,25 +3121,12 @@ class SequenceEditor extends BaseEditor {
         this.markUnsaved();
         this.saveStateToHistory();
 
-        if (splitHappened) {
-            this.showToast(
-                wt('se.node_split_notice', 'Группа разделена на отдельные узлы для ветвления'),
-                'info'
-            );
-        }
+
     }
 
     addItemToNode(nodeId) {
         const node = this.nodes.find(n => n.nodeId === nodeId);
         if (!node) return;
-        const hasChildren = this.nodes.some(n => n.parentId === nodeId);
-        if (hasChildren) {
-            this.showToast(
-                wt('se.btn_add_group_item_title', 'Добавить элемент в конечную группу-список этого узла'),
-                'warning'
-            );
-            return;
-        }
         this.checkpointHistoryBeforeMutation();
         const newItem = this.createEmptyItem('');
         node.items.push(newItem);
@@ -2745,25 +3136,42 @@ class SequenceEditor extends BaseEditor {
         const itemsList = card?.querySelector('.se-node-items-list');
 
         if (itemsList && card) {
-            // If card previously had 1 item, it didn't have a delete button. Add it now.
+            // If card previously had 1 item, it didn't have a delete button or second-item handles. Add them now.
             if (node.items.length === 2) {
                 const firstRow = itemsList.children[0];
-                if (firstRow && !firstRow.querySelector('.delete-node-item')) {
-                    const delBtn = document.createElement('button');
-                    delBtn.type = 'button';
-                    delBtn.className = 'delete-node-item';
-                    delBtn.title = wt('se.k014', 'Удалить элемент');
-                    delBtn.innerHTML = '<span class="material-symbols-outlined text-[13px]">close</span>';
-                    delBtn.onclick = () => this.deleteItemFromNode(node.nodeId, 0);
-                    firstRow.appendChild(delBtn);
+                if (firstRow) {
+                    firstRow.setAttribute('data-node-id', node.nodeId);
+                    firstRow.setAttribute('data-item-idx', '0');
+                    if (!firstRow.querySelector('.se-item-drag-handle')) {
+                        const handle = document.createElement('span');
+                        handle.className = 'se-item-drag-handle';
+                        handle.setAttribute('data-i18n-title', 'se.drag_item_hint');
+                        handle.title = wt('se.drag_item_hint', 'Потяните для переноса или группировки');
+                        handle.innerHTML = '<span class="material-symbols-outlined text-[14px]">drag_indicator</span>';
+                        firstRow.insertBefore(handle, firstRow.firstChild);
+                    }
+                    if (!firstRow.querySelector('.delete-node-item')) {
+                        const delBtn = document.createElement('button');
+                        delBtn.type = 'button';
+                        delBtn.className = 'delete-node-item';
+                        delBtn.title = wt('se.k014', 'Удалить элемент');
+                        delBtn.innerHTML = '<span class="material-symbols-outlined text-[13px]">close</span>';
+                        delBtn.onclick = () => this.deleteItemFromNode(node.nodeId, 0);
+                        firstRow.appendChild(delBtn);
+                    }
                 }
             }
 
             const itemRow = document.createElement('div');
             itemRow.className = 'se-node-item-row se-node-item-row--entering';
+            itemRow.setAttribute('data-node-id', node.nodeId);
+            itemRow.setAttribute('data-item-idx', String(itemIdx));
             itemRow.innerHTML = `
+                <span class="se-item-drag-handle" data-i18n-title="se.drag_item_hint" title="${wt('se.drag_item_hint', 'Потяните для переноса или группировки')}">
+                    <span class="material-symbols-outlined text-[14px]">drag_indicator</span>
+                </span>
                 <textarea class="block-title-input sequence-block-title se-node-item-input"
-                          rows="2" data-min-height="36" data-i18n-placeholder="se.node_item_placeholder" placeholder="${wt('se.node_item_placeholder', 'Текст элемента или признака...')}"></textarea>
+                          rows="2" data-min-height="36" data-i18n-placeholder="se.node_item_placeholder" placeholder="${wt('se.node_item_placeholder', 'Текст элемента или признака')}"></textarea>
                 <button type="button" class="delete-node-item" title="${wt('se.k014', 'Удалить элемент')}">
                     <span class="material-symbols-outlined text-[13px]">close</span>
                 </button>
@@ -2772,6 +3180,7 @@ class SequenceEditor extends BaseEditor {
             const textarea = itemRow.querySelector('.block-title-input');
             textarea.value = newItem.label || '';
             textarea.title = newItem.label || '';
+            this.bindNodeItemInputKeyboard(textarea, node.nodeId);
             textarea.oninput = (e) => {
                 newItem.label = e.target.value;
                 textarea.title = e.target.value;
@@ -2798,6 +3207,8 @@ class SequenceEditor extends BaseEditor {
 
             this.syncNodeCardGroupBadge(card, node);
             this.trackConnectorAnimation(220);
+            this.renderHierarchyConnectors();
+            this.updateHierarchyMinimap();
 
             setTimeout(() => {
                 itemRow.classList.remove('se-node-item-row--entering');
@@ -2839,6 +3250,8 @@ class SequenceEditor extends BaseEditor {
                 targetRow.remove();
                 if (itemsList) {
                     Array.from(itemsList.children).forEach((row, newIdx) => {
+                        row.setAttribute('data-node-id', node.nodeId);
+                        row.setAttribute('data-item-idx', String(newIdx));
                         const delBtn = row.querySelector('.delete-node-item');
                         if (delBtn) {
                             delBtn.onclick = () => this.deleteItemFromNode(node.nodeId, newIdx);
@@ -2865,7 +3278,7 @@ class SequenceEditor extends BaseEditor {
         }
     }
 
-    deleteNode(nodeId) {
+    async deleteNode(nodeId) {
         const target = this.nodes.find(n => n.nodeId === nodeId);
         if (!target) return;
         const roots = this.nodes.filter(n => !n.parentId);
@@ -2874,7 +3287,6 @@ class SequenceEditor extends BaseEditor {
             return;
         }
 
-        this.checkpointHistoryBeforeMutation();
         const toDelete = new Set([nodeId]);
         let added = true;
         while (added) {
@@ -2886,6 +3298,22 @@ class SequenceEditor extends BaseEditor {
                 }
             });
         }
+
+        if (toDelete.size > 1) {
+            const childBranchesCount = toDelete.size - 1;
+            const message = wt('se.delete_subtree_confirm', 'Удалить этот узел вместе со всеми дочерними ветками ({count})?')
+                .replace('{count}', childBranchesCount);
+            const confirmed = await this.confirmAction({
+                title: wt('se.delete_node_title', 'Удалить узел'),
+                message,
+                confirmText: wt('editor_base.modal.delete_btn', 'Удалить'),
+                cancelText: wt('editor_base.modal.cancel_btn', 'Отмена'),
+                variant: 'danger',
+            });
+            if (!confirmed) return;
+        }
+
+        this.checkpointHistoryBeforeMutation();
 
         const cardsToDelete = Array.from(toDelete).map(id => document.querySelector(`.se-node-card[data-node-id="${id}"]`)).filter(Boolean);
         const executeDelete = () => {
@@ -2907,13 +3335,19 @@ class SequenceEditor extends BaseEditor {
             this.saveStateToHistory();
         };
 
-        if (cardsToDelete.length > 0) {
-            cardsToDelete.forEach(c => c.classList.add('se-node-card--exiting'));
-            this.trackConnectorAnimation(180);
-            setTimeout(executeDelete, 180);
-        } else {
-            executeDelete();
-        }
+        return new Promise((resolve) => {
+            if (cardsToDelete.length > 0) {
+                cardsToDelete.forEach(c => c.classList.add('se-node-card--exiting'));
+                this.trackConnectorAnimation(180);
+                setTimeout(() => {
+                    executeDelete();
+                    resolve();
+                }, 180);
+            } else {
+                executeDelete();
+                resolve();
+            }
+        });
     }
 
     moveNodeSibling(nodeId, direction) {
@@ -2938,6 +3372,193 @@ class SequenceEditor extends BaseEditor {
         this.renderLevels();
         this.markUnsaved();
         this.saveStateToHistory();
+    }
+
+    reorderItemInNode(nodeId, fromIdx, toIdx) {
+        const node = this.nodes.find(n => n.nodeId === nodeId);
+        if (!node || !Array.isArray(node.items)) return false;
+        if (fromIdx < 0 || fromIdx >= node.items.length) return false;
+        if (toIdx < 0 || toIdx >= node.items.length) return false;
+        if (fromIdx === toIdx) return false;
+
+        this.checkpointHistoryBeforeMutation();
+        const prevRects = this.captureHierarchyNodeRects();
+
+        const [item] = node.items.splice(fromIdx, 1);
+        node.items.splice(toIdx, 0, item);
+
+        this.syncLevelsFromNodes();
+        this.renderLevels();
+        this.animateHierarchyFLIP(prevRects);
+        this.markUnsaved();
+        this.saveStateToHistory();
+        return true;
+    }
+
+    moveItemBetweenNodes(sourceNodeId, itemIdx, targetNodeId, targetIdx = -1) {
+        const sourceNode = this.nodes.find(n => n.nodeId === sourceNodeId);
+        const targetNode = this.nodes.find(n => n.nodeId === targetNodeId);
+        if (!sourceNode || !targetNode || sourceNodeId === targetNodeId) return false;
+        if (!Array.isArray(sourceNode.items) || itemIdx < 0 || itemIdx >= sourceNode.items.length) return false;
+        if (!Array.isArray(targetNode.items)) targetNode.items = [];
+
+        this.checkpointHistoryBeforeMutation();
+        const prevRects = this.captureHierarchyNodeRects();
+
+        const [item] = sourceNode.items.splice(itemIdx, 1);
+        if (targetIdx >= 0 && targetIdx <= targetNode.items.length) {
+            targetNode.items.splice(targetIdx, 0, item);
+        } else {
+            targetNode.items.push(item);
+        }
+
+        // Smart cleanup if sourceNode became empty:
+        if (sourceNode.items.length === 0) {
+            this.nodes.forEach(n => {
+                if (n.parentId === sourceNodeId) {
+                    n.parentId = targetNodeId;
+                }
+            });
+            if (sourceNode.columnTitle && !targetNode.columnTitle) {
+                targetNode.columnTitle = sourceNode.columnTitle;
+            }
+            this.nodes = this.nodes.filter(n => n.nodeId !== sourceNodeId);
+        }
+
+        this.syncLevelsFromNodes();
+        this.renderLevels();
+        this.animateHierarchyFLIP(prevRects);
+        this.markUnsaved();
+        this.saveStateToHistory();
+        return true;
+    }
+
+    extractItemToNewNode(sourceNodeId, itemIdx, mode = 'sibling') {
+        const sourceNode = this.nodes.find(n => n.nodeId === sourceNodeId);
+        if (!sourceNode || !Array.isArray(sourceNode.items) || sourceNode.items.length <= 1) return false;
+        if (itemIdx < 0 || itemIdx >= sourceNode.items.length) return false;
+
+        this.checkpointHistoryBeforeMutation();
+        const prevRects = this.captureHierarchyNodeRects();
+
+        const [item] = sourceNode.items.splice(itemIdx, 1);
+
+        let targetLevelId = sourceNode.levelId;
+        let targetParentId = sourceNode.parentId;
+
+        if (mode === 'child') {
+            targetParentId = sourceNode.nodeId;
+            const currentTierIdx = this.levels.findIndex(l => l.levelId === sourceNode.levelId);
+            const nextTierIdx = currentTierIdx >= 0 ? currentTierIdx + 1 : this.levels.length;
+            if (nextTierIdx >= this.levels.length) {
+                const newLevel = this.addLevel();
+                targetLevelId = newLevel.levelId;
+            } else {
+                targetLevelId = this.levels[nextTierIdx].levelId;
+            }
+        }
+
+        const newNode = this.createEmptyNode({
+            levelId: targetLevelId,
+            parentId: targetParentId,
+            items: [item]
+        });
+
+        const sIdx = this.nodes.findIndex(n => n.nodeId === sourceNodeId);
+        if (sIdx >= 0) {
+            this.nodes.splice(sIdx + 1, 0, newNode);
+        } else {
+            this.nodes.push(newNode);
+        }
+
+        this._lastCreatedNodeId = newNode.nodeId;
+
+        this.syncLevelsFromNodes();
+        this.renderLevels();
+        this.animateHierarchyFLIP(prevRects);
+        this.markUnsaved();
+        this.saveStateToHistory();
+        return true;
+    }
+
+    reparentOrMergeNode(draggedNodeId, targetId, mode = 'merge') {
+        const draggedNode = this.nodes.find(n => n.nodeId === draggedNodeId);
+        if (!draggedNode) return false;
+
+        const isDescendant = (candidateId, rootId) => {
+            let curr = this.nodes.find(n => n.nodeId === candidateId);
+            const visited = new Set();
+            while (curr && curr.parentId) {
+                if (curr.parentId === rootId) return true;
+                if (visited.has(curr.parentId)) break;
+                visited.add(curr.parentId);
+                curr = this.nodes.find(n => n.nodeId === curr.parentId);
+            }
+            return false;
+        };
+
+        if (draggedNodeId === targetId || isDescendant(targetId, draggedNodeId)) {
+            return false;
+        }
+
+        this.checkpointHistoryBeforeMutation();
+        const prevRects = this.captureHierarchyNodeRects();
+
+        if (mode === 'merge') {
+            const targetNode = this.nodes.find(n => n.nodeId === targetId);
+            if (!targetNode) return false;
+
+            if (!Array.isArray(targetNode.items)) targetNode.items = [];
+            targetNode.items.push(...draggedNode.items);
+
+            this.nodes.forEach(n => {
+                if (n.parentId === draggedNodeId) {
+                    n.parentId = targetId;
+                }
+            });
+
+            if (draggedNode.columnTitle && !targetNode.columnTitle) {
+                targetNode.columnTitle = draggedNode.columnTitle;
+            }
+
+            this.nodes = this.nodes.filter(n => n.nodeId !== draggedNodeId);
+        } else if (mode === 'reparent') {
+            const targetParent = targetId ? this.nodes.find(n => n.nodeId === targetId) : null;
+            draggedNode.parentId = targetParent ? targetParent.nodeId : null;
+
+            let childTier = 0;
+            if (targetParent) {
+                const pTier = this.levels.findIndex(l => l.levelId === targetParent.levelId);
+                childTier = pTier >= 0 ? pTier + 1 : 0;
+            }
+
+            while (this.levels.length <= childTier) {
+                this.addLevel();
+            }
+            draggedNode.levelId = this.levels[childTier].levelId;
+
+            const updateDescendants = (parentId, parentTier) => {
+                const children = this.nodes.filter(n => n.parentId === parentId);
+                if (!children.length) return;
+                const nextTier = parentTier + 1;
+                while (this.levels.length <= nextTier) {
+                    this.addLevel();
+                }
+                const levId = this.levels[nextTier].levelId;
+                children.forEach(child => {
+                    child.levelId = levId;
+                    updateDescendants(child.nodeId, nextTier);
+                });
+            };
+            updateDescendants(draggedNode.nodeId, childTier);
+        }
+
+        this.syncLevelsFromNodes();
+        this.renderLevels();
+        this.animateHierarchyFLIP(prevRects);
+        this.markUnsaved();
+        this.saveStateToHistory();
+        return true;
     }
 
     expandBlock(card) {
@@ -3615,7 +4236,7 @@ class SequenceEditor extends BaseEditor {
         }
         const elementMap = new Map();
 
-        const normalizedLevels = this.levels.map(level => {
+        const normalizedLevels = this.levels.map((level, index) => {
             const levelId = level.levelId || this.generateId("level");
             level.levelId = levelId;
 
@@ -3648,14 +4269,18 @@ class SequenceEditor extends BaseEditor {
             return normalizedLevel;
         });
 
-        const legacySequence = this.levels.map(level => ({
-            level_id: level.levelId,
-            title: level.title || "",
-            items: level.items.map(item => ({
-                id: item.id,
-                label: item.label || ""
-            }))
-        }));
+        const legacySequence = this.levels.map((level, idx) => {
+            const rawTitle = (level.title || "").trim();
+            const title = this.isTautologicalTitle(rawTitle, idx) ? "" : rawTitle;
+            return {
+                level_id: level.levelId,
+                title: title,
+                items: level.items.map(item => ({
+                    id: item.id,
+                    label: item.label || ""
+                }))
+            };
+        });
 
         const normalizedNodes = (this.displayMode === 'hierarchy' && Array.isArray(this.nodes))
             ? this.nodes.map((node) => {

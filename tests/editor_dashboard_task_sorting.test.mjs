@@ -267,8 +267,12 @@ describe("EditorDashboard Task Sorting by Modification Date", () => {
     };
 
     const card = dashboard.createTaskCard(taskWithEdit);
-    const dateText = card.querySelector("p.text-text-secondary")?.textContent || "";
-    expect(dateText).toContain("Создано");
+    const dateEl = card.querySelector(".tabular-nums");
+    expect(dateEl).not.toBeNull();
+    const dateText = dateEl.textContent || "";
+    const dateTitle = dateEl.getAttribute("title") || "";
     expect(dateText).toContain("Изм.");
+    expect(dateTitle).toContain("Создано");
+    expect(dateTitle).toContain("Изм.");
   });
 });

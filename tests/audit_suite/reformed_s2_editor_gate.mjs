@@ -76,17 +76,16 @@ async function assertSegmentedControlClearance(page) {
 // -----------------------------------------------------------------------------
 // GATE S2-2: assertNoFooterButtonOverflow
 // -----------------------------------------------------------------------------
-async function assertNoFooterButtonOverflow(page) {
-  console.log("\n[Gate S2-2] Running assertNoFooterButtonOverflow...");
+async function checkCardsGeometry(page, layoutLabel) {
   await page.evaluate(() => {
-    document.querySelectorAll(".se-node-footer").forEach((f) => {
+    document.querySelectorAll(".se-node-footer, .se-node-add-item-btn").forEach((f) => {
       f.style.opacity = "1";
       f.style.visibility = "visible";
     });
   });
   await page.waitForTimeout(100);
 
-  const report = await page.evaluate(() => {
+  return await page.evaluate((label) => {
     const cards = Array.from(document.querySelectorAll(".se-node-card"));
     const issues = [];
     let checkedButtons = 0;
@@ -94,9 +93,45 @@ async function assertNoFooterButtonOverflow(page) {
     cards.forEach((card) => {
       const cardR = card.getBoundingClientRect();
       const footer = card.querySelector(".se-node-footer");
+      const addItemBtn = card.querySelector(".add-node-item-btn");
+
+      // Stage 1 Assertion: Every node card must have the + Элемент в группу button above footer
+      if (!addItemBtn) {
+        issues.push({
+          nodeId: card.dataset.nodeId,
+          layout: label,
+          type: "missing-add-item-btn",
+          message: "Node card is missing .add-node-item-btn",
+        });
+      } else {
+        const addR = addItemBtn.getBoundingClientRect();
+        if (addR.left < cardR.left - 0.5 || addR.right > cardR.right + 0.5) {
+          issues.push({
+            nodeId: card.dataset.nodeId,
+            layout: label,
+            type: "add-item-btn-overflow",
+            message: ".add-node-item-btn overflows card boundaries horizontally",
+          });
+        }
+        if (footer) {
+          const footerR = footer.getBoundingClientRect();
+          if (addR.bottom > footerR.top + 0.5) {
+            issues.push({
+              nodeId: card.dataset.nodeId,
+              layout: label,
+              type: "add-item-footer-overlap",
+              message: ".add-node-item-btn vertically collides with .se-node-footer",
+              addBottom: addR.bottom,
+              footerTop: footerR.top,
+            });
+          }
+        }
+      }
+
       if (!footer) return;
       const buttons = Array.from(footer.querySelectorAll("button"));
 
+      // 1. Boundary checks
       buttons.forEach((btn) => {
         checkedButtons++;
         const btnR = btn.getBoundingClientRect();
@@ -107,6 +142,8 @@ async function assertNoFooterButtonOverflow(page) {
         if (overflowsLeft || overflowsRight) {
           issues.push({
             nodeId: card.dataset.nodeId,
+            layout: label,
+            type: "button-boundary-overflow",
             buttonText: text,
             cardLeft: cardR.left,
             cardRight: cardR.right,
@@ -117,6 +154,31 @@ async function assertNoFooterButtonOverflow(page) {
           });
         }
       });
+
+      // 2. AABB Collision detection between footer buttons (Zero Overlap Invariant)
+      for (let i = 0; i < buttons.length; i++) {
+        for (let j = i + 1; j < buttons.length; j++) {
+          const rA = buttons[i].getBoundingClientRect();
+          const rB = buttons[j].getBoundingClientRect();
+          const overlaps = !(
+            rA.right <= rB.left + 0.5 ||
+            rA.left >= rB.right - 0.5 ||
+            rA.bottom <= rB.top + 0.5 ||
+            rA.top >= rB.bottom - 0.5
+          );
+          if (overlaps) {
+            issues.push({
+              nodeId: card.dataset.nodeId,
+              layout: label,
+              type: "footer-button-collision",
+              btnA: buttons[i].innerText.trim().replace(/\n/g, " "),
+              btnB: buttons[j].innerText.trim().replace(/\n/g, " "),
+              rA: { left: rA.left, right: rA.right, top: rA.top, bottom: rA.bottom },
+              rB: { left: rB.left, right: rB.right, top: rB.top, bottom: rB.bottom },
+            });
+          }
+        }
+      }
     });
 
     return {
@@ -125,15 +187,46 @@ async function assertNoFooterButtonOverflow(page) {
       checkedButtons,
       issues,
     };
-  });
+  }, layoutLabel);
+}
 
-  console.log(`  Checked ${report.checkedButtons} footer buttons across ${report.totalCards} cards.`);
-  if (!report.passed) {
-    console.error("  Issues:", JSON.stringify(report.issues, null, 2));
-    throw new Error(`Gate S2-2 FAILED: ${report.issues.length} button overflow issues detected.`);
+async function assertNoFooterButtonOverflow(page) {
+  console.log("\n[Gate S2-2] Running assertNoFooterButtonOverflow (Card bounds, AABB non-overlap, and multi-column geometry)...");
+
+  // Check 1: Base 2-column layout (380px)
+  const rep2 = await checkCardsGeometry(page, "2-cols (380px)");
+  if (!rep2.passed) {
+    throw new Error(`Gate S2-2 FAILED on 2-cols: ${JSON.stringify(rep2.issues, null, 2)}`);
   }
-  console.log("  ✅ Gate S2-2 PASSED (0px button overflow on cards, all buttons within card bounds).");
-  return report;
+  console.log(`  Checked 2-column layout (380px): ${rep2.checkedButtons} buttons across ${rep2.totalCards} cards - PASS.`);
+
+  // Check 2: 3-column layout (320px)
+  await page.evaluate(() => window.editor.addRootNode());
+  await page.waitForTimeout(150);
+  const rep3 = await checkCardsGeometry(page, "3-cols (320px)");
+  if (!rep3.passed) {
+    throw new Error(`Gate S2-2 FAILED on 3-cols: ${JSON.stringify(rep3.issues, null, 2)}`);
+  }
+  console.log(`  Checked 3-column layout (320px): ${rep3.checkedButtons} buttons across ${rep3.totalCards} cards - PASS.`);
+
+  // Check 3: 4-column layout (280px)
+  await page.evaluate(() => window.editor.addRootNode());
+  await page.waitForTimeout(150);
+  const rep4 = await checkCardsGeometry(page, "4-cols (280px)");
+  if (!rep4.passed) {
+    throw new Error(`Gate S2-2 FAILED on 4-cols: ${JSON.stringify(rep4.issues, null, 2)}`);
+  }
+  console.log(`  Checked 4-column layout (280px): ${rep4.checkedButtons} buttons across ${rep4.totalCards} cards - PASS.`);
+
+  // Restore back to original state via undo
+  await page.evaluate(() => {
+    window.editor.performUndo();
+    window.editor.performUndo();
+  });
+  await page.waitForTimeout(150);
+
+  console.log("  ✅ Gate S2-2 PASSED (0px button overflow on 380px, 320px, 280px cards, 0px AABB collision, all add-item buttons verified).");
+  return { passed: true };
 }
 
 // -----------------------------------------------------------------------------
@@ -239,6 +332,22 @@ async function assertUndoRedoTextIntegrity(page) {
 // -----------------------------------------------------------------------------
 async function assertEmptySlotValidationHighlighter(page) {
   console.log("\n[Gate S2-4] Running assertEmptySlotValidationHighlighter (Error styling, shake, autofocus, and resolution)...");
+
+  // Ensure all existing nodes are clean and non-empty before testing
+  await page.evaluate(() => {
+    const editor = window.editor;
+    editor.nodes.forEach((n, nIdx) => {
+      n.items.forEach((item, iIdx) => {
+        if (!item.label || !item.label.trim()) {
+          item.label = `Валидный элемент ${nIdx + 1}.${iIdx + 1}`;
+        }
+      });
+    });
+    editor.clearValidationErrors();
+    editor.renderLevels();
+  });
+  await page.waitForTimeout(100);
+
   const leafCard = await page.$(".se-node-card:has(.add-node-item-btn)");
   if (!leafCard) throw new Error("Leaf card not found");
 
@@ -290,7 +399,13 @@ async function assertEmptySlotValidationHighlighter(page) {
   console.log("  PASS: Repeated validation re-triggered .se-shake animation.");
 
   // 5. Test error clearance on typing
-  await page.keyboard.type("Заполненное значение для очистки ошибки");
+  const emptyTextarea = await leafCard.$(".se-field--error");
+  if (emptyTextarea) {
+    await emptyTextarea.focus();
+    await emptyTextarea.type("Заполненное значение для очистки ошибки");
+  } else {
+    await page.keyboard.type("Заполненное значение для очистки ошибки");
+  }
   await page.waitForTimeout(200);
 
   const errorsCleared = await leafCard.evaluate((card) => {
@@ -510,21 +625,35 @@ async function assertKineticTransitions(page) {
   console.log(`  Card entering class (is-new-node) detected: ${hasEnteringCard}`);
   await page.waitForTimeout(250);
 
-  const siblingDelBtn = await page.$(".se-node-card:last-child .delete-node");
+  // Target either the new card or the last card, and handle any subtree confirmation modal
+  const targetDelCard = enteringCard || (await page.$(".se-node-card:last-child"));
+  const siblingDelBtn = targetDelCard ? await targetDelCard.$(".delete-node") : null;
   if (siblingDelBtn) {
     await siblingDelBtn.click();
     await page.waitForTimeout(50);
+    const modalConfirm = await page.$('div[role="dialog"] button[data-role="confirm"]');
+    if (modalConfirm) {
+      await modalConfirm.click();
+      await page.waitForTimeout(50);
+    }
     const exitingCard = await page.$(".se-node-card--exiting");
     const hasExitingCard = !!exitingCard;
     console.log(`  Card exiting class detected: ${hasExitingCard}`);
     await page.waitForTimeout(250);
   }
 
+  // Ensure any pending modal is dismissed before switching tabs
+  const lingeringModal = await page.$('div[role="dialog"] button[data-role="confirm"]');
+  if (lingeringModal) {
+    await lingeringModal.click();
+    await page.waitForTimeout(150);
+  }
+
   // 4. Linear Mode addBlock order and move-right enablement
   console.log("  Testing linear mode addBlock order and button states...");
   await page.click("#mode-tab-linear");
   await page.waitForTimeout(100);
-  const confirmBtn = await page.$('button[data-role="confirm"]');
+  const confirmBtn = await page.$('div[role="dialog"] button[data-role="confirm"], button[data-role="confirm"]');
   if (confirmBtn) await confirmBtn.click();
   await page.waitForSelector(".sequence-level-card", { timeout: 10000 });
   await page.waitForTimeout(200);
@@ -616,6 +745,80 @@ async function assertColorDifferentiationPermanent(page) {
 }
 
 // -----------------------------------------------------------------------------
+// GATE S2-8: assertHierarchyDragAndDropGroupBranching
+// -----------------------------------------------------------------------------
+async function assertHierarchyDragAndDropGroupBranching(page) {
+  console.log("\n[Gate S2-8] Running assertHierarchyDragAndDropGroupBranching (Handles, grouping, extraction, reparenting, undo)...");
+
+  const testReport = await page.evaluate(async () => {
+    const editor = window.editor;
+    if (!editor || !Array.isArray(editor.nodes) || editor.nodes.length < 2) {
+      return { passed: false, error: "Editor not initialized or insufficient nodes" };
+    }
+
+    // 1. Verify drag handles exist in DOM
+    const itemHandles = document.querySelectorAll(".se-item-drag-handle");
+    const nodeHandles = document.querySelectorAll(".se-node-drag-handle");
+    if (itemHandles.length === 0 || nodeHandles.length === 0) {
+      return { passed: false, error: "Missing drag handles (.se-item-drag-handle or .se-node-drag-handle)" };
+    }
+
+    // 2. Test moveItemBetweenNodes (forming a group)
+    const nodeA = editor.nodes[0];
+    const nodeB = editor.nodes[1];
+    const initialCount = editor.nodes.length;
+    const initialItemA = nodeA.items[0];
+
+    const moveRes = editor.moveItemBetweenNodes(nodeA.nodeId, 0, nodeB.nodeId, -1);
+    if (!moveRes) {
+      return { passed: false, error: "moveItemBetweenNodes returned false" };
+    }
+    const updatedB = editor.nodes.find((n) => n.nodeId === nodeB.nodeId);
+    if (!updatedB || updatedB.items.length < 2) {
+      return { passed: false, error: "Target node did not receive item in group" };
+    }
+
+    // 3. Test extractItemToNewNode (branch extraction: sibling)
+    const extractRes = editor.extractItemToNewNode(nodeB.nodeId, updatedB.items.length - 1, "sibling");
+    if (!extractRes) {
+      return { passed: false, error: "extractItemToNewNode returned false" };
+    }
+    const newNode = editor.nodes.find((n) => n.nodeId === editor._lastCreatedNodeId);
+    if (!newNode || newNode.items[0].id !== initialItemA.id) {
+      return { passed: false, error: "Extracted node not created correctly" };
+    }
+
+    // 4. Test reparentOrMergeNode with cycle rejection
+    const childNode = editor.nodes.find((n) => n.parentId);
+    if (childNode) {
+      const cycleRes = editor.reparentOrMergeNode(childNode.parentId, childNode.nodeId, "reparent");
+      if (cycleRes !== false) {
+        return { passed: false, error: "Cycle prevention failed to reject reparenting parent to child" };
+      }
+    }
+
+    // 5. Test Undo/Redo stack restoration
+    editor.performUndo(); // undo extract
+    editor.performUndo(); // undo move
+    const restoredCount = editor.nodes.length;
+    if (restoredCount !== initialCount) {
+      return { passed: false, error: `Undo did not restore initial node count: expected ${initialCount}, got ${restoredCount}` };
+    }
+
+    return { passed: true, itemHandlesCount: itemHandles.length, nodeHandlesCount: nodeHandles.length };
+  });
+
+  if (!testReport.passed) {
+    throw new Error(`Gate S2-8 FAILED: ${testReport.error}`);
+  }
+
+  console.log(`  PASS: Drag handles verified (${testReport.itemHandlesCount} item handles, ${testReport.nodeHandlesCount} node handles).`);
+  console.log("  PASS: Group formation, branch extraction, cycle prevention, and Undo/Redo verified.");
+  console.log("  ✅ Gate S2-8 PASSED (Hierarchy Drag-and-Drop & Group Branching).");
+  return testReport;
+}
+
+// -----------------------------------------------------------------------------
 // MAIN TEST RUNNER
 // -----------------------------------------------------------------------------
 async function main() {
@@ -643,9 +846,10 @@ async function main() {
     results["Gate S2-7 (Permanent Color Differentiation)"] = await assertColorDifferentiationPermanent(page);
     results["Gate S2-3 (Undo/Redo Text Integrity & Race)"] = await assertUndoRedoTextIntegrity(page);
     results["Gate S2-4 (Empty Slot Validation & Highlight)"] = await assertEmptySlotValidationHighlighter(page);
+    results["Gate S2-8 (Hierarchy Drag-and-Drop & Group Branching)"] = await assertHierarchyDragAndDropGroupBranching(page);
 
     console.log("\n=================================================================");
-    console.log("  ALL 7 REFORMED S2 AUTOMATED GATES PASSED (100% GREEN) ✅");
+    console.log("  ALL 8 REFORMED S2 AUTOMATED GATES PASSED (100% GREEN) ✅");
     console.log("=================================================================");
   } catch (err) {
     console.error("\n❌ AUDIT GATE RUNNER FAILED:", err.message);

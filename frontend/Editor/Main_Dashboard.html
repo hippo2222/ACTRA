@@ -168,10 +168,14 @@
         .editor-task-card-title {
             display: -webkit-box;
             -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
             overflow: hidden;
-            line-height: 1.25;
+            text-overflow: ellipsis;
+            white-space: normal !important;
+            line-height: 1.38;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         .editor-task-card-chip {
@@ -332,6 +336,17 @@
             font-size: 0.88rem;
             font-weight: 650;
             line-height: 1.2;
+        }
+
+        #editor-author-note-filter[aria-pressed="true"] {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: rgba(245, 158, 11, 0.14);
+            color: #d97706;
+        }
+        html.dark #editor-author-note-filter[aria-pressed="true"] {
+            color: #fbbf24;
+            background: rgba(245, 158, 11, 0.2);
+            border-color: rgba(245, 158, 11, 0.6);
         }
 
         .editor-toolbar-search input {
@@ -782,6 +797,16 @@
                         class="block w-full pl-10 pr-4 outline-none focus:ring-0"
                         placeholder="Поиск заданий, модулей или файлов..." data-i18n-placeholder="md.search_placeholder" type="text" />
                 </div>
+                <button id="editor-author-note-filter" type="button"
+                    class="relative inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border-subtle bg-surface-1 hover:bg-surface-2 text-text-secondary hover:text-text-main transition-colors shadow-sm shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-pressed="false"
+                    title="Показать только задания с заметками автора"
+                    data-i18n-title="md.author_note_filter_title"
+                    aria-label="Показать только задания с заметками автора"
+                    data-i18n-aria="md.author_note_filter_title">
+                    <span class="material-symbols-outlined text-[20px]">flag</span>
+                    <span id="editor-author-note-filter-count" class="hidden absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white shadow-xs pointer-events-none">0</span>
+                </button>
                 <div class="relative shrink-0" data-role="sort-controller" data-onboarding-target="editor-sort">
                     <button data-role="sort-toggle"
                         class="editor-toolbar-sort flex items-center gap-2 text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm whitespace-nowrap shrink-0">

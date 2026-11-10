@@ -631,8 +631,7 @@ describe('SequenceEditor', () => {
         expect(payload.content.nodes[3].parent_id).toBe(payload.content.nodes[1].node_id);
     });
 
-    it('enforces Variant B rule: splits multi-item leaf container-group into sibling nodes when addChildNode is called', () => {
-        const toastSpy = vi.spyOn(editor, 'showToast').mockImplementation(() => {});
+    it('preserves multi-item container-group intact when addChildNode is called without destructive splitting', () => {
         editor.setDisplayMode('hierarchy');
 
         // Pick a leaf node on tier 2 and add a second item to make it a 2-slot container-group
@@ -645,21 +644,21 @@ describe('SequenceEditor', () => {
 
         const countBefore = editor.nodes.filter(n => n.levelId === tier2LevelId).length;
 
-        // Now add a child node to leafNode -> must split leafNode's 2 items into 2 sibling nodes on tier 2 and create a child on tier 3
+        // Now add a child node to leafNode -> parentNode preserves all items, child created on tier 3
         editor.addChildNode(leafNode.nodeId);
 
-        expect(leafNode.items).toHaveLength(1);
+        expect(leafNode.items).toHaveLength(2);
         expect(leafNode.items[0].label).toBe('Инородное тело бронха');
+        expect(leafNode.items[1].label).toBe('Слизистая пробка');
         const tier2NodesAfter = editor.nodes.filter(n => n.levelId === tier2LevelId);
-        expect(tier2NodesAfter).toHaveLength(countBefore + 1);
-        expect(tier2NodesAfter.some(n => n.items[0]?.label === 'Слизистая пробка')).toBe(true);
+        expect(tier2NodesAfter).toHaveLength(countBefore);
         expect(editor.levels).toHaveLength(3);
         const childOnTier3 = editor.nodes.find(n => n.parentId === leafNode.nodeId);
         expect(childOnTier3).toBeDefined();
-        expect(toastSpy).toHaveBeenCalledWith(
-            expect.stringContaining('Группа разделена на отдельные узлы'),
-            'info'
-        );
+
+        // Also verify that parent node with children can still receive new items (unblocked hasChildren)
+        editor.addItemToNode(leafNode.nodeId);
+        expect(leafNode.items).toHaveLength(3);
     });
 
     it('captureState and restoreState preserve hierarchy nodes, displayMode, and colorDifferentiation', () => {
@@ -989,11 +988,13 @@ describe('SequenceEditor', () => {
             const card = document.querySelector(`.se-node-card[data-node-id="${node.nodeId}"]`);
             expect(card).toBeTruthy();
             expect(card.classList.contains('is-leaf-group')).toBe(false);
+            expect(card.classList.contains('is-node-group')).toBe(false);
             expect(card.querySelector('.se-node-group-badge')).toBeNull();
 
             // Add second item
             editor.addItemToNode(node.nodeId);
             expect(card.classList.contains('is-leaf-group')).toBe(true);
+            expect(card.classList.contains('is-node-group')).toBe(true);
             const badge = card.querySelector('.se-node-group-badge');
             expect(badge).toBeTruthy();
             expect(badge.textContent).toContain('2');
@@ -1003,8 +1004,224 @@ describe('SequenceEditor', () => {
             vi.advanceTimersByTime(200);
 
             expect(card.classList.contains('is-leaf-group')).toBe(false);
+            expect(card.classList.contains('is-node-group')).toBe(false);
             expect(card.querySelector('.se-node-group-badge')).toBeNull();
             vi.useRealTimers();
+        });
+
+        it('Stage 1 Remediation: Separates item addition from footer branching and permits item addition on parent nodes', () => {
+            editor.displayMode = 'hierarchy';
+            editor.levels = [
+                { levelId: 't1', title: 'Tier 1', items: [] },
+                { levelId: 't2', title: 'Tier 2', items: [] }
+            ];
+            const parent = editor.createEmptyNode({
+                levelId: 't1',
+                parentId: null,
+                items: [{ id: 'p1', label: 'Parent item 1' }]
+            });
+            const child = editor.createEmptyNode({
+                levelId: 't2',
+                parentId: parent.nodeId,
+                items: [{ id: 'c1', label: 'Child item 1' }]
+            });
+            editor.nodes = [parent, child];
+            editor.syncLevelsFromNodes();
+            editor.renderLevels();
+
+            const parentCard = document.querySelector(`.se-node-card[data-node-id="${parent.nodeId}"]`);
+            const childCard = document.querySelector(`.se-node-card[data-node-id="${child.nodeId}"]`);
+            expect(parentCard).toBeTruthy();
+            expect(childCard).toBeTruthy();
+
+            // 1. Every card must have .add-node-item-btn as sibling of .se-node-items-list (NOT inside footer)
+            [parentCard, childCard].forEach((card) => {
+                const itemsList = card.querySelector('.se-node-items-list');
+                const addItemBtn = card.querySelector('.add-node-item-btn');
+                const footer = card.querySelector('.se-node-footer');
+
+                expect(addItemBtn).toBeTruthy();
+                expect(footer).toBeTruthy();
+                // Button is not inside the footer
+                expect(footer.contains(addItemBtn)).toBe(false);
+                // Footer contains exactly the 2 branching buttons: + Ветка ниже, + Соседняя ветка
+                const footerBtns = footer.querySelectorAll('button');
+                expect(footerBtns).toHaveLength(2);
+                expect(footer.querySelector('.add-child-node-btn')).toBeTruthy();
+                expect(footer.querySelector('.add-sibling-node-btn')).toBeTruthy();
+                // Sibling order: itemsList -> addItemBtn -> footer
+                expect(itemsList.nextElementSibling).toBe(addItemBtn);
+                expect(addItemBtn.nextElementSibling).toBe(footer);
+            });
+
+            // 2. Parent node with children CAN add items without being blocked
+            const toastSpy = vi.spyOn(editor, 'showToast');
+            editor.addItemToNode(parent.nodeId);
+            expect(parent.items).toHaveLength(2);
+            expect(parentCard.classList.contains('is-node-group')).toBe(true);
+            expect(parentCard.querySelector('.se-node-group-badge')).toBeTruthy();
+            expect(toastSpy).not.toHaveBeenCalledWith(expect.anything(), 'warning');
+        });
+
+        it('Stage 2 Remediation (L1): switching to linear and editing blocks faithfully rebuilds hierarchy on return', async () => {
+            editor.displayMode = 'hierarchy';
+            editor.levels = [
+                { levelId: 't1', title: 'Tier 1', items: [{ id: 'i1', label: 'Initial Hierarchy Item' }] }
+            ];
+            editor.syncNodesFromLevels();
+            expect(editor.nodes).toHaveLength(1);
+            expect(editor.nodes[0].items[0].label).toBe('Initial Hierarchy Item');
+
+            // Switch to linear mode
+            await editor.setDisplayMode('linear');
+            expect(editor.displayMode).toBe('linear');
+            expect(editor.nodes).toEqual([]); // this.nodes cleared to prevent stale state clobbering
+
+            // Author edits the item in linear mode
+            editor.levels[0].items[0].label = 'Updated in Linear Mode';
+            editor.levels[0].items.push(editor.createEmptyItem('Second Item Added in Linear'));
+
+            // Switch back to hierarchy mode
+            await editor.setDisplayMode('hierarchy');
+            expect(editor.displayMode).toBe('hierarchy');
+            // Hierarchy tree is faithfully reconstructed from latest levels!
+            expect(editor.nodes).toHaveLength(2);
+            expect(editor.nodes[0].items[0].label).toBe('Updated in Linear Mode');
+            expect(editor.nodes[1].items[0].label).toBe('Second Item Added in Linear');
+        });
+
+        it('Stage 2 Remediation (L7): syncNodesFromLevels distributes children across all parents round-robin', () => {
+            editor.levels = [
+                {
+                    levelId: 't1',
+                    title: 'Tier 1',
+                    items: [
+                        { id: 'p1', label: 'Parent A' },
+                        { id: 'p2', label: 'Parent B' }
+                    ]
+                },
+                {
+                    levelId: 't2',
+                    title: 'Tier 2',
+                    items: [
+                        { id: 'c1', label: 'Child 1' },
+                        { id: 'c2', label: 'Child 2' },
+                        { id: 'c3', label: 'Child 3' }
+                    ]
+                }
+            ];
+
+            editor.syncNodesFromLevels();
+
+            const roots = editor.nodes.filter(n => n.levelId === 't1');
+            const tier2Nodes = editor.nodes.filter(n => n.levelId === 't2');
+            expect(roots).toHaveLength(2);
+            expect(tier2Nodes).toHaveLength(3);
+
+            // Child 1 -> Parent A (idx 0 % 2 = 0)
+            expect(tier2Nodes[0].parentId).toBe(roots[0].nodeId);
+            // Child 2 -> Parent B (idx 1 % 2 = 1)
+            expect(tier2Nodes[1].parentId).toBe(roots[1].nodeId);
+            // Child 3 -> Parent A (idx 2 % 2 = 0)
+            expect(tier2Nodes[2].parentId).toBe(roots[0].nodeId);
+
+            // Verifies that Parent B has at least 1 child (not empty / 0 children!)
+            const parentBChildren = tier2Nodes.filter(n => n.parentId === roots[1].nodeId);
+            expect(parentBChildren).toHaveLength(1);
+        });
+
+        it('Stage 2 Remediation (L4): item input handles Enter and Alt+Down hotkeys', () => {
+            editor.displayMode = 'hierarchy';
+            editor.levels = [{ levelId: 't1', title: 'Tier 1', items: [] }];
+            const node = editor.createEmptyNode({
+                levelId: 't1',
+                parentId: null,
+                items: [{ id: 'i1', label: 'Keyboard Test' }]
+            });
+            editor.nodes = [node];
+            editor.syncLevelsFromNodes();
+            editor.renderLevels();
+
+            const card = document.querySelector(`.se-node-card[data-node-id="${node.nodeId}"]`);
+            const textarea = card.querySelector('.se-node-item-input');
+            expect(textarea).toBeTruthy();
+
+            const addItemSpy = vi.spyOn(editor, 'addItemToNode');
+            const addChildSpy = vi.spyOn(editor, 'addChildNode');
+
+            // 1. Enter without modifiers -> calls addItemToNode
+            const enterEvt = new dom.window.KeyboardEvent('keydown', {
+                key: 'Enter',
+                bubbles: true,
+                cancelable: true
+            });
+            textarea.dispatchEvent(enterEvt);
+            expect(addItemSpy).toHaveBeenCalledWith(node.nodeId);
+            expect(enterEvt.defaultPrevented).toBe(true);
+
+            // 2. Shift+Enter -> does NOT call addItemToNode (allows standard newline)
+            const shiftEnterEvt = new dom.window.KeyboardEvent('keydown', {
+                key: 'Enter',
+                shiftKey: true,
+                bubbles: true,
+                cancelable: true
+            });
+            textarea.dispatchEvent(shiftEnterEvt);
+            expect(addItemSpy).toHaveBeenCalledTimes(1);
+            expect(shiftEnterEvt.defaultPrevented).toBe(false);
+
+            // 3. Alt+ArrowDown -> calls addChildNode
+            const altDownEvt = new dom.window.KeyboardEvent('keydown', {
+                key: 'ArrowDown',
+                altKey: true,
+                bubbles: true,
+                cancelable: true
+            });
+            textarea.dispatchEvent(altDownEvt);
+            expect(addChildSpy).toHaveBeenCalledWith(node.nodeId);
+            expect(altDownEvt.defaultPrevented).toBe(true);
+        });
+
+        it('Stage 2 Remediation (L6): deleteNode prompts confirmation when deleting a subtree, deletes without prompt for single leaf', async () => {
+            editor.displayMode = 'hierarchy';
+            editor.levels = [
+                { levelId: 't1', title: 'Tier 1', items: [] },
+                { levelId: 't2', title: 'Tier 2', items: [] }
+            ];
+            const root1 = editor.createEmptyNode({ levelId: 't1', parentId: null, items: [{ id: 'r1', label: 'Root 1' }] });
+            const root2 = editor.createEmptyNode({ levelId: 't1', parentId: null, items: [{ id: 'r2', label: 'Root 2' }] });
+            const child1 = editor.createEmptyNode({ levelId: 't2', parentId: root1.nodeId, items: [{ id: 'c1', label: 'Child 1' }] });
+            editor.nodes = [root1, root2, child1];
+            editor.syncLevelsFromNodes();
+            editor.renderLevels();
+
+            const confirmSpy = vi.spyOn(editor, 'confirmAction');
+
+            // 1. Delete single leaf node -> no confirmation dialog needed
+            await editor.deleteNode(child1.nodeId);
+            expect(confirmSpy).not.toHaveBeenCalled();
+            expect(editor.nodes.some(n => n.nodeId === child1.nodeId)).toBe(false);
+
+            // Re-add child to root1
+            const child2 = editor.createEmptyNode({ levelId: 't2', parentId: root1.nodeId, items: [{ id: 'c2', label: 'Child 2' }] });
+            editor.nodes.push(child2);
+
+            // 2. Delete root1 (has child2: subtree size = 2) with cancellation -> subtree preserved!
+            confirmSpy.mockResolvedValueOnce(false);
+            await editor.deleteNode(root1.nodeId);
+            expect(confirmSpy).toHaveBeenCalledWith(expect.objectContaining({
+                title: expect.anything(),
+                message: expect.stringContaining('1'), // 1 child branch
+                variant: 'danger'
+            }));
+            expect(editor.nodes.some(n => n.nodeId === root1.nodeId)).toBe(true);
+            expect(editor.nodes.some(n => n.nodeId === child2.nodeId)).toBe(true);
+
+            // 3. Delete root1 with confirmation -> subtree deleted!
+            confirmSpy.mockResolvedValueOnce(true);
+            await editor.deleteNode(root1.nodeId);
+            expect(editor.nodes.some(n => n.nodeId === root1.nodeId)).toBe(false);
+            expect(editor.nodes.some(n => n.nodeId === child2.nodeId)).toBe(false);
         });
 
         it('2.4: setCanvasZoom preserves pan offset when recenter is false, centers when recenter is true', () => {
@@ -1456,6 +1673,144 @@ describe('SequenceEditor', () => {
             expect(editor.levels[0].title).toBe('Авторский уровень');
             expect(editor.levels[0].items[0].label).toBe('Шаг автора');
             expect(editor.hasUnsavedChanges).toBe(true);
+        });
+    });
+
+    describe('Stage 3: Drag-and-Drop Controller (HierarchyDnDController) and Hierarchy Mutations', () => {
+        let editor;
+
+        beforeEach(() => {
+            dom = setupGlobalDom();
+            mountEditorDom();
+            editor = new dom.window.SequenceEditor();
+            editor.displayMode = 'hierarchy';
+            editor.levels = [
+                { levelId: 'l1', title: 'Этаж 1', items: [{ id: 'e1', label: 'Узел 1-1' }, { id: 'e2', label: 'Узел 1-2' }] },
+                { levelId: 'l2', title: 'Этаж 2', items: [{ id: 'e3', label: 'Узел 2-1' }, { id: 'e4', label: 'Узел 2-2' }] }
+            ];
+            editor.syncNodesFromLevels();
+            editor.renderLevels();
+        });
+
+        it('3.1: DOM renders drag handles on cards and items and initializes HierarchyDnDController', () => {
+            const nodeCards = document.querySelectorAll('.se-node-card');
+            expect(nodeCards.length).toBeGreaterThanOrEqual(4);
+
+            // Node drag handles in headers
+            const nodeHandles = document.querySelectorAll('.se-node-drag-handle');
+            expect(nodeHandles.length).toBe(nodeCards.length);
+
+            // Item drag handles in rows
+            const itemHandles = document.querySelectorAll('.se-item-drag-handle');
+            expect(itemHandles.length).toBeGreaterThanOrEqual(4);
+
+            // Controller initialized
+            expect(editor._hierarchyDnDController).toBeDefined();
+            expect(editor._hierarchyDnDController.viewport).toBeDefined();
+        });
+
+        it('3.2: reorderItemInNode reorders items within group and syncs levels with undo support', () => {
+            const rootNode = editor.nodes[0];
+            rootNode.items = [
+                { id: 'item_a', label: 'Шаг A' },
+                { id: 'item_b', label: 'Шаг B' },
+                { id: 'item_c', label: 'Шаг C' }
+            ];
+            editor.syncLevelsFromNodes();
+            editor.renderLevels();
+
+            // Reorder from index 0 to index 2
+            const res = editor.reorderItemInNode(rootNode.nodeId, 0, 2);
+            expect(res).toBe(true);
+
+            expect(rootNode.items.map(i => i.id)).toEqual(['item_b', 'item_c', 'item_a']);
+            const level = editor.levels.find(l => l.levelId === rootNode.levelId);
+            expect(level.items[0].id).toBe('item_b');
+
+            // Undo restores original order
+            editor.performUndo();
+            const restoredNode = editor.nodes.find(n => n.nodeId === rootNode.nodeId);
+            expect(restoredNode.items.map(i => i.id)).toEqual(['item_a', 'item_b', 'item_c']);
+        });
+
+        it('3.3: moveItemBetweenNodes transfers item into target group and cleans up source if emptied', () => {
+            const nodeA = editor.nodes[0]; // 1 item: e1
+            const nodeB = editor.nodes[1]; // 1 item: e2
+            nodeA.columnTitle = 'Колонка A';
+            const childOfA = editor.nodes.find(n => n.parentId === nodeA.nodeId);
+            expect(childOfA).toBeDefined();
+
+            // Transfer only item of nodeA into nodeB
+            const res = editor.moveItemBetweenNodes(nodeA.nodeId, 0, nodeB.nodeId, -1);
+            expect(res).toBe(true);
+
+            // nodeB now has 2 items
+            const updatedB = editor.nodes.find(n => n.nodeId === nodeB.nodeId);
+            expect(updatedB.items.length).toBe(2);
+            expect(updatedB.items[1].id).toBe('e1');
+
+            // nodeA had 0 items remaining -> smart cleanup removed nodeA
+            expect(editor.nodes.some(n => n.nodeId === nodeA.nodeId)).toBe(false);
+
+            // Children of nodeA safely re-parented to nodeB!
+            const updatedChild = editor.nodes.find(n => n.nodeId === childOfA.nodeId);
+            expect(updatedChild.parentId).toBe(nodeB.nodeId);
+        });
+
+        it('3.4: extractItemToNewNode splits group item into sibling branch or child branch', () => {
+            const rootNode = editor.nodes[0];
+            rootNode.items = [
+                { id: 'item_1', label: 'Симптом 1' },
+                { id: 'item_2', label: 'Симптом 2' }
+            ];
+            editor.syncLevelsFromNodes();
+            editor.renderLevels();
+
+            // Extract to sibling branch
+            const initialNodeCount = editor.nodes.length;
+            const resSibling = editor.extractItemToNewNode(rootNode.nodeId, 1, 'sibling');
+            expect(resSibling).toBe(true);
+            expect(rootNode.items.length).toBe(1);
+            expect(editor.nodes.length).toBe(initialNodeCount + 1);
+
+            const siblingNode = editor.nodes.find(n => n.nodeId === editor._lastCreatedNodeId);
+            expect(siblingNode).toBeDefined();
+            expect(siblingNode.items[0].id).toBe('item_2');
+            expect(siblingNode.levelId).toBe(rootNode.levelId);
+            expect(siblingNode.parentId).toBe(rootNode.parentId);
+
+            // Add second item to rootNode again and extract as child
+            rootNode.items.push({ id: 'item_3', label: 'Осложнение' });
+            const resChild = editor.extractItemToNewNode(rootNode.nodeId, 1, 'child');
+            expect(resChild).toBe(true);
+
+            const childNode = editor.nodes.find(n => n.nodeId === editor._lastCreatedNodeId);
+            expect(childNode).toBeDefined();
+            expect(childNode.items[0].id).toBe('item_3');
+            expect(childNode.parentId).toBe(rootNode.nodeId);
+        });
+
+        it('3.5: reparentOrMergeNode merges nodes on same tier and reparents subtrees across tiers with cycle prevention', () => {
+            const root1 = editor.nodes[0];
+            const root2 = editor.nodes[1];
+            const child1 = editor.nodes.find(n => n.parentId === root1.nodeId);
+            expect(child1).toBeDefined();
+
+            // Attempt cycle: try to reparent root1 under its own child -> must be rejected
+            const cycleRes = editor.reparentOrMergeNode(root1.nodeId, child1.nodeId, 'reparent');
+            expect(cycleRes).toBe(false);
+
+            // Merge root1 into root2
+            const mergeRes = editor.reparentOrMergeNode(root1.nodeId, root2.nodeId, 'merge');
+            expect(mergeRes).toBe(true);
+
+            const updatedRoot2 = editor.nodes.find(n => n.nodeId === root2.nodeId);
+            expect(updatedRoot2.items.length).toBe(2); // merged items
+            expect(editor.nodes.some(n => n.nodeId === root1.nodeId)).toBe(false); // root1 removed
+
+            // child1 now attached to root2
+            const updatedChild1 = editor.nodes.find(n => n.nodeId === child1.nodeId);
+            expect(updatedChild1.parentId).toBe(root2.nodeId);
         });
     });
 });

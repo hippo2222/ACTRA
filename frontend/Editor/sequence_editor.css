@@ -1500,10 +1500,75 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     transition: background-color 140ms ease;
 }
 
+.se-item-drag-handle {
+    opacity: 0.35;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1.5rem;
+    color: var(--color-text-muted);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: opacity 120ms ease, color 120ms ease;
+    margin-top: 0.25rem;
+    flex-shrink: 0;
+}
+
+.se-node-item-row:hover .se-item-drag-handle,
+.se-node-item-row:focus-within .se-item-drag-handle {
+    opacity: 0.85;
+}
+
+.se-item-drag-handle:hover {
+    opacity: 1 !important;
+    color: var(--color-primary);
+}
+
+.se-item-drag-handle:active {
+    cursor: grabbing;
+}
+
+.se-node-drag-handle {
+    opacity: 0.45;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1.15rem;
+    color: var(--color-text-muted);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    transition: opacity 120ms ease, color 120ms ease;
+    flex-shrink: 0;
+}
+
+.se-node-header:hover .se-node-drag-handle {
+    opacity: 0.85;
+}
+
+.se-node-drag-handle:hover {
+    opacity: 1 !important;
+    color: var(--color-primary);
+}
+
+.se-node-drag-handle:active {
+    cursor: grabbing;
+}
+
 .se-node-item-row textarea.block-title-input {
     width: 100%;
     flex: 1;
     min-width: 0;
+    display: block !important;
+    height: auto !important;
+    min-height: 2.25rem;
+    max-height: 16rem !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
     font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1.45;
@@ -1567,6 +1632,67 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 .se-node-item-row--exiting {
     animation: seItemExit 160ms cubic-bezier(0.4, 0, 1, 1) forwards;
     pointer-events: none;
+}
+
+.is-node-group .se-node-item-row + .se-node-item-row,
+.is-leaf-group .se-node-item-row + .se-node-item-row {
+    border-top: 1px dashed color-mix(in srgb, var(--color-border-subtle) 70%, transparent);
+    padding-top: 0.25rem;
+}
+
+/* Card Body: Add Item in Group/Container Button */
+.se-node-add-item-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    min-height: 26px;
+    padding: 0.2rem 0.5rem;
+    margin-top: 0.25rem;
+    border-radius: 0.4rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    background: color-mix(in srgb, var(--color-surface-2) 40%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--color-border-subtle) 80%, transparent);
+    cursor: pointer;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.se-node-card:hover .se-node-add-item-btn,
+.se-node-card:focus-within .se-node-add-item-btn {
+    opacity: 0.85;
+}
+
+.se-node-card.is-node-group .se-node-add-item-btn,
+.se-node-card.is-leaf-group .se-node-add-item-btn {
+    opacity: 0.85;
+}
+
+.se-node-add-item-btn:hover,
+.se-node-add-item-btn:focus-visible {
+    opacity: 1 !important;
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary-lighter) 45%, var(--color-surface-1));
+    border-color: color-mix(in srgb, var(--color-primary) 50%, transparent);
+    border-style: solid;
+}
+
+.se-node-add-item-btn:active {
+    transform: scale(0.98);
+}
+
+.se-node-add-item-btn .material-symbols-outlined {
+    font-size: 14px !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .se-node-add-item-btn {
+        opacity: 0.85;
+    }
 }
 
 @keyframes seItemEnter {
@@ -1635,20 +1761,17 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     }
 }
 
-/* Card Footer: Contextual Micro-Actions */
+/* Card Footer: Contextual Micro-Actions (2-Column Grid) */
 .se-node-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap;
-    gap: 0.25rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
     padding-top: 0.35rem;
     border-top: 1px solid color-mix(in srgb, var(--color-border-subtle) 60%, transparent);
     opacity: 0;
     transition: opacity 150ms ease;
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
 }
 
 .se-node-card:hover .se-node-footer,
@@ -1656,25 +1779,18 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     opacity: 1;
 }
 
-.se-node-footer-group {
-    display: flex;
-    align-items: center;
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.se-node-footer-branch {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    flex-shrink: 0;
+@media (hover: none), (pointer: coarse) {
+    .se-node-footer {
+        opacity: 1;
+    }
 }
 
 .se-node-action-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.2rem;
-    padding: 0.2rem 0.35rem;
+    padding: 0.25rem 0.35rem;
     border-radius: 0.4rem;
     font-size: 0.6875rem;
     font-weight: 600;
@@ -1684,12 +1800,22 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
     cursor: pointer;
     transition: all 120ms ease;
     white-space: nowrap;
-    flex-shrink: 0;
+    width: 100%;
+    min-width: 0;
     box-sizing: border-box;
+}
+
+.se-node-action-btn span[data-i18n],
+.se-node-action-btn span:not(.material-symbols-outlined) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .se-node-action-btn .material-symbols-outlined {
     font-size: 13px !important;
+    flex-shrink: 0;
 }
 
 .se-node-action-btn:hover {
@@ -1715,6 +1841,114 @@ aside .bg-surface-2 > p.text-\[11px\].text-text-secondary,
 
 .se-zoom-btn:active:not(:disabled) {
     transform: scale(0.92);
+}
+
+/* ===== Drag and Drop Visual States & Avatar ===== */
+.se-node-card.is-drop-target-group {
+    box-shadow: 0 0 0 2px var(--color-primary), 0 8px 24px -4px var(--color-primary-lighter) !important;
+    border-color: var(--color-primary) !important;
+    transition: box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.se-node-card.is-drop-target-merge {
+    box-shadow: 0 0 0 2px var(--color-accent-amber, #f59e0b), 0 8px 24px -4px rgba(245, 158, 11, 0.25) !important;
+    border-color: var(--color-accent-amber, #f59e0b) !important;
+    border-style: dashed !important;
+}
+
+.se-node-card.is-drop-target-parent {
+    box-shadow: 0 0 0 2px var(--color-accent-emerald, #10b981), 0 8px 24px -4px rgba(16, 185, 129, 0.25) !important;
+    border-color: var(--color-accent-emerald, #10b981) !important;
+}
+
+.se-node-item-row.is-drop-indicator-top {
+    position: relative;
+}
+.se-node-item-row.is-drop-indicator-top::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+.se-node-item-row.is-drop-indicator-bottom {
+    position: relative;
+}
+.se-node-item-row.is-drop-indicator-bottom::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+.se-node-item-row.is-dragging,
+.se-node-card.is-dragging {
+    opacity: 0.35 !important;
+    filter: grayscale(40%);
+    pointer-events: none;
+}
+
+.se-hierarchy-drag-avatar {
+    position: fixed;
+    z-index: 999999;
+    pointer-events: none;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.45rem 0.65rem;
+    min-width: 140px;
+    max-width: 280px;
+    background: var(--color-surface-1);
+    color: var(--color-text-main);
+    border: 1.5px solid var(--color-primary);
+    border-radius: 0.5rem;
+    box-shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.35;
+    box-sizing: border-box;
+}
+
+.se-avatar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.se-avatar-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.3rem;
+    background: var(--color-primary-lighter);
+    color: var(--color-primary);
+    width: fit-content;
+}
+
+.se-avatar-badge .material-symbols-outlined {
+    font-size: 13px !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+    .se-item-drag-handle,
+    .se-node-drag-handle {
+        opacity: 0.75;
+        width: 20px;
+    }
 }
 
 /* ===== Minimap HUD in bottom-right corner ===== */

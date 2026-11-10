@@ -28,6 +28,7 @@ class EditorDashboard {
         this.currentSearch = '';
         this.currentSort = 'date';
         this.showPremiumArchiveTasks = false;
+        this.showAuthorNoteTasks = false;
         this.sortMenuOpen = false;
         this.boundSortOutsideHandler = null;
 
@@ -186,6 +187,9 @@ class EditorDashboard {
         if (routeState.archive === 'premium' || routeState.filter === 'archived') {
             this.showPremiumArchiveTasks = true;
         }
+        if (routeState.filter === 'author_notes' || routeState.notes === '1') {
+            this.showAuthorNoteTasks = true;
+        }
 
         if (routeState.module && routeState.topic) {
             this.pendingInitialView = { moduleId: routeState.module, topicId: routeState.topic };
@@ -314,6 +318,7 @@ class EditorDashboard {
             currentSearchQuery: this.currentSearchQuery,
             currentSort: this.currentSort,
             showPremiumArchiveTasks: this.showPremiumArchiveTasks,
+            showAuthorNoteTasks: this.showAuthorNoteTasks,
             expandedState: JSON.parse(JSON.stringify(this.expandedState || { modules: [], topics: [] })),
             selectedTasks: Array.from(this.selectedTasks || []),
             selectionMode: this.selectionMode,
@@ -343,6 +348,7 @@ class EditorDashboard {
         this.currentSearchQuery = '';
         this.currentSort = 'date';
         this.showPremiumArchiveTasks = false;
+        this.showAuthorNoteTasks = false;
         this.expandedState = {
             modules: ['onboarding-module-radiology'],
             topics: ['onboarding-module-radiology:onboarding-topic-waves'],
@@ -397,6 +403,7 @@ class EditorDashboard {
             this.currentSearchQuery = snapshot.currentSearchQuery || '';
             this.currentSort = snapshot.currentSort || 'date';
             this.showPremiumArchiveTasks = Boolean(snapshot.showPremiumArchiveTasks);
+            this.showAuthorNoteTasks = Boolean(snapshot.showAuthorNoteTasks);
             this.expandedState = snapshot.expandedState || { modules: [], topics: [] };
             this.selectedTasks = new Set(snapshot.selectedTasks || []);
             this.selectionMode = Boolean(snapshot.selectionMode);
@@ -418,9 +425,12 @@ class EditorDashboard {
     }
 
     escapeHtml(value) {
-        const el = document.createElement('span');
-        el.textContent = value == null ? '' : String(value);
-        return el.innerHTML;
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     async resolveCurrentDashboardUserId(forceRefresh = false) {
@@ -812,7 +822,21 @@ class EditorDashboard {
         this.saveWorkspaceShortcuts();
         this.renderWorkspaceShortcuts();
         if (!skipRefreshGrid) {
-            this.refreshCurrentView();
+            const card = document.querySelector(`article[data-task-id="${normalized.uniqueId}"]`);
+            const favBtn = card?.querySelector('[data-action="favorite-task"]');
+            if (favBtn) {
+                const isFav = Boolean(this.favoriteTaskMap[normalized.uniqueId]);
+                favBtn.title = isFav ? wt('db.k287', 'Удалить из избранного') : wt('db.k288', 'Добавить в избранное');
+                favBtn.className = isFav
+                    ? 'h-7 w-7 inline-flex shrink-0 items-center justify-center rounded-lg text-warning-dark hover:text-warning hover:bg-warning-lighter transition-colors'
+                    : 'h-7 w-7 inline-flex shrink-0 items-center justify-center rounded-lg text-text-disabled hover:text-warning hover:bg-warning-lighter transition-colors';
+                const icon = favBtn.querySelector('.material-symbols-outlined');
+                if (icon) {
+                    icon.textContent = isFav ? 'star' : 'star_outline';
+                }
+            } else {
+                this.refreshCurrentView();
+            }
         }
     }
 
@@ -1435,6 +1459,7 @@ class EditorDashboard {
         if (this.activeTopicId) params.set('topic', this.activeTopicId);
         if (this.currentSort) params.set('sort', this.currentSort);
         if (this.showPremiumArchiveTasks) params.set('archive', 'premium');
+        if (this.showAuthorNoteTasks) params.set('filter', 'author_notes');
 
         const url = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
         history.replaceState(null, '', url);
@@ -1559,7 +1584,12 @@ class EditorDashboard {
         this.pendingTheoryHubFocusId = '';
     }
 
+    setupMarqueeController() {
+        // Marquee removed in favor of native full tooltips and multi-line clamping
+    }
+
     setupEventListeners() {
+        this.setupMarqueeController();
         const addBtn = document.querySelector('[data-role="create-task-card"]');
         if (addBtn) {
             addBtn.addEventListener('click', () => {
@@ -1585,6 +1615,18 @@ class EditorDashboard {
                 this.lastSelectedTaskId = null;
                 this.updateActionBar();
                 this.renderTaskLimitUi();
+                this.refreshCurrentView();
+            });
+        }
+
+        const authorNoteFilter = document.getElementById('editor-author-note-filter');
+        if (authorNoteFilter) {
+            authorNoteFilter.addEventListener('click', () => {
+                this.showAuthorNoteTasks = !this.showAuthorNoteTasks;
+                this.selectedTasks.clear();
+                this.lastSelectedTaskId = null;
+                this.updateActionBar();
+                this.syncAuthorNoteFilterUi();
                 this.refreshCurrentView();
             });
         }
@@ -5707,6 +5749,50 @@ class EditorDashboard {
         return allTasks;
     }
 
+    hasTaskAuthorNote(task) {
+        if (!task) return false;
+        const raw = task.author_note || task.metadata?.author_note || task.meta?.author_note;
+        if (typeof raw === 'string') return raw.trim().length > 0;
+        if (raw && typeof raw === 'object') {
+            const text = String(raw.text || '').trim();
+            const status = String(raw.status || 'open').toLowerCase();
+            return text.length > 0 && status !== 'resolved';
+        }
+        return false;
+    }
+
+    getTaskAuthorNoteText(task) {
+        if (!task) return '';
+        const raw = task.author_note || task.metadata?.author_note || task.meta?.author_note;
+        if (typeof raw === 'string') return raw.trim();
+        if (raw && typeof raw === 'object') {
+            return String(raw.text || '').trim();
+        }
+        return '';
+    }
+
+    getAuthorNotesCount(tasks = null) {
+        const list = tasks || this.collectAllTasks();
+        return list.filter((task) => this.hasTaskAuthorNote(task)).length;
+    }
+
+    syncAuthorNoteFilterUi() {
+        const btn = document.getElementById('editor-author-note-filter');
+        const countEl = document.getElementById('editor-author-note-filter-count');
+        if (!btn) return;
+
+        const count = this.getAuthorNotesCount();
+        btn.setAttribute('aria-pressed', this.showAuthorNoteTasks ? 'true' : 'false');
+        if (countEl) {
+            if (count > 0) {
+                countEl.textContent = count > 99 ? '99+' : String(count);
+                countEl.classList.remove('hidden');
+            } else {
+                countEl.classList.add('hidden');
+            }
+        }
+    }
+
     renderGrid(tasks = null) {
         const gridContainer = document.querySelector('main .grid');
         if (!gridContainer) return;
@@ -5714,9 +5800,12 @@ class EditorDashboard {
         const addBtn = document.querySelector('[data-role="create-task-card"]');
         const isFiltered = Array.isArray(tasks);
         const sourceTasks = tasks ?? this.collectAllTasks();
-        const archiveFilteredTasks = this.showPremiumArchiveTasks
+        let archiveFilteredTasks = this.showPremiumArchiveTasks
             ? sourceTasks.filter((task) => this.isTaskPremiumArchived(task))
             : sourceTasks;
+        if (this.showAuthorNoteTasks) {
+            archiveFilteredTasks = archiveFilteredTasks.filter((task) => this.hasTaskAuthorNote(task));
+        }
         const tasksToRender = this.sortTasks(archiveFilteredTasks);
         const taskDraftIds = this.collectTaskDraftIds();
 
@@ -5727,13 +5816,16 @@ class EditorDashboard {
 
         if (!tasksToRender.length) {
             const emptyCard = this.createEmptyStateCard(
-                this.showPremiumArchiveTasks
+                this.showAuthorNoteTasks
+                    ? wt('db.empty_author_notes', 'Нет заданий с заметками автора')
+                    : this.showPremiumArchiveTasks
                     ? wt('db.k276', 'В архиве Premium нет заданий для текущего раздела')
                     : isFiltered && this.currentSearchQuery
                     ? `${wt('db.k277', 'По запросу «')}${this.currentSearchQuery.trim()}» ${wt('db.k278', 'ничего не найдено')}`
                     : wt('db.k279', 'Задания не найдены')
             );
             gridContainer.appendChild(emptyCard);
+            this.syncAuthorNoteFilterUi();
             return;
         }
 
@@ -5750,6 +5842,7 @@ class EditorDashboard {
             }
             gridContainer.appendChild(card);
         });
+        this.syncAuthorNoteFilterUi();
     }
 
     renderTopicTasks(moduleId, topicId) {
@@ -5807,7 +5900,8 @@ class EditorDashboard {
         const isErrorDetection = this.isErrorDetectionTask(task);
         const archiveItem = this.resolveTaskArchiveItem(task);
         const isPremiumArchived = Boolean(archiveItem);
-        const baseCardClasses = 'group rounded-xl p-5 flex flex-col h-[200px] border transition-all hover:shadow-xl hover:translate-y-[-4px] relative animate-slide-up shadow-sm cursor-pointer task-card';
+        const animateEntrance = options.animateEntrance !== false;
+        const baseCardClasses = `group rounded-xl p-5 flex flex-col h-[200px] border transition-all hover:shadow-xl hover:translate-y-[-4px] relative ${animateEntrance ? 'animate-slide-up ' : ''}shadow-sm cursor-pointer task-card`;
         const cardTheme = 'bg-surface-2 border-border-subtle hover:border-primary';
         const hasDraft = Boolean(options.hasDraft);
         const isDraftOnly = Boolean(task.isDraftOnly);
@@ -5835,9 +5929,21 @@ class EditorDashboard {
         const createdLabel = this.escapeHtml(this.formatCreatedDate(task.created_at));
         const updatedLabel = task.updated_at ? this.escapeHtml(this.formatCreatedDate(task.updated_at)) : null;
         const safeTypeLabel = this.escapeHtml(typeLabel);
-        const safeTaskName = this.escapeHtml(task.name || task.id || wt('db.k282', 'Без названия'));
+        const rawTaskName = task.name || task.id || wt('db.k282', 'Без названия');
+        const rawFullName = task.full_name || rawTaskName;
+        const displayTitle = (task.full_name && task.full_name.trim().length > rawTaskName.trim().length)
+            ? task.full_name.trim()
+            : rawTaskName;
+        const safeFullName = this.escapeHtml(rawFullName);
+        const safeDisplayTitle = this.escapeHtml(displayTitle);
         const safeModuleLabel = this.escapeHtml(task.moduleName || task.moduleId || wt('db.k283', 'Без модуля'));
         const safeTopicLabel = this.escapeHtml(topicLabel);
+
+        const hasAuthorNote = this.hasTaskAuthorNote(task);
+        const authorNoteText = hasAuthorNote ? this.getTaskAuthorNoteText(task) : '';
+        const safeAuthorNoteTooltip = hasAuthorNote
+            ? this.escapeHtml(`${wt('db.author_note_tooltip', 'Заметка автора')}: ${authorNoteText}`)
+            : '';
 
         // Theme-aware error badge classes
         const isDark = this.isCurrentThemeDark();
@@ -5852,63 +5958,66 @@ class EditorDashboard {
             : 'border border-warning-light bg-warning-lighter text-warning-darker';
 
         article.innerHTML = `
-            <div class="flex justify-between items-start mb-3 gap-3">
-                <div class="flex items-start gap-2 flex-1 min-w-0">
-                    <button type="button" data-action="favorite-task"
-                        class="h-8 w-8 inline-flex shrink-0 items-center justify-center rounded-lg border ${isFavorite ? 'border-warning bg-warning-light text-warning-dark' : 'border-border-subtle bg-surface-1 text-text-disabled'} hover:border-warning hover:text-warning transition-colors">
-                        <span class="material-symbols-outlined text-[17px]">${isFavorite ? 'star' : 'star_outline'}</span>
-                    </button>
+            <div class="flex justify-between items-center mb-2.5 gap-2">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${typeClass}">
+                        ${safeTypeLabel}
+                    </span>
+                    ${hasDraft ? `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${draftBadgeClass}">
+                        <span class="material-symbols-outlined leading-none" style="font-size: 14px;">edit_note</span>
+                        ${wt('db.k038', 'Черновик')}
+                    </span>` : ""}
+                    ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${errorBadgeClass}">
+                        <span class="material-symbols-outlined leading-none" style="font-size: 14px;">bug_report</span>
+                        ${wt('db.k392', 'Ошибки')}
+                    </span>` : ""}
+                    ${isPremiumArchived ? `<span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium ${archiveBadgeClass}" title="${wt('db.k393', 'Архив Premium: редактирование и экспорт заблокированы до продления Premium')}">
+                        <span class="material-symbols-outlined leading-none" style="font-size: 14px;">inventory_2</span>
+                        ${wt('db.k394', 'Архив Premium')}
+                    </span>` : ""}
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
                     ${!isPremiumArchived ? `
                         <button type="button" data-action="play-task"
-                            class="h-8 w-8 inline-flex shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:border-primary hover:text-primary hover:bg-primary-lighter transition-colors"
+                            class="h-7 w-7 inline-flex shrink-0 items-center justify-center rounded-lg text-text-secondary hover:text-primary hover:bg-primary-lighter transition-colors"
                             title="${wt('db.k_play_task_title', 'Пройти задание (Тест-драйв)')}">
-                            <span class="material-symbols-outlined text-[18px]">play_arrow</span>
+                            <span class="material-symbols-outlined text-[17px]">play_arrow</span>
+                        </button>
+                        <button type="button" data-action="rename-task"
+                            class="h-7 w-7 inline-flex shrink-0 items-center justify-center rounded-lg text-text-secondary hover:text-primary hover:bg-primary-lighter transition-colors"
+                            title="${wt('db.k395', 'Переименовать задание')}">
+                            <span class="material-symbols-outlined text-[15px]">edit</span>
                         </button>
                     ` : ''}
-                    <div class="flex flex-wrap gap-1.5 pt-1">
-                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeClass}">
-                            ${safeTypeLabel}
-                        </span>
-                        ${hasDraft ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${draftBadgeClass}">
-                            <span class="material-symbols-outlined leading-none" style="font-size: 16px;">edit_note</span>
-                            ${wt('db.k038', 'Черновик')}
-                        </span>` : ""}
-                        ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${errorBadgeClass}">
-                            <span class="material-symbols-outlined leading-none" style="font-size: 18px;">bug_report</span>
-                            ${wt('db.k392', 'Ошибки')}
-                        </span>` : ""}
-                        ${isPremiumArchived ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${archiveBadgeClass}" title="${wt('db.k393', 'Архив Premium: редактирование и экспорт заблокированы до продления Premium')}">
-                            <span class="material-symbols-outlined leading-none" style="font-size: 16px;">inventory_2</span>
-                            ${wt('db.k394', 'Архив Premium')}
-                        </span>` : ""}
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 shrink-0">
-                    <div class="${isDraftOnly ? 'w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-warning-light' : 'status-indicator-published'}" title="${isDraftOnly ? wt('db.k284', 'Только локальный черновик') : 'Published'}"></div>
-                    <div class="${this.selectionMode ? 'block' : 'hidden group-hover:block'}">
+                    <button type="button" data-action="favorite-task"
+                        class="h-7 w-7 inline-flex shrink-0 items-center justify-center rounded-lg ${isFavorite ? 'text-warning-dark' : 'text-text-disabled'} hover:text-warning hover:bg-warning-lighter transition-colors"
+                        title="${isFavorite ? wt('db.k287', 'Удалить из избранного') : wt('db.k288', 'Добавить в избранное')}">
+                        <span class="material-symbols-outlined text-[17px]">${isFavorite ? 'star' : 'star_outline'}</span>
+                    </button>
+                    <div class="flex items-center transition-opacity duration-150 ${isSelected || this.selectionMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}">
+                        <div class="w-px h-3.5 bg-border-subtle mx-1"></div>
                         <input type="checkbox" 
-                            class="w-5 h-5 text-primary rounded border-border-strong focus:ring-primary task-checkbox transition-transform hover:scale-110"
+                            class="w-4 h-4 text-primary rounded border-border-strong focus:ring-primary task-checkbox transition-transform hover:scale-110 cursor-pointer"
                             ${isSelected ? 'checked' : ''}
                         >
                     </div>
                 </div>
             </div>
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1.5 mb-2 group/task-title">
-                    <h3 class="editor-task-card-title text-text-main text-lg font-bold truncate group-hover:text-primary transition-colors cursor-pointer flex-1" title="${safeTaskName}">${safeTaskName}</h3>
-                    ${!isPremiumArchived ? `
-                        <button type="button" data-action="rename-task"
-                            class="opacity-0 group-hover/task-title:opacity-100 group-hover:opacity-100 p-1 rounded-md text-text-disabled hover:text-primary hover:bg-primary-lighter transition-all shrink-0"
-                            title="${wt('db.k395', 'Переименовать задание')}">
-                            <span class="material-symbols-outlined text-[16px]">edit</span>
-                        </button>
-                    ` : ''}
+            <div class="flex-1 min-w-0 flex flex-col justify-start">
+                <div class="flex items-start gap-1.5 min-w-0">
+                    ${hasAuthorNote ? `<span class="inline-flex items-center justify-center rounded-md size-5 text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 shrink-0 mt-0.5" title="${safeAuthorNoteTooltip}">
+                        <span class="material-symbols-outlined leading-none" style="font-size: 14px; font-variation-settings: 'FILL' 1;">flag</span>
+                    </span>` : ""}
+                    <h3 class="editor-task-card-title text-text-main text-[15px] font-semibold group-hover:text-primary transition-colors cursor-pointer leading-[1.38] min-w-0" title="${safeFullName}">${safeDisplayTitle}</h3>
                 </div>
-                <p class="text-text-secondary text-xs font-medium truncate">${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', '· Изм.')} ${updatedLabel}` : ''}</p>
             </div>
-            <div class="flex gap-2 mt-4 flex-wrap items-center">
-                <span class="editor-task-card-chip inline-block rounded bg-surface-1 px-2 py-0.5 text-[11px] font-medium text-text-secondary border border-border-subtle whitespace-nowrap" title="${safeModuleLabel}">${safeModuleLabel}</span>
-                <span class="editor-task-card-chip inline-block rounded bg-surface-1 px-2 py-0.5 text-[11px] font-medium text-text-secondary border border-border-subtle whitespace-nowrap" title="${safeTopicLabel}">${safeTopicLabel}</span>
+            <div class="mt-auto pt-2.5 border-t border-border-subtle flex items-center justify-between gap-2 text-[11px] text-text-secondary">
+                <div class="flex items-center gap-1 min-w-0 truncate" title="${safeModuleLabel} › ${safeTopicLabel}">
+                    <span class="truncate text-text-muted">${safeModuleLabel}</span>
+                    <span class="text-text-disabled shrink-0 font-bold">›</span>
+                    <span class="truncate text-text-main font-medium">${safeTopicLabel}</span>
+                </div>
+                <span class="shrink-0 text-text-secondary tabular-nums" title="${wt('db.k285', 'Создано')} ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` ${wt('db.k390', '· Изм.')} ${updatedLabel}` : ''}">${updatedLabel && updatedLabel !== createdLabel ? `${wt('db.k390', '· Изм.')} ${updatedLabel}` : createdLabel}</span>
             </div>
         `;
 
@@ -6241,7 +6350,7 @@ class EditorDashboard {
         this.refreshCurrentView(); // Re-render current view to update UI state
     }
 
-    cancelSelection({ rerender = true } = {}) {
+    cancelSelection({ rerender = false } = {}) {
         this.selectionMode = false;
         this.selectedTasks.clear();
         this.lastSelectedTaskId = null;
@@ -6251,6 +6360,24 @@ class EditorDashboard {
         const btn = document.getElementById('toggle-select-btn');
         if (btn) {
             btn.classList.remove('text-primary', 'bg-primary-lighter');
+        }
+
+        // Update cards in-place without wiping DOM
+        const grid = document.querySelector('main .grid') || document.getElementById('editor-grid');
+        if (grid) {
+            grid.querySelectorAll('.task-card').forEach(card => {
+                const cb = card.querySelector('input[type="checkbox"]');
+                if (cb) cb.checked = false;
+                const wrap = cb?.parentElement;
+                if (wrap) {
+                    wrap.className = 'hidden group-hover:block';
+                }
+                card.classList.remove('border-primary', 'ring-2', 'ring-primary', 'bg-bg-hover');
+                const isPremiumArchived = card.dataset.premiumArchived === '1';
+                if (!isPremiumArchived) {
+                    card.classList.add('bg-surface-2', 'border-border-subtle', 'hover:border-primary');
+                }
+            });
         }
 
         if (rerender) {
@@ -7052,7 +7179,7 @@ class EditorDashboard {
         button.dataset.moduleButton = module.id;
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">folder_open</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${module.name || module.id}">${module.name || module.id}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${this.escapeHtml(module.name || module.id)}">${this.escapeHtml(module.name || module.id)}</span>
             <div class="editor-sidebar-tree-actions h-full">
                 <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
@@ -7156,7 +7283,7 @@ class EditorDashboard {
         button.dataset.topicModule = moduleId;
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">folder</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${topic.name || topic.id}">${topic.name || topic.id}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${this.escapeHtml(topic.name || topic.id)}">${this.escapeHtml(topic.name || topic.id)}</span>
             ${theoryBadge}
             <div class="editor-sidebar-tree-actions h-full">
                 <div class="editor-sidebar-tree-hover-actions">
@@ -7312,7 +7439,7 @@ class EditorDashboard {
 
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">${icon}</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1">${task.name || task.id}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${this.escapeHtml(task.full_name || task.name || task.id)}">${this.escapeHtml(task.name || task.id)}</span>
             ${task.isDraftOnly ? wt('db.k316', '<span class="inline-flex h-5 items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-1.5 py-0 text-[10px] font-semibold leading-none text-warning-darker">Черновик</span>') : ''}
         `;
 
@@ -8259,179 +8386,29 @@ class EditorDashboard {
     async deleteSelectedTasks() {
         if (this.selectedTasks.size === 0) return;
 
-        const confirmed = await NotificationUI.confirm({
-            title: wt('db.k353', 'Удалить задания?'),
-            message: `${wt('db.k354', 'Вы действительно хотите удалить выбранные задания')} (${this.selectedTasks.size} ${wt('db.k355', 'шт.')})?`,
-            confirmText: wt('db.k356', 'Удалить'),
-            cancelText: wt('db.k357', 'Отмена'),
-            variant: 'error'
-        });
-        if (!confirmed) return;
+        const count = this.selectedTasks.size;
+        if (count > 1) {
+            const confirmed = await NotificationUI.confirm({
+                title: wt('db.k353', 'Удалить задания?'),
+                message: `${wt('db.k354', 'Вы действительно хотите удалить выбранные задания')} (${count} ${wt('db.k355', 'шт.')})?`,
+                confirmText: wt('db.k356', 'Удалить'),
+                cancelText: wt('db.k357', 'Отмена'),
+                variant: 'error'
+            });
+            if (!confirmed) return;
+        }
 
         const tasksToDelete = [];
-        let draftsCleanedCount = 0;
-        let localDraftOnlyCount = 0;
-
         Array.from(this.selectedTasks).forEach(idStr => {
             const [moduleId, topicId, ...taskIdParts] = String(idStr || '').split(':');
             const taskId = taskIdParts.join(':');
-            if (!moduleId || !topicId || !taskId) return;
-
-            const draftKeys = this.getTaskDraftStorageKeysForSelection(moduleId, topicId, taskId);
-            const context = this.getCatalogTaskContext(moduleId, topicId, taskId);
-            draftsCleanedCount += this.removeTaskDraftsForSelection(moduleId, topicId, taskId);
-
-            if (draftKeys.size > 0 && !context.task) {
-                localDraftOnlyCount += 1;
-                return;
-            }
-
-            tasksToDelete.push({ module_id: moduleId, topic_id: topicId, task_id: taskId });
-        });
-
-        if (!tasksToDelete.length) {
-            const currentModuleId = this.activeModuleId;
-            const currentTopicId = this.activeTopicId;
-
-            this.selectedTasks.clear();
-            this.cancelSelection({ rerender: false });
-
-            if (currentModuleId) this.activeModuleId = currentModuleId;
-            if (currentTopicId) this.activeTopicId = currentTopicId;
-
-            this.renderSidebar();
-            this.refreshCurrentView();
-            this.renderRecoveryCenter();
-
-            this.showVoiceToast({
-                severity: 'success',
-                what: `${wt('db.k358', 'Удалено черновиков:')} ${draftsCleanedCount || localDraftOnlyCount}.`,
-                impact: wt('db.k359', 'Локальные черновики удалены с этого устройства.'),
-                next: wt('db.k360', 'Список заданий обновлён.'),
-            });
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/editor/tasks/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tasks: tasksToDelete })
-            });
-
-            const data = await response.json();
-
-            if (data.ok) {
-                const currentModuleId = this.activeModuleId;
-                const currentTopicId = this.activeTopicId;
-
-                this.selectedTasks.clear();
-                this.cancelSelection({ rerender: false });
-
-                // Refresh catalog and view
-                await this.loadCatalog();
-
-                if (currentModuleId) this.activeModuleId = currentModuleId;
-                if (currentTopicId) this.activeTopicId = currentTopicId;
-
-                this.renderSidebar();
-                this.refreshCurrentView();
-                this.renderRecoveryCenter();
-
-                const successMessage = draftsCleanedCount > 0
-                    ? `${wt('db.k361', 'Удалено заданий:')} ${data.deleted}. ${wt('db.k362', 'Очищено черновиков:')} ${draftsCleanedCount}.`
-                    : `${wt('db.k363', 'Удалено заданий:')} ${data.deleted}.`;
-
-                this.showVoiceToast({
-                    severity: 'success',
-                    what: successMessage,
-                    impact: wt('db.k364', 'Выбранные элементы удалены из библиотеки.'),
-                    next: wt('db.k365', 'Каталог обновлён автоматически.'),
-                });
-                if (data.errors && data.errors.length > 0) {
-                    this.showVoiceToast({
-                        severity: 'warning',
-                        what: wt('db.k366', 'Удаление выполнено частично.'),
-                        impact: `${wt('db.k367', 'Ошибки:')} ${data.errors.join(', ')}.`,
-                        next: wt('db.k368', 'Проверьте проблемные задания и повторите удаление при необходимости.'),
-                        timeout: 6000,
-                    });
-                }
-            } else {
-                this.showVoiceToast({
-                    severity: 'error',
-                    what: wt('db.k369', 'Массовое удаление не выполнено.'),
-                    impact: wt('db.k370', 'Список заданий не изменён.'),
-                    next: data?.error ? `${wt('db.k371', 'Проверьте детали')} (${data.error}) ${wt('db.k372', 'и повторите.')}` : wt('db.k373', 'Повторите операцию позже.'),
-                });
-            }
-        } catch (error) {
-            console.error('Delete error:', error);
-            this.showVoiceToast({
-                severity: 'error',
-                what: wt('db.k374', 'Массовое удаление не выполнено из-за сетевой ошибки.'),
-                impact: wt('db.k375', 'Изменения не были применены.'),
-                next: wt('db.k376', 'Проверьте сеть и повторите операцию.'),
-            });
-        }
-    }
-
-    // =========================================================================
-    // Rename Logic (Modules & Topics)
-    // =========================================================================
-
-    startRenameModule(moduleId) {
-        const btn = document.querySelector(`[data-module-button="${moduleId}"]`);
-        if (!btn) return;
-        const nameSpan = btn.querySelector('.truncate');
-        if (!nameSpan) return;
-
-        this._startInlineRename(nameSpan, nameSpan.textContent.trim(), async (newName) => {
-            if (!newName) return;
-            try {
-                const resp = await fetch('/api/editor/module/rename', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ module_id: moduleId, name: newName })
-                });
-                const data = await resp.json();
-                if (data.ok) {
-                    await this.loadCatalog();
-                    this.renderSidebar();
-                    this.refreshCurrentView();
-                }
-            } catch (err) {
-                console.error('Rename module failed:', err);
+            if (moduleId && topicId && taskId) {
+                tasksToDelete.push({ module_id: moduleId, topic_id: topicId, task_id: taskId });
             }
         });
-    }
 
-    startRenameTopic(moduleId, topicId) {
-        const container = document.querySelector(`[data-topic="${moduleId}:${topicId}"]`);
-        if (!container) return;
-        const btn = container.querySelector(`[data-topic-button="${topicId}"]`);
-        if (!btn) return;
-        const nameSpan = btn.querySelector('.truncate');
-        if (!nameSpan) return;
-
-        this._startInlineRename(nameSpan, nameSpan.textContent.trim(), async (newName) => {
-            if (!newName) return;
-            try {
-                const resp = await fetch('/api/editor/topic/rename', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ module_id: moduleId, topic_id: topicId, name: newName })
-                });
-                const data = await resp.json();
-                if (data.ok) {
-                    await this.loadCatalog();
-                    this.renderSidebar();
-                    this.refreshCurrentView();
-                }
-            } catch (err) {
-                console.error('Rename topic failed:', err);
-            }
-        });
+        this.cancelSelection({ rerender: false });
+        this.executeSoftDeleteTasks(tasksToDelete);
     }
 
     startRenameTask(task, titleElement) {
@@ -8823,31 +8800,281 @@ class EditorDashboard {
         }
     }
 
-    executeSoftDeleteModule(moduleId) {
-        // Visual feedback immediately
-        const btn = document.querySelector(`[data-module-button="${moduleId}"]`);
-        const container = document.querySelector(`[data-module="${moduleId}"]`);
+    requestDeleteTask(uniqueId) {
+        const [moduleId, topicId, ...taskIdParts] = String(uniqueId || '').split(':');
+        const taskId = taskIdParts.join(':');
+        if (!moduleId || !topicId || !taskId) return;
 
+        this.executeSoftDeleteTasks([{
+            module_id: moduleId,
+            topic_id: topicId,
+            task_id: taskId
+        }]);
+    }
+
+    animateCardsFLIP(action) {
+        if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            action();
+            return;
+        }
+
+        const grid = document.querySelector('main .grid') || document.getElementById('editor-grid');
+        if (!grid) {
+            action();
+            return;
+        }
+
+        const cards = Array.from(grid.querySelectorAll('.task-card'));
+        const firstPositions = new Map();
+        cards.forEach((card) => {
+            if (card.style.display !== 'none') {
+                firstPositions.set(card, card.getBoundingClientRect());
+            }
+        });
+
+        action();
+
+        cards.forEach((card) => {
+            if (card.style.display === 'none') return;
+            const first = firstPositions.get(card);
+            if (!first) return;
+            const last = card.getBoundingClientRect();
+            const dx = first.left - last.left;
+            const dy = first.top - last.top;
+
+            if (dx !== 0 || dy !== 0) {
+                card.style.transition = 'none';
+                card.style.transform = `translate(${dx}px, ${dy}px)`;
+                void card.offsetWidth;
+                card.style.transition = 'transform 260ms cubic-bezier(0.2, 0, 0, 1)';
+                card.style.transform = '';
+            }
+        });
+    }
+
+    executeSoftDeleteTasks(tasksToDelete = []) {
+        if (!Array.isArray(tasksToDelete) || tasksToDelete.length === 0) return;
+
+        const uniqueIds = tasksToDelete.map(t => `${t.module_id}:${t.topic_id}:${t.task_id}`);
+        const cardsToDelete = [];
+        const sidebarBtnsToDelete = [];
+
+        uniqueIds.forEach(uniqueId => {
+            const card = document.querySelector(`article[data-task-id="${uniqueId}"]`);
+            if (card) cardsToDelete.push(card);
+            const sideBtn = document.querySelector(`button[data-task-unique-id="${uniqueId}"]`);
+            if (sideBtn) sidebarBtnsToDelete.push(sideBtn);
+        });
+
+        // Exit transition on elements (180ms)
+        cardsToDelete.forEach(card => card.classList.add('task-card--deleting'));
+        sidebarBtnsToDelete.forEach(btn => btn.classList.add('sidebar-task--deleting'));
+
+        // Backup drafts before clearing
+        const draftsBackup = new Map();
+        tasksToDelete.forEach(t => {
+            const uniqueId = `${t.module_id}:${t.topic_id}:${t.task_id}`;
+            const draftKeys = Array.from(this.getTaskDraftStorageKeysForSelection(t.module_id, t.topic_id, t.task_id));
+            const draftItems = draftKeys.map(k => ({ key: k, value: localStorage.getItem(k) }));
+            if (draftItems.length > 0) {
+                draftsBackup.set(uniqueId, draftItems);
+            }
+            this.removeTaskDraftsForSelection(t.module_id, t.topic_id, t.task_id);
+        });
+
+        // After exit transition finishes, hide cards and run FLIP on remaining cards
+        const exitTimer = setTimeout(() => {
+            this.animateCardsFLIP(() => {
+                cardsToDelete.forEach(card => {
+                    card.style.display = 'none';
+                    card.classList.remove('task-card--deleting');
+                });
+                sidebarBtnsToDelete.forEach(btn => {
+                    btn.style.display = 'none';
+                    btn.classList.remove('sidebar-task--deleting');
+                });
+            });
+        }, 180);
+
+        // Schedule deletion with 6-second undo toast
+        const toastId = `toast-${Date.now()}`;
+        const key = `tasks:${Date.now()}:${tasksToDelete.map(t => t.task_id).join(',')}`;
+
+        const onUndo = () => {
+            clearTimeout(exitTimer);
+            this.undoTaskDeletion(key, toastId);
+        };
+
+        this.showUndoToast(toastId, 'task', onUndo, tasksToDelete.length);
+
+        const timer = setTimeout(async () => {
+            await this.commitTaskDeletion(key, tasksToDelete, cardsToDelete, sidebarBtnsToDelete);
+            const toast = document.getElementById(toastId);
+            if (toast) toast.remove();
+        }, 6000);
+
+        this.pendingDeletions.set(key, {
+            type: 'task',
+            tasksToDelete,
+            cardsToDelete,
+            sidebarBtnsToDelete,
+            draftsBackup,
+            timer,
+            toastId,
+            elementKey: key
+        });
+    }
+
+    undoTaskDeletion(key, toastId) {
+        const pending = this.pendingDeletions.get(key);
+        if (!pending) return;
+
+        clearTimeout(pending.timer);
+        this.pendingDeletions.delete(key);
+
+        if (toastId) {
+            const toast = document.getElementById(toastId);
+            if (toast) {
+                if (toast._timerInterval) clearInterval(toast._timerInterval);
+                toast.remove();
+            }
+        }
+
+        // Restore cards with reverse FLIP
+        this.animateCardsFLIP(() => {
+            pending.cardsToDelete.forEach(card => {
+                card.style.display = '';
+                card.classList.add('task-card--restoring');
+            });
+            pending.sidebarBtnsToDelete.forEach(btn => {
+                btn.style.display = '';
+                btn.classList.remove('sidebar-task--deleting');
+            });
+        });
+
+        setTimeout(() => {
+            pending.cardsToDelete.forEach(card => {
+                card.classList.remove('task-card--restoring');
+            });
+        }, 260);
+
+        // Restore drafts to localStorage
+        if (pending.draftsBackup) {
+            pending.draftsBackup.forEach((draftItems) => {
+                draftItems.forEach(item => {
+                    if (item.value) {
+                        localStorage.setItem(item.key, item.value);
+                    }
+                });
+            });
+        }
+    }
+
+    removeTasksFromLocalCatalog(tasksToDelete = []) {
+        if (!Array.isArray(this.catalog) || !Array.isArray(tasksToDelete)) return;
+        const toDeleteSet = new Set(tasksToDelete.map(t => `${t.module_id}:${t.topic_id}:${t.task_id}`));
+
+        for (const m of this.catalog) {
+            if (!Array.isArray(m.topics)) continue;
+            for (const t of m.topics) {
+                if (!Array.isArray(t.tasks)) continue;
+                t.tasks = t.tasks.filter(task => !toDeleteSet.has(`${m.id}:${t.id}:${task.id}`));
+            }
+        }
+    }
+
+    async commitTaskDeletion(key, tasksToDelete, cardsToDelete, sidebarBtnsToDelete) {
+        if (!this.pendingDeletions.has(key)) return;
+        this.pendingDeletions.delete(key);
+
+        const serverTasks = [];
+        tasksToDelete.forEach(t => {
+            const context = this.getCatalogTaskContext(t.module_id, t.topic_id, t.task_id);
+            if (context.task) {
+                serverTasks.push(t);
+            }
+        });
+
+        if (serverTasks.length === 0) {
+            cardsToDelete.forEach(c => c.remove());
+            sidebarBtnsToDelete.forEach(b => b.remove());
+            this.removeTasksFromLocalCatalog(tasksToDelete);
+            this.renderRecoveryCenter();
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/editor/tasks/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tasks: serverTasks })
+            });
+            const data = await response.json();
+
+            if (data.ok) {
+                cardsToDelete.forEach(c => c.remove());
+                sidebarBtnsToDelete.forEach(b => b.remove());
+                this.removeTasksFromLocalCatalog(tasksToDelete);
+                this.renderRecoveryCenter();
+
+                const grid = document.querySelector('main .grid') || document.getElementById('editor-grid');
+                const remainingCards = grid?.querySelectorAll('.task-card') || [];
+                if (grid && remainingCards.length === 0) {
+                    const emptyCard = this.createEmptyStateCard(
+                        this.showPremiumArchiveTasks
+                            ? wt('db.k276', 'В архиве Premium нет заданий для текущего раздела')
+                            : wt('db.k279', 'Задания не найдены')
+                    );
+                    grid.appendChild(emptyCard);
+                }
+            } else {
+                console.error('Commit task deletion failed:', data.error);
+                this.undoTaskDeletion(key, null);
+                this.showVoiceToast({
+                    severity: 'error',
+                    what: wt('db.k369', 'Массовое удаление не выполнено.'),
+                    impact: wt('db.k379', 'Сущность восстановлена в интерфейсе.'),
+                    next: data.error || wt('db.k382', 'Повторите действие позже.')
+                });
+            }
+        } catch (e) {
+            console.error('Commit task deletion exception:', e);
+            this.undoTaskDeletion(key, null);
+            this.showVoiceToast({
+                severity: 'error',
+                what: wt('db.k383', 'Удаление не выполнено из-за сетевой ошибки.'),
+                impact: wt('db.k384', 'Изменения отменены локально.'),
+                next: wt('db.k385', 'Проверьте сеть и повторите попытку.')
+            });
+        }
+    }
+
+    executeSoftDeleteModule(moduleId) {
+        const container = document.querySelector(`[data-module="${moduleId}"]`);
         if (container) {
-            container.style.display = 'none';
+            container.classList.add('sidebar-item--deleting');
+            setTimeout(() => {
+                container.style.display = 'none';
+                container.classList.remove('sidebar-item--deleting');
+            }, 180);
         }
 
         const payload = { module_id: moduleId };
         const key = `module:${moduleId}`;
 
         this.scheduleDeletion(key, 'module', payload, () => {
-            // Commit cleanup
             if (container) container.remove();
-            // Reload catalog to sync state
-            // this.loadCatalog(); // Optional: might be too heavy? Let's assume UI is mostly consistent.
         });
     }
 
     executeSoftDeleteTopic(moduleId, topicId) {
-        // Visual feedback
         const container = document.querySelector(`[data-topic="${moduleId}:${topicId}"]`);
         if (container) {
-            container.style.display = 'none';
+            container.classList.add('sidebar-item--deleting');
+            setTimeout(() => {
+                container.style.display = 'none';
+                container.classList.remove('sidebar-item--deleting');
+            }, 180);
         }
 
         const payload = { module_id: moduleId, topic_id: topicId };
@@ -8937,6 +9164,10 @@ class EditorDashboard {
     }
 
     undoDeletion(key, toastId) {
+        if (key.startsWith('tasks:')) {
+            this.undoTaskDeletion(key, toastId);
+            return;
+        }
         const pending = this.pendingDeletions.get(key);
         if (!pending) return;
 
@@ -8944,13 +9175,19 @@ class EditorDashboard {
         this.pendingDeletions.delete(key);
 
         const toast = document.getElementById(toastId);
-        if (toast) toast.remove();
+        if (toast) {
+            if (toast._timerInterval) clearInterval(toast._timerInterval);
+            toast.remove();
+        }
 
         this.restoreVisuals(key);
     }
 
     restoreVisuals(key) {
-        // Re-show element
+        if (key.startsWith('tasks:')) {
+            this.undoTaskDeletion(key, null);
+            return;
+        }
         let selector = '';
         if (key.startsWith('module:')) {
             const id = key.split(':')[1];
@@ -8963,14 +9200,24 @@ class EditorDashboard {
         const el = document.querySelector(selector);
         if (el) {
             el.style.display = 'flex';
+            el.classList.remove('sidebar-item--deleting');
         }
     }
 
-    showUndoToast(id, type, onUndo) {
+    showUndoToast(id, type, onUndo, count = 1) {
         const container = document.getElementById('toast-container');
         if (!container) return;
 
-        const label = type === 'module' ? wt('db.k386', 'Модуль удален') : wt('db.k387', 'Тема удалена');
+        let label = '';
+        if (type === 'module') {
+            label = wt('db.k386', 'Модуль удален');
+        } else if (type === 'topic') {
+            label = wt('db.k387', 'Тема удалена');
+        } else if (type === 'task') {
+            label = count > 1
+                ? `${wt('db.k_tasks_deleted_plural', 'Удалено заданий:')} ${count}`
+                : wt('db.k_task_deleted', 'Задание удалено');
+        }
         const toast = document.createElement('div');
         toast.id = id;
         toast.className = 'bg-bg-ink text-text-on-dark px-4 py-3 rounded-lg shadow-xl flex items-center gap-4 animate-slide-up pointer-events-auto min-w-[300px] justify-between';
@@ -9007,16 +9254,22 @@ class EditorDashboard {
             if (this.pendingDeletions.size > 0) {
                 // Force commit all pending deletions
                 this.pendingDeletions.forEach((value, key) => {
-                    const { type, payload } = value;
+                    const { type, payload, tasksToDelete } = value;
                     const endpoint = type === 'module'
                         ? '/api/editor/modules/delete'
-                        : '/api/editor/topics/delete';
+                        : type === 'topic'
+                        ? '/api/editor/topics/delete'
+                        : '/api/editor/tasks/delete';
+
+                    const body = type === 'task'
+                        ? JSON.stringify({ tasks: tasksToDelete })
+                        : JSON.stringify(payload);
 
                     // Use fetch with keepalive to ensure request survives page unload
                     fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
+                        body,
                         keepalive: true
                     }).catch(e => console.error('Safety commit failed', e));
                 });
